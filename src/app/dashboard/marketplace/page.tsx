@@ -1,3 +1,4 @@
+
 import Image from 'next/image';
 import { Star } from 'lucide-react';
 import {
@@ -40,7 +41,7 @@ export default function MarketplacePage() {
               <div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground">
                 <Avatar className="h-5 w-5">
                   <AvatarImage
-                    src="https://picsum.photos/seed/user4/100/100"
+                    src={`https://picsum.photos/seed/${product.seller.id}/100/100`}
                     alt={product.seller.name}
                     data-ai-hint="woman seller"
                   />
