@@ -20,52 +20,56 @@ import { Logo } from '@/components/logo';
 
 export default function VerificationPage() {
   return (
-    <div className="flex min-h-screen w-full flex-col items-center justify-center p-4">
+    <div className="flex min-h-screen w-full flex-col items-center justify-center bg-secondary/50 p-4">
       <div className="absolute top-8 left-8">
         <Logo />
       </div>
       <Card className="w-full max-w-md animate-fade-in-up">
         <CardHeader className="items-center text-center">
+          <ShieldCheck className="mb-2 h-12 w-12 text-primary" />
           <CardTitle className="font-headline text-3xl">
-            Join Sakhi Circle
+            Welcome to Your Safe Space
           </CardTitle>
           <CardDescription>
-            India's safe and supportive space for women.
+            To keep our community safe and authentic, we require a quick
+            one-time verification.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="flex items-center space-x-4">
-            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <UserPlus className="h-5 w-5" />
+          <div className="space-y-4">
+            <div className="flex items-start space-x-4">
+              <div className="mt-1 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <span className="font-bold">1</span>
+              </div>
+              <div>
+                <h3 className="font-semibold">Create Your Account</h3>
+                <p className="text-sm text-muted-foreground">
+                  Start by setting up your profile with basic details.
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 className="font-semibold">Create Your Account</h3>
-              <p className="text-sm text-muted-foreground">
-                Start by setting up your profile with basic details.
-              </p>
+            <div className="flex items-start space-x-4">
+              <div className="mt-1 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <span className="font-bold">2</span>
+              </div>
+              <div>
+                <h3 className="font-semibold">Quick Video Verification</h3>
+                <p className="text-sm text-muted-foreground">
+                  A short, private video selfie confirms your identity and
+                  ensures our circle is for women only.
+                </p>
+              </div>
             </div>
-          </div>
-          <div className="flex items-center space-x-4">
-            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <ShieldCheck className="h-5 w-5" />
-            </div>
-            <div>
-              <h3 className="font-semibold">Verify Your Identity</h3>
-              <p className="text-sm text-muted-foreground">
-                Our #1 priority is safety. A quick verification ensures our
-                community is for women only.
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center space-x-4">
-            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <HeartHandshake className="h-5 w-5" />
-            </div>
-            <div>
-              <h3 className="font-semibold">Join the Circle</h3>
-              <p className="text-sm text-muted-foreground">
-                Connect with thousands of women, join communities, and grow.
-              </p>
+             <div className="flex items-start space-x-4">
+              <div className="mt-1 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <span className="font-bold">3</span>
+              </div>
+              <div>
+                <h3 className="font-semibold">Join the Circle</h3>
+                <p className="text-sm text-muted-foreground">
+                  Once verified, unlock access to a supportive community of thousands of women.
+                </p>
+              </div>
             </div>
           </div>
 
@@ -73,36 +77,22 @@ export default function VerificationPage() {
 
           <div className="space-y-4">
             <Button
-              variant="outline"
               className="w-full"
               asChild
+              size="lg"
             >
               <Link href="/dashboard">
-                <Video />
-                Verify with Video Selfie
+                <Video className="mr-2 h-5 w-5" />
+                Start Video Verification
               </Link>
             </Button>
-            <Button variant="outline" className="w-full" asChild>
-              <Link href="/dashboard">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="mr-2 h-4 w-4"
-                >
-                  <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
-                  <circle cx="12" cy="12" r="3" />
-                </svg>
-                Verify with Aadhaar (Optional)
-              </Link>
-            </Button>
+            <p className="text-center text-xs text-muted-foreground">
+              Your privacy is our priority. Verification is automated and data is not stored.
+            </p>
           </div>
         </CardContent>
-        <CardFooter className="justify-center">
+        <CardFooter className="flex-col items-center justify-center gap-2 pt-4">
+           <Separator className="mb-4" />
           <p className="text-center text-sm text-muted-foreground">
             Already have an account?{' '}
             <Link
