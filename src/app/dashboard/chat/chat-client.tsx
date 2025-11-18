@@ -14,9 +14,10 @@ import {
   ThumbsUp,
   Heart,
   Laugh,
+  Loader,
 } from 'lucide-react';
 
-import { checkMessageSafety } from '@/app/actions';
+import { checkMessageSafety, type AIPoweredChatSafetyOutput } from '@/app/actions';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -42,21 +43,18 @@ import {
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 
+type SafetyCheckState = {
+  result?: AIPoweredChatSafetyOutput;
+  error?: string;
+  message: string;
+};
 
-function SubmitButton() {
-  const { pending } = useFormStatus();
-  return (
-    <Button type="submit" size="sm" disabled={pending}>
-      {pending ? 'Analyzing...' : 'Check Safety'}
-    </Button>
-  );
-}
 
 export function ChatClient() {
   const { toast } = useToast();
   const [safeMode, setSafeMode] = useState(false);
-  const [initialState, _] = useState({ message: '' });
-  const [state, formAction] = useActionState(checkMessageSafety, initialState);
+  const [initialState, _] = useState<SafetyCheckState>({ message: '' });
+  const [state, formAction, isSafetyCheckPending] = useActionState(checkMessageSafety, initialState);
   const [activeChatId, setActiveChatId] = useState('u2');
   const [isTyping, setIsTyping] = useState(false);
   const [message, setMessage] = useState('');
@@ -75,7 +73,9 @@ export function ChatClient() {
     },
   ]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
+  const isSendDisabled = isSafetyCheckPending || (state?.result?.safetyScore ?? 100) < 40 || safeMode;
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -96,7 +96,7 @@ export function ChatClient() {
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
-    if (message.trim() === '') return;
+    if (message.trim() === '' || isSendDisabled) return;
 
     if(safeMode){
         toast({
@@ -106,31 +106,50 @@ export function ChatClient() {
         });
         return;
     }
-
-    const newMessage: Message = {
-      id: `m${messages.length + 1}`,
-      senderId: 'u1', // Assuming current user is u1
-      text: message,
-      timestamp: new Date().toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit',
-      }),
-    };
-    setMessages([...messages, newMessage]);
-    setMessage('');
     
-    // Simulate a reply
-    setTimeout(() => {
-      const replyMessage: Message = {
-        id: `m${messages.length + 2}`,
-        senderId: activeChatId,
-        text: 'Sounds interesting!',
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      };
-      setMessages(prev => [...prev, replyMessage]);
-    }, 1500);
-
+    // Trigger safety check before sending
+    if (formRef.current) {
+        const formData = new FormData(formRef.current);
+        formAction(formData);
+    }
   };
+
+  useEffect(() => {
+    // This effect runs after the safety check is complete
+    if (!isSafetyCheckPending && state.result && state.message) {
+        // If message is safe, add it to chat
+        if (state.result.safetyScore >= 40) {
+            const newMessage: Message = {
+              id: `m${Date.now()}`,
+              senderId: 'u1',
+              text: state.message,
+              timestamp: new Date().toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+              }),
+            };
+            setMessages((prev) => [...prev, newMessage]);
+            setMessage('');
+            
+            // Simulate a reply
+            setTimeout(() => {
+              const replyMessage: Message = {
+                id: `m${Date.now() + 1}`,
+                senderId: activeChatId,
+                text: 'Sounds interesting!',
+                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              };
+              setMessages(prev => [...prev, replyMessage]);
+            }, 1500);
+        } else {
+             toast({
+                variant: "destructive",
+                title: "Message Not Sent",
+                description: "This message was blocked by the safety filter.",
+            });
+        }
+    }
+  }, [state, isSafetyCheckPending, activeChatId, toast])
 
   const activeChatUser = users.find((u) => u.id === activeChatId);
 
@@ -319,7 +338,7 @@ export function ChatClient() {
         {/* Message Input and AI Tool */}
         <div className="border-t bg-card p-4">
           <Card>
-            <form onSubmit={handleSendMessage}>
+            <form ref={formRef} onSubmit={handleSendMessage} action={formAction}>
               <CardContent className="p-4">
                 <div className="relative">
                   <Textarea
@@ -352,9 +371,12 @@ export function ChatClient() {
                   <span>AI-powered safety is active.</span>
                 </div>
                 <div className="flex gap-2">
-                   <Button type="button" onClick={() => formAction(new FormData(document.querySelector('form')!))}>Check Safety</Button>
-                  <Button type="submit" disabled={safeMode}>
-                    <ArrowUp className="h-4 w-4" />
+                  <Button type="submit" disabled={isSendDisabled || !message}>
+                    {isSafetyCheckPending ? (
+                      <Loader className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <ArrowUp className="h-4 w-4" />
+                    )}
                   </Button>
                 </div>
               </CardFooter>

@@ -46,6 +46,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { Controller } from 'react-hook-form';
+
 
 const tools = [
   { icon: ClipboardList, name: 'Contribution Tracker' },
@@ -68,17 +70,23 @@ export default function KittyGroupsPage() {
   const [kittyGroups, setKittyGroups] = useState(initialKittyGroups);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  const { register, handleSubmit, formState: { errors }, reset } = useForm<KittyGroupFormValues>({
+  const { register, handleSubmit, formState: { errors }, reset, control } = useForm<KittyGroupFormValues>({
     resolver: zodResolver(kittyGroupSchema),
+    defaultValues: {
+      name: '',
+      contribution: undefined,
+      members: undefined,
+      frequency: '',
+    }
   });
 
   const onSubmit = (data: KittyGroupFormValues) => {
     const newGroup: KittyGroupType = {
-      id: `k${kittyGroups.length + 1}`,
+      id: `k${Date.now()}`,
       name: data.name,
       members: data.members,
       contribution: data.contribution,
-      nextTurn: 'New Member',
+      nextTurn: 'TBD',
       nextDate: 'TBD',
     };
     setKittyGroups([newGroup, ...kittyGroups]);
@@ -231,16 +239,22 @@ export default function KittyGroupsPage() {
                       Frequency
                     </Label>
                     <div className="col-span-3">
-                      <Select onValueChange={(value) => register('frequency').onChange({ target: { value } })} name="frequency">
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select frequency" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="monthly">Monthly</SelectItem>
-                          <SelectItem value="bi-weekly">Bi-Weekly</SelectItem>
-                          <SelectItem value="weekly">Weekly</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <Controller
+                          name="frequency"
+                          control={control}
+                          render={({ field }) => (
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select frequency" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="monthly">Monthly</SelectItem>
+                                <SelectItem value="bi-weekly">Bi-Weekly</SelectItem>
+                                <SelectItem value="weekly">Weekly</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          )}
+                        />
                       {errors.frequency && <p className="mt-1 text-xs text-destructive">{errors.frequency.message}</p>}
                     </div>
                   </div>

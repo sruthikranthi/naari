@@ -1,7 +1,7 @@
 'use client';
-
+import { useState } from 'react';
 import Image from 'next/image';
-import { Plus, Calendar, User, MapPin } from 'lucide-react';
+import { Plus, Calendar, User, MapPin, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 import { type Community, type Post, type User as UserType } from '@/lib/mock-data';
@@ -22,6 +22,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { cn } from '@/lib/utils';
 
 type CommunityEvent = {
     id: string;
@@ -40,6 +41,8 @@ type CommunityClientProps = {
 
 export function CommunityClient({ community, communityMembers, communityEvents, posts }: CommunityClientProps) {
   const { toast } = useToast();
+  const [isJoined, setIsJoined] = useState(true);
+  const [connectedMembers, setConnectedMembers] = useState<string[]>([]);
 
   const handleRsvp = (eventTitle: string) => {
     toast({
@@ -48,12 +51,22 @@ export function CommunityClient({ community, communityMembers, communityEvents, 
     });
   };
 
-  const handleConnect = (userName: string) => {
+  const handleConnect = (memberId: string, memberName: string) => {
+    if (connectedMembers.includes(memberId)) return;
+    setConnectedMembers([...connectedMembers, memberId]);
     toast({
         title: 'Connection Request Sent',
-        description: `Your request to connect with ${userName} has been sent.`,
+        description: `Your request to connect with ${memberName} has been sent.`,
     });
   };
+  
+  const handleJoinToggle = () => {
+    setIsJoined(!isJoined);
+    toast({
+        title: isJoined ? `Left ${community.name}` : `Joined ${community.name}!`,
+        description: isJoined ? `You have left the community.` : 'Welcome to the community!',
+    })
+  }
 
   return (
     <div className="space-y-6">
@@ -74,9 +87,13 @@ export function CommunityClient({ community, communityMembers, communityEvents, 
             {community.description}
           </p>
         </div>
-        <Button className="absolute top-4 right-4" variant="secondary">
-          <Plus className="mr-2 h-4 w-4" />
-          Joined
+        <Button 
+            className="absolute top-4 right-4" 
+            variant={isJoined ? 'secondary' : 'default'}
+            onClick={handleJoinToggle}
+        >
+          {isJoined ? <Check className="mr-2 h-4 w-4" /> : <Plus className="mr-2 h-4 w-4" />}
+          {isJoined ? 'Joined' : 'Join'}
         </Button>
       </div>
 
@@ -101,36 +118,45 @@ export function CommunityClient({ community, communityMembers, communityEvents, 
               <CardTitle>Community Members ({community.memberCount})</CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {communityMembers.map((member) => (
-                <div
-                  key={member.id}
-                  className="flex items-center gap-3 rounded-lg border p-3"
-                >
-                  <Avatar>
-                    <AvatarImage
-                      src={`https://picsum.photos/seed/${member.id}/100/100`}
-                      alt={member.name}
-                      data-ai-hint="woman portrait"
-                    />
-                    <AvatarFallback>
-                      {member.name
-                        .split(' ')
-                        .map((n) => n[0])
-                        .join('')}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-semibold">{member.name}</p>
-                    <p className="flex items-center text-xs text-muted-foreground">
-                      <MapPin className="mr-1 h-3 w-3" />
-                      {member.city}
-                    </p>
-                  </div>
-                  <Button size="sm" variant="outline" className="ml-auto" onClick={() => handleConnect(member.name)}>
-                    Connect
-                  </Button>
-                </div>
-              ))}
+              {communityMembers.map((member) => {
+                const isPending = connectedMembers.includes(member.id);
+                return (
+                    <div
+                    key={member.id}
+                    className="flex items-center gap-3 rounded-lg border p-3"
+                    >
+                    <Avatar>
+                        <AvatarImage
+                        src={`https://picsum.photos/seed/${member.id}/100/100`}
+                        alt={member.name}
+                        data-ai-hint="woman portrait"
+                        />
+                        <AvatarFallback>
+                        {member.name
+                            .split(' ')
+                            .map((n) => n[0])
+                            .join('')}
+                        </AvatarFallback>
+                    </Avatar>
+                    <div>
+                        <p className="font-semibold">{member.name}</p>
+                        <p className="flex items-center text-xs text-muted-foreground">
+                        <MapPin className="mr-1 h-3 w-3" />
+                        {member.city}
+                        </p>
+                    </div>
+                    <Button 
+                        size="sm" 
+                        variant={isPending ? 'secondary' : 'outline'} 
+                        className="ml-auto" 
+                        onClick={() => handleConnect(member.id, member.name)}
+                        disabled={isPending}
+                    >
+                        {isPending ? 'Pending' : 'Connect'}
+                    </Button>
+                    </div>
+                )
+              })}
             </CardContent>
           </Card>
         </TabsContent>
