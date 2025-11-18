@@ -1,6 +1,6 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Hashtag } from 'lucide-react';
+import { Hash } from 'lucide-react';
 
 const hashtags = [
   { tag: 'KittyIdeas', posts: '1.2k' },
@@ -21,7 +21,7 @@ export function TrendingHashtags() {
           <div key={hashtag.tag} className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="flex h-9 w-9 items-center justify-center rounded-full bg-secondary">
-                <Hashtag className="h-5 w-5 text-muted-foreground" />
+                <Hash className="h-5 w-5 text-muted-foreground" />
               </div>
               <div>
                 <p className="font-semibold">#{hashtag.tag}</p>
