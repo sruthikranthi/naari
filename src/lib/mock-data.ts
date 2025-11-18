@@ -1,3 +1,4 @@
+
 export type User = {
   id: string;
   name: string;
@@ -5,6 +6,8 @@ export type User = {
   city: string;
   interests: string[];
   stories?: StoryItem[];
+  kittyScore?: number;
+  paymentStatus?: 'Paid' | 'Unpaid' | 'Overdue';
 };
 
 export type StoryItem = {
@@ -79,19 +82,19 @@ export const users: User[] = [
   { id: 'u1', name: 'Priya Sharma', avatar: '/assets/user-1.jpg', city: 'Mumbai', interests: ['Cooking', 'Yoga', 'Reading'], stories: [
       { id: 's1-1', type: 'image', url: 'https://picsum.photos/seed/story1/1080/1920', duration: 5 },
       { id: 's1-2', type: 'image', url: 'https://picsum.photos/seed/story2/1080/1920', duration: 5 },
-  ] },
+  ], kittyScore: 95, paymentStatus: 'Paid' },
   { id: 'u2', name: 'Anjali Singh', avatar: '/assets/user-2.jpg', city: 'Delhi', interests: ['Gardening', 'Business', 'Movies'], stories: [
       { id: 's2-1', type: 'image', url: 'https://picsum.photos/seed/story3/1080/1920', duration: 5 },
-  ] },
+  ], kittyScore: 88, paymentStatus: 'Paid' },
   { id: 'u3', name: 'Sneha Patel', avatar: '/assets/user-3.jpg', city: 'Bangalore', interests: ['Technology', 'Startups', 'Travel'], stories: [
       { id: 's3-1', type: 'image', url: 'https://picsum.photos/seed/story4/1080/1920', duration: 5 },
       { id: 's3-2', type: 'image', url: 'https://picsum.photos/seed/story5/1080/1920', duration: 5 },
       { id: 's3-3', type: 'image', url: 'https://picsum.photos/seed/story6/1080/1920', duration: 5 },
-  ] },
-  { id: 'u4', name: 'Meera Das', avatar: '/assets/user-4.jpg', city: 'Kolkata', interests: ['Art', 'Music', 'History'] },
+  ], kittyScore: 42, paymentStatus: 'Overdue' },
+  { id: 'u4', name: 'Meera Das', avatar: '/assets/user-4.jpg', city: 'Kolkata', interests: ['Art', 'Music', 'History'], kittyScore: 99, paymentStatus: 'Paid' },
   { id: 'u5', name: 'Lakshmi Rao', avatar: '/assets/user-5.jpg', city: 'Chennai', interests: ['Finance', 'Investment', 'Crafts'], stories: [
       { id: 's5-1', type: 'image', url: 'https://picsum.photos/seed/story7/1080/1920', duration: 5 },
-  ] },
+  ], kittyScore: 76, paymentStatus: 'Unpaid' },
 ];
 
 export const communities: Community[] = [

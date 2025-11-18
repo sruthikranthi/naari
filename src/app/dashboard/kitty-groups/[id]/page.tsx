@@ -1,3 +1,4 @@
+
 'use client';
 
 import { notFound } from 'next/navigation';
@@ -25,6 +26,9 @@ import {
   Plus,
   Settings,
   Mail,
+  ShieldCheck,
+  FileWarning,
+  Star,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -37,6 +41,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 
 export default function KittyGroupDetailPage({
@@ -62,6 +68,20 @@ export default function KittyGroupDetailPage({
   const handleAction = (title: string, description: string) => {
     toast({ title, description });
   };
+  
+  const getStatusVariant = (status?: 'Paid' | 'Unpaid' | 'Overdue') => {
+    switch (status) {
+      case 'Paid':
+        return 'default';
+      case 'Unpaid':
+        return 'secondary';
+      case 'Overdue':
+        return 'destructive';
+      default:
+        return 'outline';
+    }
+  };
+
 
   return (
     <div className="space-y-6">
@@ -85,7 +105,7 @@ export default function KittyGroupDetailPage({
           <TabsTrigger value="events">Events</TabsTrigger>
         </TabsList>
         <TabsContent value="overview" className="mt-6">
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Members</CardTitle>
@@ -131,21 +151,48 @@ export default function KittyGroupDetailPage({
               </CardContent>
             </Card>
           </div>
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle>Upcoming Kitty Party</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <p><strong>Host:</strong> {upcomingEvent.host}</p>
-                <p><strong>Date:</strong> {upcomingEvent.date}</p>
-                <p><strong>Time:</strong> {upcomingEvent.time}</p>
-                <p><strong>Location:</strong> {upcomingEvent.location}</p>
-                <div className="mt-4 flex gap-2">
-                    <Button onClick={() => handleAction('RSVP Confirmed!', `You are attending the next Kitty Party hosted by ${upcomingEvent.host}.`)}>RSVP</Button>
-                    <Button variant="outline" onClick={() => handleAction('Feature Coming Soon', 'Detailed event view will be available shortly.')}>View Details</Button>
-                </div>
-            </CardContent>
-          </Card>
+          <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <Card>
+                <CardHeader>
+                <CardTitle>Upcoming Kitty Party</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p><strong>Host:</strong> {upcomingEvent.host}</p>
+                    <p><strong>Date:</strong> {upcomingEvent.date}</p>
+                    <p><strong>Time:</strong> {upcomingEvent.time}</p>
+                    <p><strong>Location:</strong> {upcomingEvent.location}</p>
+                    <div className="mt-4 flex gap-2">
+                        <Button onClick={() => handleAction('RSVP Confirmed!', `You are attending the next Kitty Party hosted by ${upcomingEvent.host}.`)}>RSVP</Button>
+                        <Button variant="outline" onClick={() => handleAction('Feature Coming Soon', 'Detailed event view will be available shortly.')}>View Details</Button>
+                    </div>
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader>
+                    <CardTitle className='flex items-center gap-2'>
+                        <ShieldCheck className="h-5 w-5 text-primary" />
+                        Secure Kitty System
+                    </CardTitle>
+                    <CardDescription>
+                        This group is protected by Sakhi's Secure Kitty System.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-2 text-sm">
+                   <div className='flex justify-between'>
+                       <span className='text-muted-foreground'>Security Deposit:</span>
+                       <span className='font-semibold'>₹1,000 (Refundable)</span>
+                   </div>
+                   <div className='flex justify-between'>
+                       <span className='text-muted-foreground'>Late Payment Penalty:</span>
+                       <span className='font-semibold'>₹100 per day</span>
+                   </div>
+                   <div className='flex justify-between'>
+                       <span className='text-muted-foreground'>Group Insurance:</span>
+                       <span className='font-semibold'>Active</span>
+                   </div>
+                </CardContent>
+            </Card>
+          </div>
         </TabsContent>
         <TabsContent value="members" className="mt-6">
           <Card>
@@ -157,7 +204,8 @@ export default function KittyGroupDetailPage({
                 <TableHeader>
                   <TableRow>
                     <TableHead>Name</TableHead>
-                    <TableHead>City</TableHead>
+                    <TableHead>Kitty Score</TableHead>
+                    <TableHead>Payment Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -178,13 +226,29 @@ export default function KittyGroupDetailPage({
                                 .join('')}
                             </AvatarFallback>
                           </Avatar>
-                          <span className="font-medium">{member.name}</span>
+                          <div>
+                            <span className="font-medium">{member.name}</span>
+                            <p className='text-xs text-muted-foreground'>{member.city}</p>
+                          </div>
                         </div>
                       </TableCell>
-                      <TableCell>{member.city}</TableCell>
+                      <TableCell>
+                        <div className='flex items-center gap-1'>
+                            <Star className={cn("h-4 w-4", (member.kittyScore || 0) > 80 ? 'text-amber-500 fill-amber-500' : 'text-muted-foreground/50')}/>
+                            <span className='font-semibold'>{member.kittyScore || 'N/A'}</span>
+                        </div>
+                      </TableCell>
+                       <TableCell>
+                        <Badge variant={getStatusVariant(member.paymentStatus)}>
+                          {member.paymentStatus || 'N/A'}
+                        </Badge>
+                      </TableCell>
                       <TableCell className="text-right">
                         <Button variant="ghost" size="icon" onClick={() => handleAction('Feature Coming Soon', `Messaging ${member.name} will be available soon.`)}>
                           <Mail className="h-4 w-4" />
+                        </Button>
+                         <Button variant="ghost" size="icon" className={cn(member.paymentStatus === 'Paid' && 'hidden')} onClick={() => handleAction('Payment Reminder Sent', `A reminder has been sent to ${member.name}.`)}>
+                          <FileWarning className="h-4 w-4 text-destructive" />
                         </Button>
                       </TableCell>
                     </TableRow>
