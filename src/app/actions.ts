@@ -3,7 +3,7 @@ import {
   aiPoweredChatSafety,
   type AIPoweredChatSafetyOutput,
 } from '@/ai/flows/ai-powered-chat-safety';
-import { textToSpeech, type TextToSpeechOutput } from '@/ai/flows/text-to-speech';
+import { textToSpeech } from '@/ai/flows/text-to-speech';
 import { z } from 'zod';
 
 const safetyCheckSchema = z.object({
@@ -45,6 +45,11 @@ export async function checkMessageSafety(
 const ttsSchema = z.object({
   text: z.string(),
 });
+
+export const TextToSpeechOutputSchema = z.object({
+  media: z.string().describe('The base64 encoded audio data as a data URI.'),
+});
+export type TextToSpeechOutput = z.infer<typeof TextToSpeechOutputSchema>;
 
 type TtsState = {
   result?: TextToSpeechOutput;
