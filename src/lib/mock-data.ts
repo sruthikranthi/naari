@@ -1,0 +1,148 @@
+export type User = {
+  id: string;
+  name: string;
+  avatar: string;
+  city: string;
+  interests: string[];
+};
+
+export type Post = {
+  id: string;
+  author: User;
+  content: string;
+  image?: string;
+  timestamp: string;
+  likes: number;
+  comments: number;
+  isAnonymous: boolean;
+};
+
+export type Community = {
+  id: string;
+  name: string;
+  description: string;
+  memberCount: number;
+  image: string;
+  bannerImage: string;
+};
+
+export type Product = {
+  id:string;
+  name: string;
+  seller: User;
+  price: number;
+  image: string;
+  rating: number;
+  reviewCount: number;
+};
+
+export const users: User[] = [
+  { id: 'u1', name: 'Priya Sharma', avatar: '/assets/user-1.jpg', city: 'Mumbai', interests: ['Cooking', 'Yoga', 'Reading'] },
+  { id: 'u2', name: 'Anjali Singh', avatar: '/assets/user-2.jpg', city: 'Delhi', interests: ['Gardening', 'Business', 'Movies'] },
+  { id: 'u3', name: 'Sneha Patel', avatar: '/assets/user-3.jpg', city: 'Bangalore', interests: ['Technology', 'Startups', 'Travel'] },
+  { id: 'u4', name: 'Meera Das', avatar: '/assets/user-4.jpg', city: 'Kolkata', interests: ['Art', 'Music', 'History'] },
+  { id: 'u5', name: 'Lakshmi Rao', avatar: '/assets/user-5.jpg', city: 'Chennai', interests: ['Finance', 'Investment', 'Crafts'] },
+];
+
+export const communities: Community[] = [
+  {
+    id: 'comm1',
+    name: 'Hyderabad Ladies',
+    description: 'A space for all women in Hyderabad to connect, share, and grow together.',
+    memberCount: 1200,
+    image: 'https://picsum.photos/seed/commArt/400/300',
+    bannerImage: 'https://picsum.photos/seed/comm1/1200/400'
+  },
+  {
+    id: 'comm2',
+    name: 'Parenting Circle',
+    description: 'Join our circle of moms to share the joys and challenges of motherhood.',
+    memberCount: 850,
+    image: 'https://picsum.photos/seed/commRead/400/300',
+    bannerImage: 'https://picsum.photos/seed/comm4/1200/400'
+  },
+  {
+    id: 'comm3',
+    name: 'Women in Business',
+    description: 'A network for female entrepreneurs to collaborate and support each other.',
+    memberCount: 2500,
+    image: 'https://picsum.photos/seed/commGarden/400/300',
+    bannerImage: 'https://picsum.photos/seed/comm3/1200/400'
+  },
+  {
+    id: 'comm4',
+    name: 'Fitness & Yoga',
+    description: 'Your daily dose of motivation for a healthy body and mind.',
+    memberCount: 5300,
+    image: 'https://picsum.photos/seed/commTravel/400/300',
+    bannerImage: 'https://picsum.photos/seed/comm2/1200/400'
+  },
+];
+
+export const posts: Post[] = [
+  {
+    id: 'p1',
+    author: users[0],
+    content: "Just tried a new recipe for paneer butter masala and it turned out amazing! Who wants the recipe? 😋 #cooking #indianfood",
+    timestamp: "2h ago",
+    likes: 45,
+    comments: 12,
+    isAnonymous: false,
+    image: 'https://picsum.photos/seed/post1/600/400'
+  },
+  {
+    id: 'p2',
+    author: users[2],
+    content: "Feeling incredibly stressed with work lately. It's hard to find a balance. Any tips for managing work-life balance as an entrepreneur?",
+    timestamp: "5h ago",
+    likes: 120,
+    comments: 34,
+    isAnonymous: true,
+  },
+  {
+    id: 'p3',
+    author: users[1],
+    content: "My little one said their first word today! My heart is so full. ❤️ #momlife #parenting",
+    timestamp: "1d ago",
+    likes: 210,
+    comments: 56,
+    isAnonymous: false,
+    image: 'https://picsum.photos/seed/post2/600/400'
+  }
+];
+
+export const products: Product[] = [
+  { id: 'prod1', name: 'Handmade Scented Candles', seller: users[4], price: 499, image: 'https://picsum.photos/seed/product1/400/300', rating: 4.8, reviewCount: 150 },
+  { id: 'prod2', name: 'Gourmet Chocolate Box', seller: users[1], price: 899, image: 'https://picsum.photos/seed/product2/400/300', rating: 4.9, reviewCount: 210 },
+  { id: 'prod3', name: 'Embroidered Kurti', seller: users[3], price: 1299, image: 'https://picsum.photos/seed/product3/400/300', rating: 4.7, reviewCount: 95 },
+  { id: 'prod4', name: 'Terracotta Wall Art', seller: users[0], price: 750, image: 'https://picsum.photos/seed/product4/400/300', rating: 4.8, reviewCount: 88 },
+  { id: 'prod5', name: 'Organic Rose Water Toner', seller: users[4], price: 350, image: 'https://picsum.photos/seed/product5/400/300', rating: 4.9, reviewCount: 302 },
+  { id: 'prod6', name: 'Custom Calligraphy Service', seller: users[3], price: 1500, image: 'https://picsum.photos/seed/product6/400/300', rating: 5.0, reviewCount: 45 },
+];
+
+export const kittyGroups = [
+  {
+    id: 'k1',
+    name: "Sakhi's Monthly Meet",
+    members: 12,
+    nextTurn: 'Anjali Singh',
+    contribution: 2000,
+    nextDate: 'July 25, 2024'
+  },
+  {
+    id: 'k2',
+    name: 'City Friends Club',
+    members: 15,
+    nextTurn: 'Priya Sharma',
+    contribution: 1000,
+    nextDate: 'August 5, 2024'
+  },
+  {
+    id: 'k3',
+    name: "Wonder Women's Kitty",
+    members: 10,
+    nextTurn: 'Meera Das',
+    contribution: 5000,
+    nextDate: 'July 30, 2024'
+  }
+]
