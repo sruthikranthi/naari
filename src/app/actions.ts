@@ -3,6 +3,7 @@ import {
   aiPoweredChatSafety,
   type AIPoweredChatSafetyOutput,
 } from '@/ai/flows/ai-powered-chat-safety';
+import { textToSpeech, type TextToSpeechOutput } from '@/ai/flows/text-to-speech';
 import { z } from 'zod';
 
 const safetyCheckSchema = z.object({
@@ -38,5 +39,37 @@ export async function checkMessageSafety(
   } catch (e) {
     console.error(e);
     return { error: 'Failed to analyze message.', message: '' };
+  }
+}
+
+const ttsSchema = z.object({
+  text: z.string(),
+});
+
+type TtsState = {
+  result?: TextToSpeechOutput;
+  error?: string;
+};
+
+export async function getAudio(
+  prevState: TtsState,
+  formData: FormData
+): Promise<TtsState> {
+  const validatedFields = ttsSchema.safeParse({
+    text: formData.get('text'),
+  });
+
+  if (!validatedFields.success) {
+    return {
+      error: 'Text is required.',
+    };
+  }
+
+  try {
+    const result = await textToSpeech(validatedFields.data.text);
+    return { result };
+  } catch (e) {
+    console.error(e);
+    return { error: 'Failed to generate audio.' };
   }
 }
