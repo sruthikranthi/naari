@@ -38,6 +38,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import Link from 'next/link';
 
 const tools = [
   { icon: ClipboardList, name: 'Contribution Tracker' },
@@ -98,7 +99,9 @@ export default function KittyGroupsPage() {
                 </div>
                 <Separator />
                 <div className="flex justify-end">
-                  <Button>Manage Group</Button>
+                  <Button asChild>
+                    <Link href={`/dashboard/kitty-groups/${group.id}`}>Manage Group</Link>
+                  </Button>
                 </div>
               </CardContent>
             </Card>
