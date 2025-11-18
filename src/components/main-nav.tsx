@@ -9,6 +9,7 @@ import {
   MessageCircle,
   HeartPulse,
   BookOpen,
+  Ticket,
 } from 'lucide-react';
 
 import {
@@ -26,6 +27,7 @@ const navItems = [
   { href: '/dashboard/chat', icon: MessageCircle, label: 'Chat' },
   { href: '/dashboard/wellness', icon: HeartPulse, label: 'Wellness' },
   { href: '/dashboard/learning', icon: BookOpen, label: 'Learning' },
+  { href: '/dashboard/tambola', icon: Ticket, label: 'Tambola' },
 ];
 
 export function MainNav() {
