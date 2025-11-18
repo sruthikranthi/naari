@@ -1,9 +1,15 @@
+
 export type User = {
   id: string;
   name: string;
   avatar: string;
   city: string;
   interests: string[];
+};
+
+export type PollOption = {
+  text: string;
+  votes: number;
 };
 
 export type Post = {
@@ -15,6 +21,7 @@ export type Post = {
   likes: number;
   comments: number;
   isAnonymous: boolean;
+  pollOptions?: PollOption[];
 };
 
 export type Community = {
@@ -89,6 +96,20 @@ export const posts: Post[] = [
     comments: 12,
     isAnonymous: false,
     image: 'https://picsum.photos/seed/post1/600/400'
+  },
+  {
+    id: 'p4',
+    author: users[3],
+    content: "What should be our next kitty party theme?",
+    timestamp: "3h ago",
+    likes: 25,
+    comments: 18,
+    isAnonymous: false,
+    pollOptions: [
+      { text: 'Bollywood Retro', votes: 42 },
+      { text: 'Masquerade Ball', votes: 28 },
+      { text: '90s Nostalgia', votes: 15 },
+    ]
   },
   {
     id: 'p2',

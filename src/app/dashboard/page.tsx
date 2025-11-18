@@ -1,7 +1,9 @@
+
 import { CreatePost } from '@/components/create-post';
 import { PostCard } from '@/components/post-card';
 import { Stories } from '@/components/stories';
 import { Suggestions } from '@/components/suggestions';
+import { TrendingHashtags } from '@/components/trending-hashtags';
 import { posts } from '@/lib/mock-data';
 
 export default function DashboardPage() {
@@ -21,6 +23,7 @@ export default function DashboardPage() {
       {/* Sidebar */}
       <div className="sticky top-20 hidden space-y-6 lg:block">
         <Suggestions />
+        <TrendingHashtags />
       </div>
     </div>
   );

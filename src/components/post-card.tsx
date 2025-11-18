@@ -1,5 +1,6 @@
+
 import Image from 'next/image';
-import { Heart, MessageCircle, Share2 } from 'lucide-react';
+import { Heart, MessageCircle, Share2, BarChart } from 'lucide-react';
 import type { Post } from '@/lib/mock-data';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -9,12 +10,15 @@ import {
   CardFooter,
   CardHeader,
 } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
 
 export function PostCard({ post }: { post: Post }) {
   const authorName = post.isAnonymous ? 'Anonymous Sakhi' : post.author.name;
   const authorAvatar = post.isAnonymous
     ? 'https://picsum.photos/seed/anonymous/100/100'
-    : 'https://picsum.photos/seed/user1/100/100';
+    : `https://picsum.photos/seed/${post.author.id}/100/100`;
+  
+  const totalVotes = post.pollOptions?.reduce((acc, option) => acc + option.votes, 0) || 0;
 
   return (
     <Card>
@@ -44,6 +48,29 @@ export function PostCard({ post }: { post: Post }) {
               className="object-cover"
               data-ai-hint="social media lifestyle"
             />
+          </div>
+        )}
+        {post.pollOptions && (
+          <div className="space-y-3 rounded-lg border p-4">
+            <div className='flex items-center gap-2 font-medium text-sm'>
+              <BarChart className="h-4 w-4" />
+              <span>Poll</span>
+            </div>
+            <div className="space-y-2">
+            {post.pollOptions.map((option, index) => {
+              const votePercentage = totalVotes > 0 ? (option.votes / totalVotes) * 100 : 0;
+              return (
+                <div key={index} className="space-y-1">
+                  <div className="flex justify-between text-xs">
+                    <span className="font-medium">{option.text}</span>
+                    <span className="text-muted-foreground">{votePercentage.toFixed(0)}%</span>
+                  </div>
+                  <Progress value={votePercentage} className="h-2" />
+                </div>
+              );
+            })}
+            </div>
+             <p className="text-xs text-muted-foreground">{totalVotes} votes</p>
           </div>
         )}
       </CardContent>
