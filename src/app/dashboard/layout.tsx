@@ -36,6 +36,7 @@ const navItems = [
 ];
 
 function MainNav() {
+  'use client';
   const { isMobile } = useSidebar();
   return (
     <SidebarMenu>
