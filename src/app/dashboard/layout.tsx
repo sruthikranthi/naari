@@ -15,47 +15,15 @@ import {
   SidebarContent,
   SidebarHeader,
   SidebarInset,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
   SidebarProvider,
   SidebarTrigger,
-  useSidebar,
 } from '@/components/ui/sidebar';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/logo';
 import { UserNav } from '@/components/user-nav';
+import { MainNav } from '@/components/main-nav';
 
-const navItems = [
-  { href: '/dashboard', icon: Home, label: 'Dashboard' },
-  { href: '/dashboard/communities', icon: Users, label: 'Communities' },
-  { href: '/dashboard/marketplace', icon: Store, label: 'Marketplace' },
-  { href: '/dashboard/kitty-groups', icon: Wallet, label: 'Kitty Groups' },
-  { href: '/dashboard/chat', icon: MessageCircle, label: 'Chat' },
-];
-
-function MainNav() {
-  'use client';
-  const { isMobile } = useSidebar();
-  return (
-    <SidebarMenu>
-      {navItems.map((item) => (
-        <SidebarMenuItem key={item.label}>
-          <Link href={item.href} className="w-full">
-            <SidebarMenuButton
-              tooltip={isMobile ? undefined : item.label}
-              className="w-full justify-start"
-            >
-              <item.icon className="size-5" />
-              <span>{item.label}</span>
-            </SidebarMenuButton>
-          </Link>
-        </SidebarMenuItem>
-      ))}
-    </SidebarMenu>
-  );
-}
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (

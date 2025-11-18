@@ -1,0 +1,46 @@
+'use client';
+
+import Link from 'next/link';
+import {
+  Home,
+  Users,
+  Store,
+  Wallet,
+  MessageCircle,
+} from 'lucide-react';
+
+import {
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  useSidebar,
+} from '@/components/ui/sidebar';
+
+const navItems = [
+  { href: '/dashboard', icon: Home, label: 'Dashboard' },
+  { href: '/dashboard/communities', icon: Users, label: 'Communities' },
+  { href: '/dashboard/marketplace', icon: Store, label: 'Marketplace' },
+  { href: '/dashboard/kitty-groups', icon: Wallet, label: 'Kitty Groups' },
+  { href: '/dashboard/chat', icon: MessageCircle, label: 'Chat' },
+];
+
+export function MainNav() {
+  const { isMobile } = useSidebar();
+  return (
+    <SidebarMenu>
+      {navItems.map((item) => (
+        <SidebarMenuItem key={item.label}>
+          <Link href={item.href} className="w-full">
+            <SidebarMenuButton
+              tooltip={isMobile ? undefined : item.label}
+              className="w-full justify-start"
+            >
+              <item.icon className="size-5" />
+              <span>{item.label}</span>
+            </SidebarMenuButton>
+          </Link>
+        </SidebarMenuItem>
+      ))}
+    </SidebarMenu>
+  );
+}
