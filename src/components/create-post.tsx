@@ -1,6 +1,6 @@
 
 'use client';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -8,13 +8,16 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { users } from '@/lib/mock-data';
-import { BarChart, Image as ImageIcon, X } from 'lucide-react';
+import { BarChart, Image as ImageIcon, Video, X } from 'lucide-react';
 import { Input } from './ui/input';
 
 export function CreatePost() {
   const user = users[0];
   const [showPoll, setShowPoll] = useState(false);
   const [pollOptions, setPollOptions] = useState(['', '']);
+  const [mediaPreview, setMediaPreview] = useState<string | null>(null);
+  const [mediaType, setMediaType] = useState<'image' | 'video' | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const addPollOption = () => {
     if (pollOptions.length < 4) {
@@ -35,6 +38,31 @@ export function CreatePost() {
     newOptions[index] = value;
     setPollOptions(newOptions);
   };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const url = URL.createObjectURL(file);
+      setMediaPreview(url);
+      setMediaType(file.type.startsWith('image/') ? 'image' : 'video');
+      setShowPoll(false);
+    }
+  };
+
+  const triggerFileSelect = (accept: string) => {
+    if (fileInputRef.current) {
+      fileInputRef.current.accept = accept;
+      fileInputRef.current.click();
+    }
+  };
+  
+  const removeMedia = () => {
+      setMediaPreview(null);
+      setMediaType(null);
+      if(fileInputRef.current) {
+          fileInputRef.current.value = '';
+      }
+  }
 
 
   return (
@@ -61,7 +89,25 @@ export function CreatePost() {
               rows={3}
             />
 
-            {showPoll && (
+            {mediaPreview && (
+                <div className="relative">
+                    {mediaType === 'image' ? (
+                    <img src={mediaPreview} alt="Preview" className="max-h-80 w-full rounded-lg object-contain" />
+                    ) : (
+                    <video src={mediaPreview} controls className="max-h-80 w-full rounded-lg" />
+                    )}
+                    <Button
+                        variant="destructive"
+                        size="icon"
+                        className="absolute top-2 right-2 h-6 w-6"
+                        onClick={removeMedia}
+                    >
+                        <X className="h-4 w-4" />
+                    </Button>
+              </div>
+            )}
+
+            {showPoll && !mediaPreview && (
               <div className="space-y-2">
                 <Label>Poll Options</Label>
                 {pollOptions.map((option, index) => (
@@ -88,10 +134,19 @@ export function CreatePost() {
             
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1">
-                <Button variant="ghost" size="icon">
+                <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                    className="hidden"
+                />
+                <Button variant="ghost" size="icon" onClick={() => triggerFileSelect('image/*')}>
                   <ImageIcon className="text-muted-foreground" />
                 </Button>
-                <Button variant="ghost" size="icon" onClick={() => setShowPoll(!showPoll)}>
+                <Button variant="ghost" size="icon" onClick={() => triggerFileSelect('video/*')}>
+                  <Video className="text-muted-foreground" />
+                </Button>
+                <Button variant="ghost" size="icon" onClick={() => { setShowPoll(!showPoll); removeMedia(); }}>
                   <BarChart className="text-muted-foreground" />
                 </Button>
               </div>
