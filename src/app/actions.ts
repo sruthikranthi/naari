@@ -46,10 +46,9 @@ const ttsSchema = z.object({
   text: z.string(),
 });
 
-export const TextToSpeechOutputSchema = z.object({
-  media: z.string().describe('The base64 encoded audio data as a data URI.'),
-});
-export type TextToSpeechOutput = z.infer<typeof TextToSpeechOutputSchema>;
+export type TextToSpeechOutput = {
+  media: string;
+};
 
 type TtsState = {
   result?: TextToSpeechOutput;

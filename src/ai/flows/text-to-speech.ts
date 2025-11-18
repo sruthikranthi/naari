@@ -11,8 +11,11 @@ import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import wav from 'wav';
 import type { TextToSpeechOutput } from '@/app/actions';
-import { TextToSpeechOutputSchema } from '@/app/actions';
 
+
+const TextToSpeechOutputSchema = z.object({
+  media: z.string().describe('The base64 encoded audio data as a data URI.'),
+});
 
 async function toWav(
   pcmData: Buffer,
