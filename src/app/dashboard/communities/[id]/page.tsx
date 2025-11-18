@@ -43,12 +43,12 @@ const communityEvents = [
 ];
 
 export default function CommunityDetailPage({
-  params,
+  params: { id },
 }: {
   params: { id: string };
 }) {
   const { toast } = useToast();
-  const community = communities.find((c) => c.id === params.id);
+  const community = communities.find((c) => c.id === id);
   const communityMembers = users.slice(0, 4);
 
   if (!community) {

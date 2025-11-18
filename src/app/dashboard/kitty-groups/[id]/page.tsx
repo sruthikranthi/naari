@@ -1,4 +1,3 @@
-
 'use client';
 
 import { notFound } from 'next/navigation';
@@ -46,12 +45,12 @@ import { cn } from '@/lib/utils';
 
 
 export default function KittyGroupDetailPage({
-  params,
+  params: { id },
 }: {
   params: { id: string };
 }) {
   const { toast } = useToast();
-  const group = kittyGroups.find((g) => g.id === params.id);
+  const group = kittyGroups.find((g) => g.id === id);
   const groupMembers = users.slice(0, group?.members);
 
   if (!group) {
