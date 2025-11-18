@@ -8,8 +8,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { users } from '@/lib/mock-data';
-import { BarChart, Image as ImageIcon, Video, X } from 'lucide-react';
+import { BarChart, Image as ImageIcon, Video, X, Camera } from 'lucide-react';
 import { Input } from './ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
+import { CameraCapture } from './camera-capture';
 
 export function CreatePost() {
   const user = users[0];
@@ -18,6 +20,7 @@ export function CreatePost() {
   const [mediaPreview, setMediaPreview] = useState<string | null>(null);
   const [mediaType, setMediaType] = useState<'image' | 'video' | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
 
   const addPollOption = () => {
     if (pollOptions.length < 4) {
@@ -63,6 +66,13 @@ export function CreatePost() {
           fileInputRef.current.value = '';
       }
   }
+
+  const handleMediaCaptured = (dataUrl: string, type: 'image' | 'video') => {
+    setMediaPreview(dataUrl);
+    setMediaType(type);
+    setIsCameraOpen(false);
+    setShowPoll(false);
+  };
 
 
   return (
@@ -146,6 +156,19 @@ export function CreatePost() {
                 <Button variant="ghost" size="icon" onClick={() => triggerFileSelect('video/*')}>
                   <Video className="text-muted-foreground" />
                 </Button>
+                 <Dialog open={isCameraOpen} onOpenChange={setIsCameraOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="ghost" size="icon">
+                      <Camera className="text-muted-foreground" />
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                      <DialogTitle>Capture Selfie</DialogTitle>
+                    </DialogHeader>
+                    <CameraCapture onMediaCaptured={handleMediaCaptured} />
+                  </DialogContent>
+                </Dialog>
                 <Button variant="ghost" size="icon" onClick={() => { setShowPoll(!showPoll); removeMedia(); }}>
                   <BarChart className="text-muted-foreground" />
                 </Button>
@@ -169,3 +192,4 @@ export function CreatePost() {
     </Card>
   );
 }
+
