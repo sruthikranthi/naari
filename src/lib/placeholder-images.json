@@ -125,6 +125,42 @@
       "description": "Image for a social media post about travel",
       "imageUrl": "https://images.unsplash.com/photo-1611080402167-ed75bae6df32?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxtb3VudGFpbiUyMGxhbmRzY2FwZXxlbnwwfHx8fDE3NjMzOTE5ODd8MA&ixlib=rb-4.1.0&q=80&w=1080",
       "imageHint": "mountain landscape"
+    },
+    {
+      "id": "course-business1",
+      "description": "Image for a business course",
+      "imageUrl": "https://images.unsplash.com/photo-1556740738-b6a63e27c4df?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxzbWFsbCUyMGJ1c2luZXNzfGVufDB8fHx8MTc2MzQ1NDc1M3ww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "small business"
+    },
+    {
+      "id": "course-business2",
+      "description": "Image for a digital marketing course",
+      "imageUrl": "https://images.unsplash.com/photo-1557862921-37829c790f19?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxkaWdpdGFsJTIwbWFya2V0aW5nfGVufDB8fHx8MTc2MzQ1NDc1M3ww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "digital marketing"
+    },
+    {
+      "id": "course-beauty1",
+      "description": "Image for a makeup course",
+      "imageUrl": "https://images.unsplash.com/photo-1596704017254-9b121068fb31?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxtYWtldXAlMjB0dXRvcmlhbHxlbnwwfHx8fDE3NjM0NTQ3NTN8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "makeup tutorial"
+    },
+    {
+      "id": "course-wellness1",
+      "description": "Image for a meditation course",
+      "imageUrl": "https://images.unsplash.com/photo-1506126613408-eca07ce68773?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxtZWRpdGF0aW9ufGVufDB8fHx8MTc2MzQ1NDc1M3ww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "meditation"
+    },
+    {
+      "id": "course-crafts1",
+      "description": "Image for a sewing course",
+      "imageUrl": "https://images.unsplash.com/photo-1549298241-e84c478a5359?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxzZXdpbmd8ZW58MHx8fHwxNzYzNDU0NzUzfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "sewing"
+    },
+    {
+      "id": "course-wellness2",
+      "description": "Image for a nutrition course",
+      "imageUrl": "https://images.unsplash.com/photo-1490645935967-10de6ba17025?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxudXRyaXRpb258ZW58MHx8fHwxNzYzNDU0NzUzfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "nutrition"
     }
   ]
 }

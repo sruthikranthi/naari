@@ -43,6 +43,17 @@ export type Product = {
   reviewCount: number;
 };
 
+export type Course = {
+  id: string;
+  title: string;
+  category: 'Business' | 'Beauty' | 'Health & Wellness' | 'Crafts';
+  instructor: string;
+  duration: string;
+  image: string;
+  level: 'Beginner' | 'Intermediate' | 'Advanced';
+};
+
+
 export const users: User[] = [
   { id: 'u1', name: 'Priya Sharma', avatar: '/assets/user-1.jpg', city: 'Mumbai', interests: ['Cooking', 'Yoga', 'Reading'] },
   { id: 'u2', name: 'Anjali Singh', avatar: '/assets/user-2.jpg', city: 'Delhi', interests: ['Gardening', 'Business', 'Movies'] },
@@ -166,4 +177,61 @@ export const kittyGroups = [
     contribution: 5000,
     nextDate: 'July 30, 2024'
   }
-]
+];
+
+export const courses: Course[] = [
+  {
+    id: 'c1',
+    title: 'Home Business 101',
+    category: 'Business',
+    instructor: 'Sneha Patel',
+    duration: '4 Weeks',
+    image: 'https://picsum.photos/seed/course-business1/600/400',
+    level: 'Beginner',
+  },
+  {
+    id: 'c2',
+    title: 'Digital Marketing for Entrepreneurs',
+    category: 'Business',
+    instructor: 'Lakshmi Rao',
+    duration: '6 Weeks',
+    image: 'https://picsum.photos/seed/course-business2/600/400',
+    level: 'Intermediate',
+  },
+  {
+    id: 'c3',
+    title: 'Intro to Pro Makeup',
+    category: 'Beauty',
+    instructor: 'Anjali Singh',
+    duration: '5 Sessions',
+    image: 'https://picsum.photos/seed/course-beauty1/600/400',
+    level: 'Beginner',
+  },
+  {
+    id: 'c4',
+    title: 'Mindfulness and Meditation',
+    category: 'Health & Wellness',
+    instructor: 'Priya Sharma',
+    duration: '4 Weeks',
+    image: 'https://picsum.photos/seed/course-wellness1/600/400',
+    level: 'Beginner',
+  },
+  {
+    id: 'c5',
+    title: 'Advanced Sewing Techniques',
+    category: 'Crafts',
+    instructor: 'Meera Das',
+    duration: '8 Weeks',
+    image: 'https://picsum.photos/seed/course-crafts1/600/400',
+    level: 'Advanced',
+  },
+  {
+    id: 'c6',
+    title: 'Nutrition for a Healthy Life',
+    category: 'Health & Wellness',
+    instructor: 'Dr. Rina Verma',
+    duration: '6 Sessions',
+    image: 'https://picsum.photos/seed/course-wellness2/600/400',
+    level: 'Intermediate',
+  },
+];
