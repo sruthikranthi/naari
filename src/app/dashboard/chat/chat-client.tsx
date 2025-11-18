@@ -1,5 +1,5 @@
 'use client';
-import { useState, useActionState } from 'react';
+import { useState, useActionState, useEffect } from 'react';
 import { useFormStatus } from 'react-dom';
 import {
   AlertCircle,
@@ -7,6 +7,13 @@ import {
   Image as ImageIcon,
   Shield,
   Smile,
+  MessageCircle,
+  CheckCheck,
+  Pin,
+  MoreVertical,
+  ThumbsUp,
+  Heart,
+  Laugh,
 } from 'lucide-react';
 
 import { checkMessageSafety } from '@/app/actions';
@@ -26,6 +33,12 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -40,8 +53,19 @@ export function ChatClient() {
   const [safeMode, setSafeMode] = useState(false);
   const [initialState, _] = useState({ message: '' });
   const [state, formAction] = useActionState(checkMessageSafety, initialState);
+  const [activeChatId, setActiveChatId] = useState('u2');
+  const [isTyping, setIsTyping] = useState(false);
 
-  const activeChatUser = users[1];
+  useEffect(() => {
+    if (activeChatId !== 'self') {
+      setIsTyping(true);
+      const timeout = setTimeout(() => setIsTyping(false), 2000);
+      return () => clearTimeout(timeout);
+    }
+  }, [activeChatId]);
+
+
+  const activeChatUser = users.find(u => u.id === activeChatId);
 
   const safetyScoreColor = (score: number) => {
     if (score < 40) return 'bg-destructive text-destructive-foreground';
@@ -49,24 +73,32 @@ export function ChatClient() {
     return 'bg-green-600 text-white';
   };
 
+  const selfUser = users[0];
+  const chatListUsers = [
+      { id: 'self', name: 'Notes to Self', avatar: selfUser.avatar },
+      ...users.slice(1),
+  ];
+
+
   return (
     <div className="grid h-[calc(100vh-10rem)] grid-cols-1 md:grid-cols-3 lg:grid-cols-4">
       {/* Conversation List */}
       <div className="hidden flex-col border-r bg-card md:flex">
         <div className="p-4">
-          <h2 className="text-2xl font-bold font-headline">Chats</h2>
+          <h2 className="font-headline text-2xl font-bold">Chats</h2>
         </div>
         <div className="flex-1 overflow-auto">
-          {users.map((user) => (
+          {chatListUsers.map((user) => (
             <div
               key={user.id}
               className={`flex cursor-pointer items-center gap-3 p-3 ${
-                user.id === activeChatUser.id ? 'bg-muted' : 'hover:bg-muted'
+                user.id === activeChatId ? 'bg-muted' : 'hover:bg-muted'
               }`}
+              onClick={() => setActiveChatId(user.id)}
             >
               <Avatar>
                 <AvatarImage
-                  src={`https://picsum.photos/seed/${user.id}/100/100`}
+                  src={user.id === 'self' ? `https://picsum.photos/seed/user1/100/100` : `https://picsum.photos/seed/${user.id}/100/100`}
                   alt={user.name}
                   data-ai-hint="woman portrait"
                 />
@@ -80,7 +112,7 @@ export function ChatClient() {
               <div className="flex-1 overflow-hidden">
                 <p className="truncate font-semibold">{user.name}</p>
                 <p className="truncate text-sm text-muted-foreground">
-                  Last message preview...
+                  {user.id === 'self' ? 'My private notes...' : 'Last message preview...'}
                 </p>
               </div>
             </div>
@@ -92,20 +124,36 @@ export function ChatClient() {
       <div className="flex flex-col md:col-span-2 lg:col-span-3">
         <header className="flex items-center justify-between border-b bg-card p-4">
           <div className="flex items-center gap-3">
-            <Avatar>
-              <AvatarImage
-                src={`https://picsum.photos/seed/${activeChatUser.id}/100/100`}
-                alt={activeChatUser.name}
-                data-ai-hint="woman nature"
-              />
-              <AvatarFallback>
-                {activeChatUser.name
-                  .split(' ')
-                  .map((n) => n[0])
-                  .join('')}
-              </AvatarFallback>
-            </Avatar>
-            <p className="font-semibold">{activeChatUser.name}</p>
+             {activeChatUser && (
+                <>
+                    <Avatar>
+                    <AvatarImage
+                        src={`https://picsum.photos/seed/${activeChatUser.id}/100/100`}
+                        alt={activeChatUser.name}
+                        data-ai-hint="woman nature"
+                    />
+                    <AvatarFallback>
+                        {activeChatUser.name
+                        .split(' ')
+                        .map((n) => n[0])
+                        .join('')}
+                    </AvatarFallback>
+                    </Avatar>
+                    <div>
+                        <p className="font-semibold">{activeChatUser.name}</p>
+                        {isTyping && <p className="text-xs text-primary">typing...</p>}
+                    </div>
+                </>
+             )}
+             {activeChatId === 'self' && (
+                <>
+                    <Avatar>
+                        <AvatarImage src={`https://picsum.photos/seed/user1/100/100`} alt="Notes to Self" data-ai-hint="journal book"/>
+                        <AvatarFallback>NS</AvatarFallback>
+                    </Avatar>
+                     <p className="font-semibold">Notes to Self</p>
+                </>
+             )}
           </div>
           <div className="flex items-center gap-2">
             <Switch
@@ -118,26 +166,38 @@ export function ChatClient() {
             </Label>
           </div>
         </header>
+        
+        {/* Pinned Message */}
+        <div className="border-b bg-secondary/30 p-2 text-center text-sm text-muted-foreground">
+            <div className="flex items-center justify-center gap-2">
+                <Pin className="h-3 w-3" />
+                <span>Let's catch up on Friday at 5 PM!</span>
+            </div>
+        </div>
+
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto bg-background/50 p-6">
-          <div className="space-y-4">
+          <div className="space-y-1">
             {/* Example messages */}
-            <div className="flex items-end gap-3">
-              <Avatar className="h-8 w-8">
+            <div className="group relative flex items-end gap-3">
+              {activeChatUser && <Avatar className="h-8 w-8">
                 <AvatarImage
                   src={`https://picsum.photos/seed/${activeChatUser.id}/100/100`}
                   alt={activeChatUser.name}
                   data-ai-hint="woman nature"
                 />
                 <AvatarFallback>AS</AvatarFallback>
-              </Avatar>
-              <div className="max-w-xs rounded-lg bg-card p-3 shadow-sm">
+              </Avatar>}
+              <div className="max-w-xs rounded-lg rounded-bl-none bg-card p-3 shadow-sm">
                 <p className="text-sm">Hey! How are you doing?</p>
               </div>
+                <div className="absolute top-0 right-full mr-2 hidden group-hover:block">
+                    <MessageReactions />
+                </div>
             </div>
-            <div className="flex items-end justify-end gap-3">
-              <div className="max-w-xs rounded-lg bg-primary p-3 text-primary-foreground shadow-sm">
+            <div className="group relative flex items-end justify-end gap-3">
+              <div className="max-w-xs rounded-lg rounded-br-none bg-primary p-3 text-primary-foreground shadow-sm">
                 <p className="text-sm">
                   I'm doing great, thanks for asking! Just working on some
                   projects.
@@ -151,6 +211,13 @@ export function ChatClient() {
                 />
                 <AvatarFallback>PS</AvatarFallback>
               </Avatar>
+               <div className="absolute top-0 left-full ml-2 hidden group-hover:block">
+                    <MessageReactions />
+                </div>
+            </div>
+             <div className="flex items-center justify-end gap-2 text-xs text-muted-foreground">
+                <span>Seen</span>
+                <CheckCheck className="h-4 w-4 text-primary" />
             </div>
           </div>
         </div>
@@ -180,7 +247,7 @@ export function ChatClient() {
               <CardFooter className="flex items-center justify-between px-4 pb-4">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Shield className="h-4 w-4 text-primary" />
-                  <span>Your chat is secure.</span>
+                  <span>AI-powered safety is active.</span>
                 </div>
                 <div className="flex gap-2">
                   <SubmitButton />
@@ -232,4 +299,22 @@ export function ChatClient() {
       </div>
     </div>
   );
+}
+
+
+function MessageReactions() {
+    const reactions = [
+        { icon: ThumbsUp, label: "Like" },
+        { icon: Heart, label: "Love" },
+        { icon: Laugh, label: "Haha" },
+    ]
+    return (
+        <div className="flex items-center gap-1 rounded-full bg-card p-1 shadow-md">
+            {reactions.map(r => (
+                <Button key={r.label} variant="ghost" size="icon" className="h-7 w-7">
+                    <r.icon className="h-4 w-4" />
+                </Button>
+            ))}
+        </div>
+    )
 }
