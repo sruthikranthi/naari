@@ -15,10 +15,29 @@ import {
   Trophy,
   ClipboardList,
   Cake,
+  Plus,
 } from 'lucide-react';
 import { kittyGroups } from '@/lib/mock-data';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+  DialogClose,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 const tools = [
   { icon: ClipboardList, name: 'Contribution Tracker' },
@@ -103,7 +122,78 @@ export default function KittyGroupsPage() {
               </div>
             </CardContent>
           </Card>
-          <Button className="w-full">Create New Kitty Group</Button>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button className="w-full">
+                <Plus className="mr-2 h-4 w-4" />
+                Create New Kitty Group
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>Create New Kitty Group</DialogTitle>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="name" className="text-right">
+                    Name
+                  </Label>
+                  <Input
+                    id="name"
+                    placeholder="e.g., Sakhi's Monthly Meet"
+                    className="col-span-3"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="contribution" className="text-right">
+                    Contribution
+                  </Label>
+                  <div className="relative col-span-3">
+                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">
+                      ₹
+                    </span>
+                    <Input
+                      id="contribution"
+                      type="number"
+                      placeholder="2000"
+                      className="pl-7"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="members" className="text-right">
+                    Members
+                  </Label>
+                  <Input
+                    id="members"
+                    type="number"
+                    placeholder="12"
+                    className="col-span-3"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="frequency" className="text-right">
+                    Frequency
+                  </Label>
+                  <Select>
+                    <SelectTrigger className="col-span-3">
+                      <SelectValue placeholder="Select frequency" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="monthly">Monthly</SelectItem>
+                      <SelectItem value="bi-weekly">Bi-Weekly</SelectItem>
+                      <SelectItem value="weekly">Weekly</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button type="submit">Create Group</Button>
+                </DialogClose>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
     </div>
