@@ -1,4 +1,7 @@
 
+'use client';
+
+import { useState } from 'react';
 import Image from 'next/image';
 import { Heart, MessageCircle, Share2, BarChart } from 'lucide-react';
 import type { Post } from '@/lib/mock-data';
@@ -11,14 +14,55 @@ import {
   CardHeader,
 } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
+import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 export function PostCard({ post }: { post: Post }) {
+  const { toast } = useToast();
+  const [isLiked, setIsLiked] = useState(false);
+  const [likeCount, setLikeCount] = useState(post.likes);
+
   const authorName = post.isAnonymous ? 'Anonymous Sakhi' : post.author.name;
   const authorAvatar = post.isAnonymous
     ? 'https://picsum.photos/seed/anonymous/100/100'
     : `https://picsum.photos/seed/${post.author.id}/100/100`;
   
   const totalVotes = post.pollOptions?.reduce((acc, option) => acc + option.votes, 0) || 0;
+
+  const handleLike = () => {
+    if (isLiked) {
+      setLikeCount(likeCount - 1);
+    } else {
+      setLikeCount(likeCount + 1);
+    }
+    setIsLiked(!isLiked);
+  };
+  
+  const handleComment = () => {
+    console.log('Comment button clicked for post:', post.id);
+    // In a real app, this would open a comment modal or navigate to a post detail page
+    toast({
+        title: "Comment section coming soon!",
+        description: "You'll be able to comment on posts shortly.",
+    })
+  }
+  
+  const handleShare = () => {
+    const postUrl = `${window.location.origin}/dashboard/post/${post.id}`;
+    navigator.clipboard.writeText(postUrl).then(() => {
+        toast({
+            title: "Link Copied!",
+            description: "The post link has been copied to your clipboard.",
+        })
+    }).catch(err => {
+        console.error('Failed to copy link: ', err);
+        toast({
+            variant: "destructive",
+            title: "Failed to copy",
+            description: "Could not copy the link to your clipboard.",
+        })
+    });
+  }
 
   return (
     <Card>
@@ -75,15 +119,15 @@ export function PostCard({ post }: { post: Post }) {
         )}
       </CardContent>
       <CardFooter className="flex justify-between p-2 px-4">
-        <Button variant="ghost" size="sm" className="flex items-center gap-2">
-          <Heart className="size-4" />
-          <span>{post.likes}</span>
+        <Button variant="ghost" size="sm" className="flex items-center gap-2" onClick={handleLike}>
+          <Heart className={cn("size-4", isLiked && "fill-destructive text-destructive")} />
+          <span>{likeCount}</span>
         </Button>
-        <Button variant="ghost" size="sm" className="flex items-center gap-2">
+        <Button variant="ghost" size="sm" className="flex items-center gap-2" onClick={handleComment}>
           <MessageCircle className="size-4" />
           <span>{post.comments} Comments</span>
         </Button>
-        <Button variant="ghost" size="sm" className="flex items-center gap-2">
+        <Button variant="ghost" size="sm" className="flex items-center gap-2" onClick={handleShare}>
           <Share2 className="size-4" />
           <span>Share</span>
         </Button>
