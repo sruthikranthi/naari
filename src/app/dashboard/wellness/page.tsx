@@ -106,7 +106,7 @@ export default function WellnessPage() {
 
 
   useEffect(() => {
-    if (audioState.result?.media) {
+    if (audioState.result?.media && playingMeditationId) {
       if (audioRef.current) {
         audioRef.current.src = audioState.result.media;
         audioRef.current.play();
@@ -120,27 +120,22 @@ export default function WellnessPage() {
       });
       setPlayingMeditationId(null);
     }
-  }, [audioState, toast]);
+  }, [audioState, toast, playingMeditationId]);
 
-  const handlePlayPause = (meditationId: string, script: string) => {
-    if (playingMeditationId === meditationId) {
-      // Pause the current audio
-      if (audioRef.current) {
-        audioRef.current.pause();
-      }
-      setPlayingMeditationId(null);
-    } else {
-      // If other audio is playing, stop it
-      if (audioRef.current && !audioRef.current.paused) {
-        audioRef.current.pause();
-      }
-
-      setPlayingMeditationId(meditationId);
-      const formData = new FormData();
-      formData.append('text', script);
-      getAudioAction(formData);
+  const handlePlay = (meditationId: string) => {
+    if (audioRef.current && !audioRef.current.paused) {
+      audioRef.current.pause();
     }
+    setPlayingMeditationId(meditationId);
   };
+  
+  const handlePause = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+    }
+    setPlayingMeditationId(null);
+  };
+
 
   const handleAudioEnded = () => {
     setPlayingMeditationId(null);
@@ -232,22 +227,29 @@ export default function WellnessPage() {
                     {meditation.duration}
                   </p>
                 </div>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  onClick={() =>
-                    handlePlayPause(meditation.id, meditation.script)
-                  }
-                  disabled={isPending && playingMeditationId === meditation.id}
-                >
-                  {isPending && playingMeditationId === meditation.id ? (
-                    <Loader className="h-5 w-5 animate-spin" />
-                  ) : playingMeditationId === meditation.id ? (
-                    <Pause className="h-5 w-5" />
-                  ) : (
-                    <Play className="h-5 w-5" />
-                  )}
-                </Button>
+                {playingMeditationId === meditation.id ? (
+                    isPending ? (
+                        <Button size="icon" variant="ghost" disabled>
+                            <Loader className="h-5 w-5 animate-spin" />
+                        </Button>
+                    ) : (
+                        <Button size="icon" variant="ghost" onClick={handlePause}>
+                            <Pause className="h-5 w-5" />
+                        </Button>
+                    )
+                ) : (
+                  <form action={getAudioAction} onSubmit={() => handlePlay(meditation.id)}>
+                    <input type="hidden" name="text" value={meditation.script} />
+                    <Button
+                      type="submit"
+                      size="icon"
+                      variant="ghost"
+                      disabled={isPending}
+                    >
+                      <Play className="h-5 w-5" />
+                    </Button>
+                  </form>
+                )}
               </Card>
             ))}
           </div>
