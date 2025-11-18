@@ -7,6 +7,8 @@ import {
   Store,
   Wallet,
   MessageCircle,
+  HeartPulse,
+  BookOpen,
 } from 'lucide-react';
 
 import {
@@ -22,6 +24,8 @@ const navItems = [
   { href: '/dashboard/marketplace', icon: Store, label: 'Marketplace' },
   { href: '/dashboard/kitty-groups', icon: Wallet, label: 'Kitty Groups' },
   { href: '/dashboard/chat', icon: MessageCircle, label: 'Chat' },
+  { href: '/dashboard/wellness', icon: HeartPulse, label: 'Wellness' },
+  { href: '/dashboard/learning', icon: BookOpen, label: 'Learning' },
 ];
 
 export function MainNav() {
