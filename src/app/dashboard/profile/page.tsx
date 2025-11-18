@@ -1,6 +1,16 @@
 'use client';
 import Image from 'next/image';
-import { Edit, MapPin, Users, Heart, Briefcase, GraduationCap } from 'lucide-react';
+import {
+  Edit,
+  MapPin,
+  Users,
+  Heart,
+  Briefcase,
+  GraduationCap,
+  Award,
+  Star,
+  Baby,
+} from 'lucide-react';
 import { users, posts, communities } from '@/lib/mock-data';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -38,6 +48,13 @@ export default function ProfilePage() {
   const userPosts = posts.filter((p) => p.author.id === user.id);
   const userCommunities = communities.slice(0, 3);
   const userConnections = users.slice(1, 5);
+
+  const userBadges = [
+    { icon: Baby, label: 'Super Mom' },
+    { icon: Briefcase, label: 'Top Seller' },
+    { icon: Award, label: 'Kitty Leader' },
+    { icon: Star, label: 'Helpful Sister' },
+  ];
 
   return (
     <div className="space-y-6">
@@ -92,19 +109,31 @@ export default function ProfilePage() {
                     <Label htmlFor="name" className="text-right">
                       Name
                     </Label>
-                    <Input id="name" defaultValue={user.name} className="col-span-3" />
+                    <Input
+                      id="name"
+                      defaultValue={user.name}
+                      className="col-span-3"
+                    />
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="city" className="text-right">
                       City
                     </Label>
-                    <Input id="city" defaultValue={user.city} className="col-span-3" />
+                    <Input
+                      id="city"
+                      defaultValue={user.city}
+                      className="col-span-3"
+                    />
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="interests" className="text-right">
                       Interests
                     </Label>
-                    <Input id="interests" defaultValue={user.interests.join(', ')} className="col-span-3" />
+                    <Input
+                      id="interests"
+                      defaultValue={user.interests.join(', ')}
+                      className="col-span-3"
+                    />
                   </div>
                 </div>
                 <DialogFooter>
@@ -136,98 +165,140 @@ export default function ProfilePage() {
           </div>
         </TabsContent>
         <TabsContent value="about" className="mt-6">
-            <Card>
-                <CardHeader>
-                    <CardTitle>About {user.name}</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                    <div>
-                        <h3 className="mb-2 font-semibold">Interests</h3>
-                        <div className="flex flex-wrap gap-2">
-                        {user.interests.map((interest) => (
-                            <Badge key={interest} variant="secondary">
-                            {interest}
-                            </Badge>
-                        ))}
-                        </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>About {user.name}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div>
+                <h3 className="mb-2 font-semibold">Interests</h3>
+                <div className="flex flex-wrap gap-2">
+                  {user.interests.map((interest) => (
+                    <Badge key={interest} variant="secondary">
+                      {interest}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <h3 className="mb-2 font-semibold">Badges</h3>
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                  {userBadges.map((badge) => (
+                    <div
+                      key={badge.label}
+                      className="flex flex-col items-center gap-2 rounded-lg bg-secondary p-4"
+                    >
+                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+                        <badge.icon className="h-6 w-6" />
+                      </div>
+                      <p className="text-center text-sm font-medium">
+                        {badge.label}
+                      </p>
                     </div>
-                     <div>
-                        <h3 className="mb-2 font-semibold">Stats</h3>
-                        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-                            <div className="rounded-lg bg-secondary p-3 text-center">
-                                <p className="text-2xl font-bold">{userPosts.length}</p>
-                                <p className="text-sm text-muted-foreground">Posts</p>
-                            </div>
-                            <div className="rounded-lg bg-secondary p-3 text-center">
-                                <p className="text-2xl font-bold">128</p>
-                                <p className="text-sm text-muted-foreground">Likes</p>
-                            </div>
-                             <div className="rounded-lg bg-secondary p-3 text-center">
-                                <p className="text-2xl font-bold">{userConnections.length}</p>
-                                <p className="text-sm text-muted-foreground">Connections</p>
-                            </div>
-                             <div className="rounded-lg bg-secondary p-3 text-center">
-                                <p className="text-2xl font-bold">{userCommunities.length}</p>
-                                <p className="text-sm text-muted-foreground">Communities</p>
-                            </div>
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <h3 className="mb-2 font-semibold">Stats</h3>
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                  <div className="rounded-lg bg-secondary p-3 text-center">
+                    <p className="text-2xl font-bold">{userPosts.length}</p>
+                    <p className="text-sm text-muted-foreground">Posts</p>
+                  </div>
+                  <div className="rounded-lg bg-secondary p-3 text-center">
+                    <p className="text-2xl font-bold">128</p>
+                    <p className="text-sm text-muted-foreground">Likes</p>
+                  </div>
+                  <div className="rounded-lg bg-secondary p-3 text-center">
+                    <p className="text-2xl font-bold">
+                      {userConnections.length}
+                    </p>
+                    <p className="text-sm text-muted-foreground">Connections</p>
+                  </div>
+                  <div className="rounded-lg bg-secondary p-3 text-center">
+                    <p className="text-2xl font-bold">
+                      {userCommunities.length}
+                    </p>
+                    <p className="text-sm text-muted-foreground">Communities</p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
         <TabsContent value="connections" className="mt-6">
-             <Card>
-                <CardHeader>
-                    <CardTitle>Connections</CardTitle>
-                    <CardDescription>{user.name} is connected with {userConnections.length} people.</CardDescription>
-                </CardHeader>
-                <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
-                    {userConnections.map(connection => (
-                        <Card key={connection.id}>
-                            <CardContent className="flex items-center gap-4 p-4">
-                                <Avatar>
-                                    <AvatarImage src={`https://picsum.photos/seed/${connection.id}/100/100`} alt={connection.name} data-ai-hint="woman portrait" />
-                                    <AvatarFallback>{connection.name.split(' ').map((n) => n[0]).join('')}</AvatarFallback>
-                                </Avatar>
-                                <div>
-                                    <p className="font-semibold">{connection.name}</p>
-                                    <p className="text-sm text-muted-foreground">{connection.city}</p>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    ))}
-                </CardContent>
-             </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Connections</CardTitle>
+              <CardDescription>
+                {user.name} is connected with {userConnections.length} people.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
+              {userConnections.map((connection) => (
+                <Card key={connection.id}>
+                  <CardContent className="flex items-center gap-4 p-4">
+                    <Avatar>
+                      <AvatarImage
+                        src={`https://picsum.photos/seed/${connection.id}/100/100`}
+                        alt={connection.name}
+                        data-ai-hint="woman portrait"
+                      />
+                      <AvatarFallback>
+                        {connection.name
+                          .split(' ')
+                          .map((n) => n[0])
+                          .join('')}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="font-semibold">{connection.name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {connection.city}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </CardContent>
+          </Card>
         </TabsContent>
         <TabsContent value="communities" className="mt-6">
-            <Card>
-                <CardHeader>
-                    <CardTitle>Communities</CardTitle>
-                    <CardDescription>{user.name} is a member of {userCommunities.length} communities.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                {userCommunities.map((community) => (
-                    <div key={community.id} className="flex items-center gap-4 rounded-lg border p-3">
-                    <div className="relative h-16 w-16 shrink-0">
-                        <Image
-                        src={community.image}
-                        alt={community.name}
-                        fill
-                        className="rounded-md object-cover"
-                        data-ai-hint="community people"
-                        />
-                    </div>
-                    <div>
-                        <p className="font-semibold">{community.name}</p>
-                        <p className="flex items-center text-sm text-muted-foreground">
-                        <Users className="mr-1 h-3 w-3" />
-                        {community.memberCount.toLocaleString()} members
-                        </p>
-                    </div>
-                    <Button variant="outline" size="sm" className="ml-auto">View</Button>
-                    </div>
-                ))}
-                </CardContent>
+          <Card>
+            <CardHeader>
+              <CardTitle>Communities</CardTitle>
+              <CardDescription>
+                {user.name} is a member of {userCommunities.length} communities.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {userCommunities.map((community) => (
+                <div
+                  key={community.id}
+                  className="flex items-center gap-4 rounded-lg border p-3"
+                >
+                  <div className="relative h-16 w-16 shrink-0">
+                    <Image
+                      src={community.image}
+                      alt={community.name}
+                      fill
+                      className="rounded-md object-cover"
+                      data-ai-hint="community people"
+                    />
+                  </div>
+                  <div>
+                    <p className="font-semibold">{community.name}</p>
+                    <p className="flex items-center text-sm text-muted-foreground">
+                      <Users className="mr-1 h-3 w-3" />
+                      {community.memberCount.toLocaleString()} members
+                    </p>
+                  </div>
+                  <Button variant="outline" size="sm" className="ml-auto">
+                    View
+                  </Button>
+                </div>
+              ))}
+            </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
