@@ -1,7 +1,9 @@
+'use client';
 
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import { Plus, Calendar, User, MapPin } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 import { communities, posts, users } from '@/lib/mock-data';
 import { Button } from '@/components/ui/button';
@@ -45,12 +47,27 @@ export default function CommunityDetailPage({
 }: {
   params: { id: string };
 }) {
+  const { toast } = useToast();
   const community = communities.find((c) => c.id === params.id);
   const communityMembers = users.slice(0, 4);
 
   if (!community) {
     notFound();
   }
+
+  const handleRsvp = (eventTitle: string) => {
+    toast({
+      title: 'RSVP Confirmed!',
+      description: `You have successfully RSVP'd for "${eventTitle}".`,
+    });
+  };
+
+  const handleConnect = (userName: string) => {
+    toast({
+        title: 'Connection Request Sent',
+        description: `Your request to connect with ${userName} has been sent.`,
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -123,7 +140,7 @@ export default function CommunityDetailPage({
                       {member.city}
                     </p>
                   </div>
-                  <Button size="sm" variant="outline" className="ml-auto">
+                  <Button size="sm" variant="outline" className="ml-auto" onClick={() => handleConnect(member.name)}>
                     Connect
                   </Button>
                 </div>
@@ -150,7 +167,7 @@ export default function CommunityDetailPage({
                 </CardHeader>
                 <CardContent className="flex items-center justify-between">
                   <p className="font-semibold">{event.time}</p>
-                  <Button>RSVP</Button>
+                  <Button onClick={() => handleRsvp(event.title)}>RSVP</Button>
                 </CardContent>
               </Card>
             ))}

@@ -1,5 +1,6 @@
 'use client';
 import Image from 'next/image';
+import { useState } from 'react';
 import {
   Edit,
   MapPin,
@@ -13,7 +14,8 @@ import {
   CheckCircle,
   Zap,
 } from 'lucide-react';
-import { users, posts, communities } from '@/lib/mock-data';
+import { users, posts as initialPosts, communities } from '@/lib/mock-data';
+import type { User } from '@/lib/mock-data';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -31,7 +33,6 @@ import {
   TabsTrigger,
 } from '@/components/ui/tabs';
 import { PostCard } from '@/components/post-card';
-import { PageHeader } from '@/components/page-header';
 import {
   Dialog,
   DialogContent,
@@ -43,11 +44,56 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/hooks/use-toast';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+
+const profileSchema = z.object({
+    name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
+    city: z.string().min(2, { message: 'City must be at least 2 characters.' }),
+    interests: z.string(),
+});
+
+type ProfileFormValues = z.infer<typeof profileSchema>;
 
 export default function ProfilePage() {
-  const user = users[0];
-  const userPosts = posts.filter((p) => p.author.id === user.id);
+  const { toast } = useToast();
+  const [user, setUser] = useState<User>(users[0]);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  const { register, handleSubmit, formState: { errors }, setValue } = useForm<ProfileFormValues>({
+    resolver: zodResolver(profileSchema),
+    defaultValues: {
+      name: user.name,
+      city: user.city,
+      interests: user.interests.join(', '),
+    }
+  });
+
+  const onSubmit = (data: ProfileFormValues) => {
+    const updatedUser = {
+      ...user,
+      name: data.name,
+      city: data.city,
+      interests: data.interests.split(',').map(interest => interest.trim()).filter(Boolean),
+    };
+    setUser(updatedUser);
+    toast({
+      title: 'Profile Updated',
+      description: 'Your profile information has been successfully saved.',
+    });
+    setIsDialogOpen(false);
+  };
+
+  const handleGoPremium = () => {
+    toast({
+      title: 'Premium Coming Soon!',
+      description: 'Unlock exclusive features with Sakhi Premium. Stay tuned!',
+    });
+  };
+
+  const userPosts = initialPosts.filter((p) => p.author.id === user.id);
   const userCommunities = communities.slice(0, 3);
   const userConnections = users.slice(1, 5);
 
@@ -100,13 +146,14 @@ export default function ProfilePage() {
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <Dialog>
+              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogTrigger asChild>
                   <Button variant="outline">
                     <Edit className="mr-2 h-4 w-4" /> Edit Profile
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-[425px]">
+                  <form onSubmit={handleSubmit(onSubmit)}>
                   <DialogHeader>
                     <DialogTitle>Edit profile</DialogTitle>
                   </DialogHeader>
@@ -115,41 +162,50 @@ export default function ProfilePage() {
                       <Label htmlFor="name" className="text-right">
                         Name
                       </Label>
-                      <Input
-                        id="name"
-                        defaultValue={user.name}
-                        className="col-span-3"
-                      />
+                      <div className="col-span-3">
+                        <Input
+                          id="name"
+                          {...register('name')}
+                        />
+                        {errors.name && <p className="text-destructive text-xs mt-1">{errors.name.message}</p>}
+                      </div>
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
                       <Label htmlFor="city" className="text-right">
                         City
                       </Label>
-                      <Input
-                        id="city"
-                        defaultValue={user.city}
-                        className="col-span-3"
-                      />
+                       <div className="col-span-3">
+                        <Input
+                          id="city"
+                          {...register('city')}
+                        />
+                         {errors.city && <p className="text-destructive text-xs mt-1">{errors.city.message}</p>}
+                      </div>
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
                       <Label htmlFor="interests" className="text-right">
                         Interests
                       </Label>
-                      <Input
-                        id="interests"
-                        defaultValue={user.interests.join(', ')}
-                        className="col-span-3"
-                      />
+                       <div className="col-span-3">
+                        <Input
+                          id="interests"
+                          {...register('interests')}
+                          placeholder="e.g. Cooking, Yoga, Reading"
+                        />
+                         <p className="text-xs text-muted-foreground mt-1">Separate interests with a comma.</p>
+                      </div>
                     </div>
                   </div>
                   <DialogFooter>
                     <DialogClose asChild>
-                      <Button type="submit">Save changes</Button>
+                      <Button type="button" variant="ghost">Cancel</Button>
                     </DialogClose>
+                    <Button type="submit">Save changes</Button>
                   </DialogFooter>
+                  </form>
                 </DialogContent>
               </Dialog>
-              <Button>
+              <Button onClick={handleGoPremium}>
                 <Zap className="mr-2 h-4 w-4" /> Go Premium
               </Button>
             </div>
@@ -193,7 +249,7 @@ export default function ProfilePage() {
                     <li>Access to premium communities & courses</li>
                     <li>Advanced Kitty Party tools</li>
                   </ul>
-                  <Button>Upgrade Now</Button>
+                  <Button onClick={handleGoPremium}>Upgrade Now</Button>
                 </CardContent>
               </Card>
 
@@ -332,5 +388,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-
-    

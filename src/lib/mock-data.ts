@@ -1,4 +1,3 @@
-
 export type User = {
   id: string;
   name: string;
@@ -32,6 +31,13 @@ export type Post = {
   isAnonymous: boolean;
   pollOptions?: PollOption[];
 };
+
+export type Message = {
+    id: string;
+    senderId: string;
+    text: string;
+    timestamp: string;
+}
 
 export type Community = {
   id: string;

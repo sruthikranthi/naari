@@ -1,4 +1,3 @@
-
 'use client';
 import { useState } from 'react';
 import Image from 'next/image';
@@ -20,6 +19,7 @@ import {
   TabsList,
   TabsTrigger,
 } from '@/components/ui/tabs';
+import { useToast } from '@/hooks/use-toast';
 
 const categories = [
   'All',
@@ -74,6 +74,15 @@ export default function LearningPage() {
 }
 
 function CourseCard({ course }: { course: Course }) {
+    const { toast } = useToast();
+
+    const handleEnroll = () => {
+        toast({
+            title: 'Successfully Enrolled!',
+            description: `You have been enrolled in "${course.title}".`,
+        });
+    };
+
   return (
     <Card className="flex flex-col overflow-hidden transition-all hover:shadow-lg">
       <CardHeader className="p-0">
@@ -110,7 +119,7 @@ function CourseCard({ course }: { course: Course }) {
         </div>
       </CardContent>
       <CardFooter className="p-4 pt-0">
-        <Button className="w-full">Enroll Now</Button>
+        <Button className="w-full" onClick={handleEnroll}>Enroll Now</Button>
       </CardFooter>
     </Card>
   );

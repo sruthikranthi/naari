@@ -1,4 +1,3 @@
-
 'use client';
 import { useState, useRef } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -8,19 +7,68 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { users } from '@/lib/mock-data';
+import type { Post } from '@/lib/mock-data';
 import { BarChart, Image as ImageIcon, Video, X, Camera } from 'lucide-react';
 import { Input } from './ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { CameraCapture } from './camera-capture';
+import { useToast } from '@/hooks/use-toast';
 
-export function CreatePost() {
+
+export function CreatePost({ onPostCreated }: { onPostCreated?: (post: Post) => void }) {
+  const { toast } = useToast();
   const user = users[0];
+  const [content, setContent] = useState('');
   const [showPoll, setShowPoll] = useState(false);
   const [pollOptions, setPollOptions] = useState(['', '']);
   const [mediaPreview, setMediaPreview] = useState<string | null>(null);
   const [mediaType, setMediaType] = useState<'image' | 'video' | null>(null);
+  const [isAnonymous, setIsAnonymous] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
+
+
+  const handlePost = () => {
+    if (!content.trim() && !mediaPreview) {
+      toast({
+        variant: 'destructive',
+        title: 'Cannot create empty post',
+        description: 'Please write something or add media.',
+      });
+      return;
+    }
+
+    const newPost: Post = {
+      id: `p${Date.now()}`,
+      author: user,
+      content,
+      timestamp: 'Just now',
+      likes: 0,
+      comments: 0,
+      isAnonymous,
+      image: mediaType === 'image' ? mediaPreview! : undefined,
+      // video support can be added similarly
+      pollOptions: showPoll ? pollOptions.map(opt => ({ text: opt, votes: 0 })) : undefined
+    };
+    
+    onPostCreated?.(newPost);
+    toast({
+        title: 'Post Created!',
+        description: 'Your post has been shared with the community.',
+    })
+
+    // Reset form
+    setContent('');
+    setMediaPreview(null);
+    setMediaType(null);
+    setShowPoll(false);
+    setPollOptions(['', '']);
+    setIsAnonymous(false);
+     if(fileInputRef.current) {
+        fileInputRef.current.value = '';
+    }
+  };
+
 
   const addPollOption = () => {
     if (pollOptions.length < 4) {
@@ -97,6 +145,8 @@ export function CreatePost() {
               placeholder="What's on your mind, Sakhi?"
               className="border-none bg-secondary focus-visible:ring-0 focus-visible:ring-offset-0"
               rows={3}
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
             />
 
             {mediaPreview && (
@@ -175,7 +225,11 @@ export function CreatePost() {
               </div>
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
-                  <Checkbox id="anonymous-post" />
+                  <Checkbox 
+                    id="anonymous-post" 
+                    checked={isAnonymous}
+                    onCheckedChange={(checked) => setIsAnonymous(checked as boolean)}
+                  />
                   <Label
                     htmlFor="anonymous-post"
                     className="text-sm font-normal text-muted-foreground"
@@ -183,7 +237,7 @@ export function CreatePost() {
                     Post Anonymously
                   </Label>
                 </div>
-                <Button size="sm">Post</Button>
+                <Button size="sm" onClick={handlePost}>Post</Button>
               </div>
             </div>
           </div>
@@ -192,4 +246,3 @@ export function CreatePost() {
     </Card>
   );
 }
-
