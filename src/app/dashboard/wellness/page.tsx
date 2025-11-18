@@ -1,3 +1,4 @@
+
 'use client';
 import { useState, useActionState, useRef, useEffect } from 'react';
 import { getAudio } from '@/app/actions';
@@ -20,12 +21,15 @@ import {
   Play,
   Pause,
   Loader,
+  Check,
 } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { selfCareActivities } from '@/lib/mock-data';
+import type { SelfCareActivity } from '@/lib/mock-data';
 
 const moods = [
   { icon: Sparkles, label: 'Great' },
@@ -35,28 +39,12 @@ const moods = [
   { icon: Angry, label: 'Awful' },
 ];
 
-const selfCareActivities = [
-  {
-    icon: Wind,
-    title: 'Mindful Morning',
-    description: 'Start your day with 5 minutes of mindful breathing.',
-  },
-  {
-    icon: Coffee,
-    title: 'Mindful Break',
-    description: 'Take a 10-minute break away from your screens.',
-  },
-  {
-    icon: Moon,
-    title: 'Digital Detox',
-    description: 'No screens for 1 hour before bed for better sleep.',
-  },
-  {
-    icon: Leaf,
-    title: 'Connect with Nature',
-    description: 'Spend 15 minutes outdoors, observing your surroundings.',
-  },
-];
+const lucideIcons: { [key: string]: React.ElementType } = {
+  Wind,
+  Coffee,
+  Moon,
+  Leaf,
+};
 
 const guidedMeditations = [
   {
@@ -102,6 +90,21 @@ export default function WellnessPage() {
     error: undefined,
   });
 
+  const [completedActivities, setCompletedActivities] = useState<string[]>([]);
+
+  const handleCompleteActivity = (activityTitle: string) => {
+    if (completedActivities.includes(activityTitle)) {
+      setCompletedActivities(completedActivities.filter(t => t !== activityTitle));
+    } else {
+      setCompletedActivities([...completedActivities, activityTitle]);
+      toast({
+        title: 'Activity Completed!',
+        description: `You've completed "${activityTitle}". Keep it up!`,
+      });
+    }
+  };
+
+
   useEffect(() => {
     if (audioState.result?.media) {
       if (audioRef.current) {
@@ -142,6 +145,14 @@ export default function WellnessPage() {
   const handleAudioEnded = () => {
     setPlayingMeditationId(null);
   };
+  
+  const handleMoodSelect = (moodLabel: string) => {
+    setSelectedMood(moodLabel);
+    toast({
+      title: 'Mood Logged',
+      description: `You're feeling ${moodLabel.toLowerCase()} today.`,
+    });
+  };
 
   return (
     <div className="space-y-8">
@@ -160,7 +171,7 @@ export default function WellnessPage() {
               key={mood.label}
               variant={selectedMood === mood.label ? 'default' : 'outline'}
               className="flex h-24 w-24 flex-col items-center justify-center gap-2 rounded-lg"
-              onClick={() => setSelectedMood(mood.label)}
+              onClick={() => handleMoodSelect(mood.label)}
             >
               <mood.icon
                 className={cn(
@@ -176,9 +187,40 @@ export default function WellnessPage() {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
-        <div className="space-y-6">
-          <h2 className="font-headline text-2xl font-bold">
+       <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
+        <div className="space-y-6 md:col-span-2">
+           <h2 className="font-headline text-2xl font-bold">
+            Daily Self-Care
+          </h2>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {selfCareActivities.map((activity) => {
+                const Icon = lucideIcons[activity.icon];
+                const isCompleted = completedActivities.includes(activity.title);
+              return (
+              <Card key={activity.title} className="flex flex-col">
+                <CardHeader className="flex flex-row items-start gap-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <Icon className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg">{activity.title}</CardTitle>
+                    <p className="text-sm text-muted-foreground">{activity.description}</p>
+                  </div>
+                </CardHeader>
+                <CardContent className="mt-auto flex justify-end">
+                    <Button
+                        variant={isCompleted ? "secondary" : "default"}
+                        onClick={() => handleCompleteActivity(activity.title)}
+                    >
+                        {isCompleted ? <Check className="mr-2 h-4 w-4" /> : null}
+                        {isCompleted ? 'Completed' : 'Mark as Done'}
+                    </Button>
+                </CardContent>
+              </Card>
+            )})}
+          </div>
+          
+          <h2 className="font-headline text-2xl font-bold pt-4">
             Guided Meditations
           </h2>
           <div className="space-y-4">
@@ -221,6 +263,7 @@ export default function WellnessPage() {
                     key={tool.label}
                     variant="outline"
                     className="flex h-24 flex-col items-center justify-center gap-2"
+                    onClick={() => toast({ title: 'Coming Soon!', description: `${tool.label} will be available soon.`})}
                   >
                     <tool.icon className="h-6 w-6 text-primary" />
                     <span className="text-center text-xs">{tool.label}</span>
@@ -233,7 +276,7 @@ export default function WellnessPage() {
           <Card>
             <CardHeader className="flex-row items-center justify-between">
               <CardTitle>Find Support</CardTitle>
-              <Button>View Directory</Button>
+              <Button onClick={() => toast({ title: 'Coming Soon!', description: 'The professional directory is being curated.'})}>View Directory</Button>
             </CardHeader>
             <CardContent>
               <p className="text-muted-foreground">

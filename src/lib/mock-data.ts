@@ -53,6 +53,12 @@ export type Course = {
   level: 'Beginner' | 'Intermediate' | 'Advanced';
 };
 
+export type SelfCareActivity = {
+  icon: string;
+  title: string;
+  description: string;
+};
+
 
 export const users: User[] = [
   { id: 'u1', name: 'Priya Sharma', avatar: '/assets/user-1.jpg', city: 'Mumbai', interests: ['Cooking', 'Yoga', 'Reading'] },
@@ -233,5 +239,29 @@ export const courses: Course[] = [
     duration: '6 Sessions',
     image: 'https://picsum.photos/seed/course-wellness2/600/400',
     level: 'Intermediate',
+  },
+];
+
+
+export const selfCareActivities: SelfCareActivity[] = [
+  {
+    icon: 'Wind',
+    title: 'Mindful Morning',
+    description: 'Start your day with 5 minutes of mindful breathing.',
+  },
+  {
+    icon: 'Coffee',
+    title: 'Mindful Break',
+    description: 'Take a 10-minute break away from your screens.',
+  },
+  {
+    icon: 'Moon',
+    title: 'Digital Detox',
+    description: 'No screens for 1 hour before bed for better sleep.',
+  },
+  {
+    icon: 'Leaf',
+    title: 'Connect with Nature',
+    description: 'Spend 15 minutes outdoors, observing your surroundings.',
   },
 ];
