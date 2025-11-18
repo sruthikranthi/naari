@@ -10,6 +10,8 @@ import {
   Award,
   Star,
   Baby,
+  CheckCircle,
+  Zap,
 } from 'lucide-react';
 import { users, posts, communities } from '@/lib/mock-data';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -71,7 +73,7 @@ export default function ProfilePage() {
           </div>
         </CardHeader>
         <CardContent className="relative p-6 pt-0">
-          <div className="flex flex-col items-center md:flex-row md:items-end">
+          <div className="flex flex-col items-center gap-4 md:flex-row md:items-end">
             <div className="-mt-20 shrink-0 md:-mt-24">
               <Avatar className="h-32 w-32 border-4 border-card md:h-40 md:w-40">
                 <AvatarImage
@@ -87,62 +89,70 @@ export default function ProfilePage() {
                 </AvatarFallback>
               </Avatar>
             </div>
-            <div className="mt-4 flex-1 text-center md:ml-6 md:text-left">
-              <h1 className="font-headline text-3xl font-bold">{user.name}</h1>
+            <div className="flex-1 text-center md:ml-6 md:text-left">
+              <div className="flex items-center justify-center gap-2 md:justify-start">
+                <h1 className="font-headline text-3xl font-bold">{user.name}</h1>
+                <CheckCircle className="h-6 w-6 text-primary" />
+              </div>
               <p className="flex items-center justify-center text-muted-foreground md:justify-start">
                 <MapPin className="mr-1.5 h-4 w-4" />
                 {user.city}
               </p>
             </div>
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button variant="outline" className="mt-4 md:mt-0">
-                  <Edit className="mr-2 h-4 w-4" /> Edit Profile
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                  <DialogTitle>Edit profile</DialogTitle>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="name" className="text-right">
-                      Name
-                    </Label>
-                    <Input
-                      id="name"
-                      defaultValue={user.name}
-                      className="col-span-3"
-                    />
+            <div className="flex items-center gap-2">
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="outline">
+                    <Edit className="mr-2 h-4 w-4" /> Edit Profile
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[425px]">
+                  <DialogHeader>
+                    <DialogTitle>Edit profile</DialogTitle>
+                  </DialogHeader>
+                  <div className="grid gap-4 py-4">
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="name" className="text-right">
+                        Name
+                      </Label>
+                      <Input
+                        id="name"
+                        defaultValue={user.name}
+                        className="col-span-3"
+                      />
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="city" className="text-right">
+                        City
+                      </Label>
+                      <Input
+                        id="city"
+                        defaultValue={user.city}
+                        className="col-span-3"
+                      />
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="interests" className="text-right">
+                        Interests
+                      </Label>
+                      <Input
+                        id="interests"
+                        defaultValue={user.interests.join(', ')}
+                        className="col-span-3"
+                      />
+                    </div>
                   </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="city" className="text-right">
-                      City
-                    </Label>
-                    <Input
-                      id="city"
-                      defaultValue={user.city}
-                      className="col-span-3"
-                    />
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="interests" className="text-right">
-                      Interests
-                    </Label>
-                    <Input
-                      id="interests"
-                      defaultValue={user.interests.join(', ')}
-                      className="col-span-3"
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <DialogClose asChild>
-                    <Button type="submit">Save changes</Button>
-                  </DialogClose>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+                  <DialogFooter>
+                    <DialogClose asChild>
+                      <Button type="submit">Save changes</Button>
+                    </DialogClose>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+              <Button>
+                <Zap className="mr-2 h-4 w-4" /> Go Premium
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -170,6 +180,23 @@ export default function ProfilePage() {
               <CardTitle>About {user.name}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
+              <Card className="bg-gradient-to-r from-primary/10 to-accent/10">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-xl">
+                    <Zap className="text-primary" />
+                    Unlock Premium Features!
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <ul className="list-inside list-disc space-y-1 text-sm text-muted-foreground">
+                    <li>Ad-free experience</li>
+                    <li>Access to premium communities & courses</li>
+                    <li>Advanced Kitty Party tools</li>
+                  </ul>
+                  <Button>Upgrade Now</Button>
+                </CardContent>
+              </Card>
+
               <div>
                 <h3 className="mb-2 font-semibold">Interests</h3>
                 <div className="flex flex-wrap gap-2">
@@ -305,3 +332,5 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+    
