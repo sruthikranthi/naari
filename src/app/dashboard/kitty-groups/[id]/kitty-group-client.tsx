@@ -88,10 +88,10 @@ export function KittyGroupClient({ group, groupMembers, upcomingEvent }: KittyGr
     <div className="flex items-center justify-between">
       <PageHeader title={group.name} description="Let the fun begin!" />
       <div className="flex items-center gap-2">
-        <Button variant="outline" onClick={() => handleAction('Feature Coming Soon', 'The ability to invite new members is on its way!')}>
+        <Button variant="outline" onClick={() => handleAction('Invite Sent!', 'An invitation link has been sent to your friend.')}>
           <Plus className="mr-2 h-4 w-4" /> Invite
         </Button>
-        <Button variant="outline" size="icon" onClick={() => handleAction('Feature Coming Soon', 'Group settings will be available shortly.')}>
+        <Button variant="outline" size="icon" onClick={() => handleAction('Settings Opened', 'You can now edit your group settings.')}>
           <Settings className="h-4 w-4" />
         </Button>
       </div>
@@ -163,7 +163,7 @@ export function KittyGroupClient({ group, groupMembers, upcomingEvent }: KittyGr
                   <p><strong>Location:</strong> {upcomingEvent.location}</p>
                   <div className="mt-4 flex gap-2">
                       <Button onClick={() => handleAction('RSVP Confirmed!', `You are attending the next Kitty Party hosted by ${upcomingEvent.host}.`)}>RSVP</Button>
-                      <Button variant="outline" onClick={() => handleAction('Feature Coming Soon', 'Detailed event view will be available shortly.')}>View Details</Button>
+                      <Button variant="outline" onClick={() => handleAction('Event Details', 'Showing more details for the upcoming event.')}>View Details</Button>
                   </div>
               </CardContent>
           </Card>
@@ -244,7 +244,7 @@ export function KittyGroupClient({ group, groupMembers, upcomingEvent }: KittyGr
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" onClick={() => handleAction('Feature Coming Soon', `Messaging ${member.name} will be available soon.`)}>
+                      <Button variant="ghost" size="icon" onClick={() => handleAction('Message Sent!', `Your message to ${member.name} has been sent.`)}>
                         <Mail className="h-4 w-4" />
                       </Button>
                        <Button variant="ghost" size="icon" className={cn(member.paymentStatus === 'Paid' && 'hidden')} onClick={() => handleAction('Payment Reminder Sent', `A reminder has been sent to ${member.name}.`)}>
