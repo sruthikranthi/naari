@@ -12,7 +12,7 @@ export default function KittyGroupDetailPage() {
   const params = useParams();
   const { id } = params;
   const firestore = useFirestore();
-  const { user: currentUser } = useUser();
+  const { user: currentAuthUser } = useUser();
 
   const groupRef = useMemoFirebase(
     () => (firestore && id ? doc(firestore, 'kitty_groups', id as string) : null),
@@ -26,8 +26,15 @@ export default function KittyGroupDetailPage() {
   );
   const { data: groupMembers, isLoading: areMembersLoading } = useCollection<User>(membersQuery);
 
+  // Fetch current user's profile from Firestore
+  const currentUserRef = useMemoFirebase(
+    () => (firestore && currentAuthUser ? doc(firestore, 'users', currentAuthUser.uid) : null),
+    [firestore, currentAuthUser]
+  );
+  const { data: currentUser, isLoading: isCurrentUserLoading } = useDoc<User>(currentUserRef);
 
-  if (isGroupLoading || areMembersLoading) {
+
+  if (isGroupLoading || areMembersLoading || isCurrentUserLoading) {
     return (
         <div className="space-y-6">
             <Skeleton className="h-16 w-1/2" />
@@ -43,7 +50,7 @@ export default function KittyGroupDetailPage() {
     );
   }
 
-  if (!group || !currentUser) {
+  if (!group || !currentUser || !currentAuthUser) {
     notFound();
   }
   
