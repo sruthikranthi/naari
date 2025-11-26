@@ -159,7 +159,7 @@ export function CommunityClient({ community, communityMembers, communityEvents, 
                     </DialogHeader>
                     <div className="space-y-4">
                         <Input placeholder="Enter a title for your seminar..." />
-                        <CameraCapture onMediaCaptured={handleMediaCaptured} />
+                        <div className='h-96'><CameraCapture onMediaCaptured={handleMediaCaptured} /></div>
                     </div>
                     <DialogFooter>
                         <Button variant="ghost" onClick={() => setIsMeetDialogOpen(false)}>Cancel</Button>

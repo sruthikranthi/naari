@@ -226,7 +226,7 @@ export function KittyGroupClient({ group, groupMembers, upcomingEvent, currentUs
                           <div className="absolute top-4 left-4 z-10 flex items-center gap-2 rounded-full bg-destructive px-3 py-1 text-white text-sm"><div className="h-2 w-2 rounded-full bg-white animate-pulse"></div>LIVE</div>
                           <div className="grid grid-cols-2 gap-2 h-full">
                             <div className="relative rounded-md overflow-hidden bg-secondary">
-                               <CameraCapture onMediaCaptured={() => {}} showControls={false} />
+                               <div className='h-full'><CameraCapture onMediaCaptured={() => {}} showControls={false} /></div>
                                <div className="absolute bottom-2 left-2 text-white text-sm font-medium bg-black/50 px-2 py-1 rounded-md">{currentUser.name} (You)</div>
                             </div>
                             {groupMembers.slice(1,4).map(member => (
@@ -294,7 +294,7 @@ export function KittyGroupClient({ group, groupMembers, upcomingEvent, currentUs
                                     </DialogHeader>
                                     <div className="space-y-4">
                                         <Input placeholder="Enter a title for your party..." defaultValue={`${group.name} - Live!`} />
-                                        <CameraCapture onMediaCaptured={handleMediaCaptured} />
+                                        <div className="h-96"><CameraCapture onMediaCaptured={handleMediaCaptured} /></div>
                                     </div>
                                     <DialogFooter>
                                         <Button variant="ghost" onClick={() => setIsPartyDialogOpen(false)}>Cancel</Button>
