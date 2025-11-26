@@ -1,3 +1,4 @@
+
 'use client';
 import React, { useState } from 'react';
 import Image from 'next/image';
@@ -53,13 +54,13 @@ export default function CommunitiesPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
   const firestore = useFirestore();
-  const { user } = useUser();
+  const { user, isUserLoading } = useUser();
 
   const communitiesQuery = useMemoFirebase(
-    () => (firestore ? collection(firestore, 'communities') : null),
-    [firestore]
+    () => (firestore && user ? collection(firestore, 'communities') : null),
+    [firestore, user]
   );
-  const { data: communities, isLoading } = useCollection<Community>(communitiesQuery);
+  const { data: communities, isLoading: areCommunitiesLoading } = useCollection<Community>(communitiesQuery);
 
   const {
     register,
@@ -121,6 +122,8 @@ export default function CommunitiesPage() {
   const filteredCommunities = communities?.filter((community) =>
     community.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const isLoading = isUserLoading || areCommunitiesLoading;
 
   return (
     <div>
