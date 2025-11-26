@@ -23,6 +23,8 @@ import {
   Calendar,
   GraduationCap,
   Edit,
+  Users2,
+  CalendarClock,
 } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
 import {
@@ -189,7 +191,7 @@ export default function AdminPanelPage() {
     });
   }
 
-  const handleUpdateContestDetail = (field: keyof Contest, value: string) => {
+  const handleUpdateContestDetail = (field: keyof Contest, value: string | number) => {
     if(!managingContest) return;
     const updatedContest = { ...managingContest, [field]: value };
     setManagingContest(updatedContest);
@@ -537,6 +539,18 @@ export default function AdminPanelPage() {
                                     label="Education"
                                     value={managingContest.education || 'Not set'}
                                     onEdit={(value) => handleUpdateContestDetail('education', value)}
+                                />
+                                <ContestDetailItem
+                                    icon={Users2}
+                                    label="Max Nominees"
+                                    value={String(managingContest.maxNominees) || 'Not set'}
+                                    onEdit={(value) => handleUpdateContestDetail('maxNominees', value)}
+                                />
+                                <ContestDetailItem
+                                    icon={CalendarClock}
+                                    label="Nomination Deadline"
+                                    value={managingContest.nominationEndDate || 'Not set'}
+                                    onEdit={(value) => handleUpdateContestDetail('nominationEndDate', value)}
                                 />
                             </CardContent>
                         </Card>
