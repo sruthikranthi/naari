@@ -17,8 +17,22 @@ import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { Timestamp } from 'firebase/firestore';
+import { formatDistanceToNow } from 'date-fns';
 
-export function PostCard({ post }: { post: Post }) {
+type PostFromFirestore = Omit<Post, 'timestamp'> & {
+  timestamp: Timestamp | null;
+};
+
+const formatTimestamp = (timestamp: Timestamp | null): string => {
+  if (!timestamp) {
+    return 'Just now';
+  }
+  return `${formatDistanceToNow(timestamp.toDate())} ago`;
+};
+
+
+export function PostCard({ post }: { post: PostFromFirestore }) {
   const { toast } = useToast();
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(post.likes);
@@ -37,6 +51,7 @@ export function PostCard({ post }: { post: Post }) {
       setLikeCount(likeCount + 1);
     }
     setIsLiked(!isLiked);
+    // In a real app, you would also update the document in Firestore.
   };
   
   const handleComment = () => {
@@ -79,7 +94,7 @@ export function PostCard({ post }: { post: Post }) {
         </Avatar>
         <div className="flex-1">
           <p className="font-semibold">{authorName}</p>
-          <p className="text-sm text-muted-foreground">{post.timestamp}</p>
+          <p className="text-sm text-muted-foreground">{formatTimestamp(post.timestamp)}</p>
         </div>
       </CardHeader>
       <CardContent className="space-y-4 px-4 pb-2">

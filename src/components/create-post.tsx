@@ -1,24 +1,28 @@
 
 'use client';
 import { useState, useRef } from 'react';
+import { useAuth, useFirestore } from '@/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { users } from '@/lib/mock-data';
 import type { Post } from '@/lib/mock-data';
 import { BarChart, Image as ImageIcon, Video, X, Camera, Shield } from 'lucide-react';
 import { Input } from './ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { CameraCapture } from './camera-capture';
 import { useToast } from '@/hooks/use-toast';
+import { useUser } from '@/firebase';
 
 
-export function CreatePost({ onPostCreated }: { onPostCreated?: (post: Post) => void }) {
+export function CreatePost() {
   const { toast } = useToast();
-  const user = users[0];
+  const { user } = useUser();
+  const firestore = useFirestore();
+
   const [content, setContent] = useState('');
   const [showPoll, setShowPoll] = useState(false);
   const [pollOptions, setPollOptions] = useState(['', '']);
@@ -29,7 +33,16 @@ export function CreatePost({ onPostCreated }: { onPostCreated?: (post: Post) => 
   const [isCameraOpen, setIsCameraOpen] = useState(false);
 
 
-  const handlePost = () => {
+  const handlePost = async () => {
+    if (!user) {
+        toast({
+            variant: 'destructive',
+            title: 'Not Authenticated',
+            description: 'You must be logged in to create a post.',
+        });
+        return;
+    }
+
     if (!content.trim() && !mediaPreview) {
       toast({
         variant: 'destructive',
@@ -39,34 +52,46 @@ export function CreatePost({ onPostCreated }: { onPostCreated?: (post: Post) => 
       return;
     }
 
-    const newPost: Post = {
-      id: `p${Date.now()}`,
-      author: user,
+    const newPost = {
+      author: {
+        id: user.uid,
+        name: user.displayName || 'Anonymous Sakhi',
+        avatar: user.photoURL || `https://picsum.photos/seed/${user.uid}/100/100`,
+      },
       content,
-      timestamp: 'Just now',
+      timestamp: serverTimestamp(),
       likes: 0,
       comments: 0,
       isAnonymous,
       image: mediaType === 'image' ? mediaPreview! : undefined,
-      // video support can be added similarly
-      pollOptions: showPoll ? pollOptions.map(opt => ({ text: opt, votes: 0 })) : undefined
+      pollOptions: showPoll ? pollOptions.filter(opt => opt.trim() !== '').map(opt => ({ text: opt, votes: 0 })) : undefined
     };
     
-    onPostCreated?.(newPost);
-    toast({
-        title: 'Post Created!',
-        description: 'Your post has been shared with the community.',
-    })
+    try {
+        const postsCollection = collection(firestore, 'posts');
+        await addDoc(postsCollection, newPost);
+        toast({
+            title: 'Post Created!',
+            description: 'Your post has been shared with the community.',
+        })
 
-    // Reset form
-    setContent('');
-    setMediaPreview(null);
-    setMediaType(null);
-    setShowPoll(false);
-    setPollOptions(['', '']);
-    setIsAnonymous(false);
-     if(fileInputRef.current) {
-        fileInputRef.current.value = '';
+        // Reset form
+        setContent('');
+        setMediaPreview(null);
+        setMediaType(null);
+        setShowPoll(false);
+        setPollOptions(['', '']);
+        setIsAnonymous(false);
+        if(fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+    } catch (error) {
+        console.error("Error creating post: ", error);
+        toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'Could not create post. Please try again.',
+        });
     }
   };
 
@@ -130,15 +155,15 @@ export function CreatePost({ onPostCreated }: { onPostCreated?: (post: Post) => 
         <div className="flex gap-4">
           <Avatar>
             <AvatarImage
-              src={user.avatar}
-              alt={user.name}
+              src={user?.photoURL || 'https://picsum.photos/seed/user1/100/100'}
+              alt={user?.displayName || "User"}
               data-ai-hint="woman portrait"
             />
             <AvatarFallback>
-              {user.name
-                .split(' ')
+              {user?.displayName
+                ?.split(' ')
                 .map((n) => n[0])
-                .join('')}
+                .join('') || 'U'}
             </AvatarFallback>
           </Avatar>
           <div className="w-full space-y-3">

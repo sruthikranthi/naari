@@ -22,7 +22,6 @@ import { CartSheet } from '@/components/cart-sheet';
 import { NotificationsNav } from '@/components/notifications-nav';
 import { ThemeToggle } from '@/components/theme-toggle';
 import type { Post } from '@/lib/mock-data';
-import { posts as initialPosts } from '@/lib/mock-data';
 
 // Create Dashboard Context
 type DashboardContextType = {
@@ -42,7 +41,7 @@ export const useDashboard = () => {
 
 // Create Dashboard Provider
 export function DashboardProvider({ children }: { children: React.ReactNode }) {
-  const [posts, setPosts] = useState<Post[]>(initialPosts);
+  const [posts, setPosts] = useState<Post[]>([]);
 
   const addPost = (newPost: Post) => {
     setPosts(prevPosts => [newPost, ...prevPosts]);
