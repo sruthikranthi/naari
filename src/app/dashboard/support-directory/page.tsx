@@ -14,17 +14,43 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Search, CheckCircle, MessageSquare } from 'lucide-react';
+import { Search, CheckCircle, MessageSquare, Plus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { directory, type Professional } from '@/lib/directory';
+import { directory as initialDirectory, type Professional } from '@/lib/directory';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Textarea } from '@/components/ui/textarea';
 
-const allSpecialties = [...new Set(directory.flatMap(p => p.specialties))];
+
+const professionalSchema = z.object({
+    name: z.string().min(3, "Name must be at least 3 characters."),
+    specialties: z.string().min(3, "Please list at least one specialty."),
+    description: z.string().min(10, "Description must be at least 10 characters long."),
+    verified: z.boolean().default(false),
+});
+
+type ProfessionalFormValues = z.infer<typeof professionalSchema>;
+
+
+const allSpecialties = [...new Set(initialDirectory.flatMap(p => p.specialties))];
 
 export default function SupportDirectoryPage() {
   const { toast } = useToast();
+  const [professionals, setProfessionals] = useState<Professional[]>(initialDirectory);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>([]);
   const [showVerifiedOnly, setShowVerifiedOnly] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  const { register, handleSubmit, formState: { errors }, reset } = useForm<ProfessionalFormValues>({
+    resolver: zodResolver(professionalSchema),
+    defaultValues: {
+        verified: false,
+    }
+  });
+
 
   const handleContact = (name: string) => {
     toast({
@@ -42,18 +68,89 @@ export default function SupportDirectoryPage() {
   };
 
   const filteredProfessionals = useMemo(() => {
-    return directory
+    return professionals
       .filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()))
       .filter(p => selectedSpecialties.length === 0 || p.specialties.some(s => selectedSpecialties.includes(s)))
       .filter(p => !showVerifiedOnly || p.verified);
-  }, [searchTerm, selectedSpecialties, showVerifiedOnly]);
+  }, [professionals, searchTerm, selectedSpecialties, showVerifiedOnly]);
+
+  const onAddProfessional = (data: ProfessionalFormValues) => {
+    const newProfessional: Professional = {
+      id: `prof${Date.now()}`,
+      name: data.name,
+      avatar: `https://picsum.photos/seed/prof${Date.now()}/100/100`,
+      specialties: data.specialties.split(',').map(s => s.trim()).filter(Boolean),
+      description: data.description,
+      verified: data.verified,
+    };
+    setProfessionals([newProfessional, ...professionals]);
+    toast({
+      title: 'Professional Added',
+      description: `${data.name} has been added to the directory.`,
+    });
+    reset();
+    setIsDialogOpen(false);
+  };
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Find Support"
-        description="Connect with verified mental health professionals, counselors, and coaches."
-      />
+       <div className="flex items-center justify-between">
+        <PageHeader
+          title="Find Support"
+          description="Connect with verified mental health professionals, counselors, and coaches."
+        />
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Professional
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-lg">
+            <form onSubmit={handleSubmit(onAddProfessional)}>
+              <DialogHeader>
+                <DialogTitle>Add a New Professional</DialogTitle>
+                <DialogDescription>
+                  Fill in the details below to add a new expert to the directory.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div>
+                  <Label htmlFor="name">Full Name</Label>
+                  <Input id="name" {...register('name')} />
+                  {errors.name && <p className="mt-1 text-xs text-destructive">{errors.name.message}</p>}
+                </div>
+                <div>
+                  <Label htmlFor="specialties">Specialties (comma-separated)</Label>
+                  <Input id="specialties" placeholder="e.g., Anxiety, Parenting Support" {...register('specialties')} />
+                  {errors.specialties && <p className="mt-1 text-xs text-destructive">{errors.specialties.message}</p>}
+                </div>
+                 <div>
+                  <Label htmlFor="description">Description / Bio</Label>
+                  <Textarea id="description" {...register('description')} />
+                  {errors.description && <p className="mt-1 text-xs text-destructive">{errors.description.message}</p>}
+                </div>
+                <div>
+                    <Label htmlFor="avatar">Avatar Image</Label>
+                    <Input id="avatar" type="file" accept="image/*" />
+                    <p className="mt-1 text-xs text-muted-foreground">For demonstration only.</p>
+                </div>
+                <div className="flex items-center space-x-2">
+                    <Checkbox id="verified" {...register('verified')} />
+                    <Label htmlFor="verified">Mark as Verified</Label>
+                </div>
+              </div>
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button variant="ghost" type="button">Cancel</Button>
+                </DialogClose>
+                <Button type="submit">Add Professional</Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
         {/* Filters */}
         <aside className="md:col-span-1">
