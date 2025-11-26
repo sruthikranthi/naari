@@ -13,6 +13,10 @@ import {
   FileWarning,
   Star,
   Video,
+  Heart,
+  ThumbsUp,
+  Laugh,
+  Send,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/page-header';
@@ -71,9 +75,23 @@ type KittyGroupClientProps = {
   currentUser: UserType;
 };
 
+type LiveChatMessage = {
+    id: string;
+    author: string;
+    text: string;
+}
+
+const initialMessages: LiveChatMessage[] = [
+    { id: 'msg1', author: 'Sneha Patel', text: 'Hey everyone! Excited for the party!' },
+    { id: 'msg2', author: 'Meera Das', text: 'Looking good, Anjali! 🎉' }
+];
+
 export function KittyGroupClient({ group, groupMembers, upcomingEvent, currentUser }: KittyGroupClientProps) {
   const { toast } = useToast();
   const [isPartyDialogOpen, setIsPartyDialogOpen] = useState(false);
+  const [isLive, setIsLive] = useState(false);
+  const [liveMessages, setLiveMessages] = useState<LiveChatMessage[]>(initialMessages);
+  const [newMessage, setNewMessage] = useState('');
   const isHost = currentUser.name === group.nextTurn;
 
   const handleAction = (title: string, description: string) => {
@@ -95,9 +113,10 @@ export function KittyGroupClient({ group, groupMembers, upcomingEvent, currentUs
 
   const handleStartParty = () => {
     setIsPartyDialogOpen(false);
+    setIsLive(true);
     toast({
-      title: 'Party Started!',
-      description: 'Your virtual kitty party is now live!',
+      title: 'You are now live!',
+      description: 'Your virtual kitty party has started.',
     });
   };
 
@@ -105,6 +124,25 @@ export function KittyGroupClient({ group, groupMembers, upcomingEvent, currentUs
     // In a real app, you might use this for a thumbnail or preview
     console.log('Media captured for party:', type, dataUrl.substring(0, 50));
   };
+  
+  const handleSendChatMessage = (e: React.FormEvent) => {
+      e.preventDefault();
+      if(newMessage.trim()){
+          const msg: LiveChatMessage = {
+              id: `msg${Date.now()}`,
+              author: currentUser.name,
+              text: newMessage.trim(),
+          }
+          setLiveMessages([...liveMessages, msg]);
+          setNewMessage('');
+      }
+  }
+  
+  const sendReaction = (reaction: string) => {
+      toast({
+          title: `You sent a ${reaction} reaction!`,
+      });
+  }
 
 
   return (
@@ -175,68 +213,109 @@ export function KittyGroupClient({ group, groupMembers, upcomingEvent, currentUs
             </CardContent>
           </Card>
         </div>
-        <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <Card>
-              <CardHeader>
-              <CardTitle>Upcoming Kitty Party</CardTitle>
-              </CardHeader>
-              <CardContent>
-                  <p><strong>Host:</strong> {upcomingEvent.host}</p>
-                  <p><strong>Date:</strong> {upcomingEvent.date}</p>
-                  <p><strong>Time:</strong> {upcomingEvent.time}</p>
-                  <p><strong>Location:</strong> {upcomingEvent.location}</p>
-                  <div className="mt-4 flex gap-2">
-                    <Button onClick={() => handleAction('RSVP Confirmed!', `You are attending the next Kitty Party hosted by ${upcomingEvent.host}.`)}>RSVP</Button>
-                    {isHost && (
-                        <Dialog open={isPartyDialogOpen} onOpenChange={setIsPartyDialogOpen}>
-                            <DialogTrigger asChild>
-                                <Button variant="outline"><Video className="mr-2 h-4 w-4" /> Start Virtual Party</Button>
-                            </DialogTrigger>
-                            <DialogContent className="sm:max-w-2xl">
-                                <DialogHeader>
-                                    <DialogTitle>Start a Virtual Kitty Party</DialogTitle>
-                                    <DialogDescription>
-                                        Get ready to host your kitty party live! Your camera will be used.
-                                    </DialogDescription>
-                                </DialogHeader>
-                                <div className="space-y-4">
-                                    <Input placeholder="Enter a title for your party..." defaultValue={`${group.name} - Live!`} />
-                                    <CameraCapture onMediaCaptured={handleMediaCaptured} />
-                                </div>
-                                <DialogFooter>
-                                    <Button variant="ghost" onClick={() => setIsPartyDialogOpen(false)}>Cancel</Button>
-                                    <Button onClick={handleStartParty}>Go Live</Button>
-                                </DialogFooter>
-                            </DialogContent>
-                        </Dialog>
-                    )}
+        <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-5">
+          <Card className={isLive ? 'lg:col-span-3' : 'lg:col-span-2'}>
+              {isLive ? (
+                  <div>
+                      <div className="relative aspect-video w-full bg-black">
+                          <video src="https://placehold.co/1920x1080.mp4" autoPlay muted loop className="h-full w-full object-cover" />
+                           <div className="absolute top-2 left-2 flex items-center gap-2 rounded-full bg-destructive px-3 py-1 text-white text-sm"><div className="h-2 w-2 rounded-full bg-white animate-pulse"></div>LIVE</div>
+                      </div>
+                      <CardContent className="p-4 flex justify-center gap-2">
+                        <Button variant="ghost" size="icon" onClick={() => sendReaction('heart')}><Heart className="text-red-500 fill-red-500" /></Button>
+                        <Button variant="ghost" size="icon" onClick={() => sendReaction('like')}><ThumbsUp className="text-blue-500 fill-blue-500" /></Button>
+                        <Button variant="ghost" size="icon" onClick={() => sendReaction('laugh')}><Laugh className="text-yellow-500 fill-yellow-500" /></Button>
+                         {isHost && <Button variant="destructive" size="sm" onClick={() => setIsLive(false)}>End Party</Button>}
+                      </CardContent>
                   </div>
-              </CardContent>
+              ) : (
+                <>
+                <CardHeader>
+                <CardTitle>Upcoming Kitty Party</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p><strong>Host:</strong> {upcomingEvent.host}</p>
+                    <p><strong>Date:</strong> {upcomingEvent.date}</p>
+                    <p><strong>Time:</strong> {upcomingEvent.time}</p>
+                    <p><strong>Location:</strong> {upcomingEvent.location}</p>
+                    <div className="mt-4 flex gap-2">
+                        <Button onClick={() => handleAction('RSVP Confirmed!', `You are attending the next Kitty Party hosted by ${upcomingEvent.host}.`)}>RSVP</Button>
+                        {isHost && (
+                            <Dialog open={isPartyDialogOpen} onOpenChange={setIsPartyDialogOpen}>
+                                <DialogTrigger asChild>
+                                    <Button variant="outline"><Video className="mr-2 h-4 w-4" /> Start Virtual Party</Button>
+                                </DialogTrigger>
+                                <DialogContent className="sm:max-w-2xl">
+                                    <DialogHeader>
+                                        <DialogTitle>Start a Virtual Kitty Party</DialogTitle>
+                                        <DialogDescription>
+                                            Get ready to host your kitty party live! Your camera will be used.
+                                        </DialogDescription>
+                                    </DialogHeader>
+                                    <div className="space-y-4">
+                                        <Input placeholder="Enter a title for your party..." defaultValue={`${group.name} - Live!`} />
+                                        <CameraCapture onMediaCaptured={handleMediaCaptured} />
+                                    </div>
+                                    <DialogFooter>
+                                        <Button variant="ghost" onClick={() => setIsPartyDialogOpen(false)}>Cancel</Button>
+                                        <Button onClick={handleStartParty}>Go Live</Button>
+                                    </DialogFooter>
+                                </DialogContent>
+                            </Dialog>
+                        )}
+                    </div>
+                </CardContent>
+                </>
+              )}
           </Card>
-          <Card>
-              <CardHeader>
-                  <CardTitle className='flex items-center gap-2'>
-                      <ShieldCheck className="h-5 w-5 text-primary" />
-                      Secure Kitty System
-                  </CardTitle>
-                  <CardDescription>
-                      This group is protected by Sakhi's Secure Kitty System.
-                  </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                 <div className='flex justify-between'>
-                     <span className='text-muted-foreground'>Security Deposit:</span>
-                     <span className='font-semibold'>₹1,000 (Refundable)</span>
-                 </div>
-                 <div className='flex justify-between'>
-                     <span className='text-muted-foreground'>Late Payment Penalty:</span>
-                     <span className='font-semibold'>₹100 per day</span>
-                 </div>
-                 <div className='flex justify-between'>
-                     <span className='text-muted-foreground'>Group Insurance:</span>
-                     <span className='font-semibold'>Active</span>
-                 </div>
-              </CardContent>
+          <Card className='lg:col-span-2'>
+              {isLive ? (
+                  <>
+                    <CardHeader>
+                        <CardTitle>Live Chat</CardTitle>
+                    </CardHeader>
+                    <CardContent className="flex flex-col h-96">
+                        <div className="flex-1 space-y-3 overflow-y-auto pr-2">
+                            {liveMessages.map(msg => (
+                                <div key={msg.id}>
+                                    <span className="font-semibold text-sm">{msg.author}: </span>
+                                    <span className="text-sm text-muted-foreground">{msg.text}</span>
+                                </div>
+                            ))}
+                        </div>
+                        <form className="mt-4 flex gap-2" onSubmit={handleSendChatMessage}>
+                            <Input placeholder="Say something..." value={newMessage} onChange={(e) => setNewMessage(e.target.value)} />
+                            <Button type="submit" size="icon"><Send className="h-4 w-4" /></Button>
+                        </form>
+                    </CardContent>
+                  </>
+              ) : (
+                <>
+                <CardHeader>
+                    <CardTitle className='flex items-center gap-2'>
+                        <ShieldCheck className="h-5 w-5 text-primary" />
+                        Secure Kitty System
+                    </CardTitle>
+                    <CardDescription>
+                        This group is protected by Sakhi's Secure Kitty System.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-2 text-sm">
+                    <div className='flex justify-between'>
+                        <span className='text-muted-foreground'>Security Deposit:</span>
+                        <span className='font-semibold'>₹1,000 (Refundable)</span>
+                    </div>
+                    <div className='flex justify-between'>
+                        <span className='text-muted-foreground'>Late Payment Penalty:</span>
+                        <span className='font-semibold'>₹100 per day</span>
+                    </div>
+                    <div className='flex justify-between'>
+                        <span className='text-muted-foreground'>Group Insurance:</span>
+                        <span className='font-semibold'>Active</span>
+                    </div>
+                </CardContent>
+                </>
+              )}
           </Card>
         </div>
       </TabsContent>
