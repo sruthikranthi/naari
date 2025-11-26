@@ -163,9 +163,10 @@ export async function savePushSubscription(
   subscription: PushSubscription
 ) {
   const { collection, addDoc, query, where, getDocs, updateDoc, doc } = await import('firebase/firestore');
-  const { db } = await import('@/firebase/config');
+  const { initializeFirebase } = await import('@/firebase');
   
-  const subscriptionsRef = collection(db, 'push_subscriptions');
+  const { firestore } = initializeFirebase();
+  const subscriptionsRef = collection(firestore, 'push_subscriptions');
   const q = query(subscriptionsRef, where('userId', '==', userId), where('endpoint', '==', subscription.endpoint));
   const snapshot = await getDocs(q);
 
@@ -188,9 +189,10 @@ export async function savePushSubscription(
  */
 export async function removePushSubscription(userId: string, endpoint: string) {
   const { collection, query, where, getDocs, deleteDoc } = await import('firebase/firestore');
-  const { db } = await import('@/firebase/config');
+  const { initializeFirebase } = await import('@/firebase');
   
-  const subscriptionsRef = collection(db, 'push_subscriptions');
+  const { firestore } = initializeFirebase();
+  const subscriptionsRef = collection(firestore, 'push_subscriptions');
   const q = query(subscriptionsRef, where('userId', '==', userId), where('endpoint', '==', endpoint));
   const snapshot = await getDocs(q);
 
