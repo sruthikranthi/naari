@@ -7,11 +7,11 @@ import {
   Trophy,
   Plus,
   Users,
-  Calendar,
   IndianRupee,
   MessageSquare,
   Share2,
   Heart,
+  Loader,
 } from 'lucide-react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -50,82 +50,14 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useDashboard } from '../layout';
 import { users } from '@/lib/mock-data';
 import type { Post } from '@/lib/mock-data';
-
-const featuredContests = [
-  {
-    id: 'c1',
-    title: 'NAARIMANI of the Year',
-    category: 'Annual Award',
-    description:
-      'Celebrating the most inspirational and impactful woman in our community. Nominate someone who has made a significant difference.',
-    prize: '₹1,00,000 + Trophy',
-    endsIn: '45 days',
-    nominees: 12,
-    image: 'https://picsum.photos/seed/naarimani/800/600',
-    nominationFee: 0,
-    likes: 1200,
-    comments: 250,
-  },
-  {
-    id: 'c2',
-    title: 'Woman Entrepreneur of The Year',
-    category: 'Business Award',
-    description:
-      'Recognizing the most innovative and successful woman-led business on our platform. Showcase your venture and win big!',
-    prize: '₹50,000 Grant',
-    endsIn: '60 days',
-    nominees: 8,
-    image: 'https://picsum.photos/seed/entrepreneur/800/600',
-    nominationFee: 500,
-    likes: 850,
-    comments: 180,
-  },
-  {
-    id: 'c3',
-    title: 'Parashakthi Award for Bravery',
-    category: 'Community Award',
-    description:
-      'Honoring extraordinary courage and resilience. Share a story of a woman who has overcome immense challenges with grace.',
-    prize: 'Trophy + Feature',
-    endsIn: '30 days',
-    nominees: 15,
-    image: 'https://picsum.photos/seed/bravery/800/600',
-    nominationFee: 0,
-    likes: 2100,
-    comments: 400,
-  },
-];
-
-const communityContests = [
-  {
-    id: 'cc1',
-    title: 'Best Home Chef',
-    category: 'Cooking Contest',
-    prize: 'Gift Hamper',
-    nominees: 25,
-    nominationFee: 100,
-  },
-  {
-    id: 'cc2',
-    title: 'DIY Craft Challenge',
-    category: 'Creative Contest',
-    prize: 'Voucher',
-    nominees: 18,
-    nominationFee: 50,
-  },
-  {
-    id: 'cc3',
-    title: 'Photography Contest: Monsoon',
-    category: 'Art Contest',
-    prize: 'Feature',
-    nominees: 40,
-    nominationFee: 0,
-  },
-];
+import { useCollection, useFirestore, useUser, useMemoFirebase } from '@/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import type { Contest } from '@/lib/contests-data';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const contestSchema = z.object({
   title: z.string().min(5, 'Title must be at least 5 characters.'),
@@ -141,7 +73,15 @@ export default function ContestsPage() {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { addPost } = useDashboard();
-  
+  const firestore = useFirestore();
+  const { user, isUserLoading } = useUser();
+
+  const contestsQuery = useMemoFirebase(
+    () => (firestore && user ? collection(firestore, 'contests') : null),
+    [firestore, user]
+  );
+  const { data: contests, isLoading: areContestsLoading } = useCollection<Contest>(contestsQuery);
+
   const {
     register,
     handleSubmit,
@@ -152,14 +92,48 @@ export default function ContestsPage() {
     resolver: zodResolver(contestSchema),
   });
   
-  const handleCreateContest = (data: ContestFormValues) => {
-    console.log('New Contest Data:', data);
-    toast({
-      title: 'Contest Submitted for Review!',
-      description: `Your contest "${data.title}" will be live after admin approval.`,
-    });
-    reset();
-    setIsDialogOpen(false);
+  const handleCreateContest = async (data: ContestFormValues) => {
+    if (!user) {
+        toast({
+            variant: 'destructive',
+            title: 'Not Authenticated',
+            description: 'You must be logged in to propose a contest.',
+        });
+        return;
+    }
+    
+    const newContest = {
+      title: data.title,
+      description: data.description,
+      prize: data.prize,
+      category: data.category,
+      nominationFee: data.nominationFee || 0,
+      endsIn: '30 days',
+      image: `https://picsum.photos/seed/contest${Date.now()}/800/600`,
+      status: 'Pending Approval',
+      nominees: [],
+      jury: [],
+      createdAt: serverTimestamp(),
+      likes: 0,
+      commentCount: 0,
+    };
+
+    try {
+        await addDoc(collection(firestore, 'contests'), newContest);
+        toast({
+          title: 'Contest Submitted for Review!',
+          description: `Your contest "${data.title}" will be live after admin approval.`,
+        });
+        reset();
+        setIsDialogOpen(false);
+    } catch (e) {
+        console.error("Error creating contest:", e);
+        toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'Could not submit your contest proposal. Please try again.',
+        });
+    }
   };
   
   const handleShareContest = (contestTitle: string) => {
@@ -178,6 +152,15 @@ export default function ContestsPage() {
       description: `A post about "${contestTitle}" has been added to your feed.`,
     });
   }
+
+  const { featuredContests, communityContests } = useMemo(() => {
+    if (!contests) return { featuredContests: [], communityContests: [] };
+    const featured = contests.filter(c => ['Annual Award', 'Business Award', 'Community Award'].includes(c.category));
+    const community = contests.filter(c => !['Annual Award', 'Business Award', 'Community Award'].includes(c.category));
+    return { featuredContests: featured, communityContests: community };
+  }, [contests]);
+
+  const isLoading = isUserLoading || areContestsLoading;
 
   return (
     <div className="space-y-8">
@@ -289,96 +272,106 @@ export default function ContestsPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-        {featuredContests.map((contest) => (
-            <Card
-              key={contest.id}
-              className="flex flex-col overflow-hidden transition-all hover:shadow-lg"
-            >
-              <CardHeader className="p-0">
-                <div className="relative aspect-video w-full">
-                  <Image
-                    src={contest.image}
-                    alt={contest.title}
-                    fill
-                    className="object-cover"
-                    data-ai-hint="award ceremony"
-                  />
-                  <Badge className="absolute top-3 left-3">{contest.category}</Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="flex flex-1 flex-col p-4">
-                <CardTitle className="font-headline text-xl">
-                  {contest.title}
-                </CardTitle>
-                <CardDescription className="mt-2 flex-grow">
-                  {contest.description}
-                </CardDescription>
-                <div className="mt-4 grid grid-cols-3 gap-2 text-center text-sm">
-                  <div>
-                    <p className="font-bold">{contest.prize}</p>
-                    <p className="text-xs text-muted-foreground">Prize</p>
-                  </div>
-                  <div>
-                    <p className="font-bold">{contest.endsIn}</p>
-                    <p className="text-xs text-muted-foreground">Ends In</p>
-                  </div>
-                  <div>
-                    <p className="font-bold">
-                      {contest.nominees.toLocaleString()}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Nominees
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-              <CardFooter className="flex flex-col items-stretch gap-2 p-4 pt-0">
-                 <Button asChild className="w-full">
-                  <Link href={`/dashboard/contests/${contest.id}`}>
-                    <Trophy className="mr-2 h-4 w-4" />
-                    View Contest & Nominees
-                  </Link>
-                </Button>
-                <div className="flex justify-around">
-                     <Button variant="ghost" size="sm" className="flex-1 text-muted-foreground">
-                        <Heart className="mr-2 h-4 w-4" /> {contest.likes}
+        {isLoading ? (
+            [...Array(3)].map((_,i) => <Skeleton key={i} className="w-full h-[500px]" />)
+        ) : (
+            featuredContests.map((contest) => (
+                <Card
+                key={contest.id}
+                className="flex flex-col overflow-hidden transition-all hover:shadow-lg"
+                >
+                <CardHeader className="p-0">
+                    <div className="relative aspect-video w-full">
+                    <Image
+                        src={contest.image}
+                        alt={contest.title}
+                        fill
+                        className="object-cover"
+                        data-ai-hint="award ceremony"
+                    />
+                    <Badge className="absolute top-3 left-3">{contest.category}</Badge>
+                    </div>
+                </CardHeader>
+                <CardContent className="flex flex-1 flex-col p-4">
+                    <CardTitle className="font-headline text-xl">
+                    {contest.title}
+                    </CardTitle>
+                    <CardDescription className="mt-2 flex-grow">
+                    {contest.description}
+                    </CardDescription>
+                    <div className="mt-4 grid grid-cols-3 gap-2 text-center text-sm">
+                    <div>
+                        <p className="font-bold">{contest.prize}</p>
+                        <p className="text-xs text-muted-foreground">Prize</p>
+                    </div>
+                    <div>
+                        <p className="font-bold">{contest.endsIn}</p>
+                        <p className="text-xs text-muted-foreground">Ends In</p>
+                    </div>
+                    <div>
+                        <p className="font-bold">
+                        {contest.nominees.length.toLocaleString()}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                        Nominees
+                        </p>
+                    </div>
+                    </div>
+                </CardContent>
+                <CardFooter className="flex flex-col items-stretch gap-2 p-4 pt-0">
+                    <Button asChild className="w-full">
+                    <Link href={`/dashboard/contests/${contest.id}`}>
+                        <Trophy className="mr-2 h-4 w-4" />
+                        View Contest & Nominees
+                    </Link>
                     </Button>
-                    <Button variant="ghost" size="sm" className="flex-1 text-muted-foreground">
-                        <MessageSquare className="mr-2 h-4 w-4" /> {contest.comments}
-                    </Button>
-                    <Button variant="ghost" size="sm" className="flex-1 text-muted-foreground" onClick={() => handleShareContest(contest.title)}>
-                        <Share2 className="mr-2 h-4 w-4" /> Share
-                    </Button>
-                </div>
-              </CardFooter>
-            </Card>
-        ))}
+                    <div className="flex justify-around">
+                        <Button variant="ghost" size="sm" className="flex-1 text-muted-foreground">
+                            <Heart className="mr-2 h-4 w-4" /> {contest.likes || 0}
+                        </Button>
+                        <Button variant="ghost" size="sm" className="flex-1 text-muted-foreground">
+                            <MessageSquare className="mr-2 h-4 w-4" /> {contest.commentCount || 0}
+                        </Button>
+                        <Button variant="ghost" size="sm" className="flex-1 text-muted-foreground" onClick={() => handleShareContest(contest.title)}>
+                            <Share2 className="mr-2 h-4 w-4" /> Share
+                        </Button>
+                    </div>
+                </CardFooter>
+                </Card>
+            ))
+        )}
       </div>
 
       <Separator />
 
       <div>
         <h2 className="font-headline text-2xl font-bold mb-4">Ongoing Community Contests</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {communityContests.map(contest => (
-                <Card key={contest.id}>
-                    <CardHeader>
-                        <CardTitle className="text-lg">{contest.title}</CardTitle>
-                        <CardDescription>{contest.category}</CardDescription>
-                    </CardHeader>
-                    <CardContent className="flex justify-between items-center text-sm">
-                        <div className="space-y-1">
-                            <p className="flex items-center gap-1.5 text-muted-foreground"><Award className="h-4 w-4" /> {contest.prize}</p>
-                            <p className="flex items-center gap-1.5 text-muted-foreground"><Users className="h-4 w-4" /> {contest.nominees.toLocaleString()} nominees</p>
-                             <p className="flex items-center gap-1.5 text-muted-foreground"><IndianRupee className="h-4 w-4" /> {contest.nominationFee > 0 ? `${contest.nominationFee} entry fee` : 'Free entry'}</p>
-                        </div>
-                        <Button asChild>
-                            <Link href={`/dashboard/contests/${contest.id}`}>View</Link>
-                        </Button>
-                    </CardContent>
-                </Card>
-            ))}
-        </div>
+         {isLoading ? (
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[...Array(3)].map((_,i) => <Skeleton key={i} className="w-full h-48" />)}
+             </div>
+         ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {communityContests.map(contest => (
+                    <Card key={contest.id}>
+                        <CardHeader>
+                            <CardTitle className="text-lg">{contest.title}</CardTitle>
+                            <CardDescription>{contest.category}</CardDescription>
+                        </CardHeader>
+                        <CardContent className="flex justify-between items-center text-sm">
+                            <div className="space-y-1">
+                                <p className="flex items-center gap-1.5 text-muted-foreground"><Award className="h-4 w-4" /> {contest.prize}</p>
+                                <p className="flex items-center gap-1.5 text-muted-foreground"><Users className="h-4 w-4" /> {contest.nominees.length.toLocaleString()} nominees</p>
+                                <p className="flex items-center gap-1.5 text-muted-foreground"><IndianRupee className="h-4 w-4" /> {contest.nominationFee > 0 ? `${contest.nominationFee} entry fee` : 'Free entry'}</p>
+                            </div>
+                            <Button asChild>
+                                <Link href={`/dashboard/contests/${contest.id}`}>View</Link>
+                            </Button>
+                        </CardContent>
+                    </Card>
+                ))}
+            </div>
+         )}
       </div>
     </div>
   );
