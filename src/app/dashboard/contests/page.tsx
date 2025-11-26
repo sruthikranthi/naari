@@ -6,11 +6,10 @@ import {
   Award,
   Trophy,
   Plus,
-  Users,
-  Calendar,
-  IndianRupee,
-  Check,
+  Heart,
+  MessageCircle,
   Share2,
+  Check,
 } from 'lucide-react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -49,6 +48,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
+import { useDashboard } from '@/app/dashboard/page';
+import { users } from '@/lib/mock-data';
 
 const featuredContests = [
   {
@@ -126,6 +127,7 @@ export default function ContestsPage() {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [nominatedContests, setNominatedContests] = useState<string[]>([]);
+  const { addPost } = useDashboard();
   
   const {
     register,
@@ -143,6 +145,27 @@ export default function ContestsPage() {
     toast({
       title: 'Nomination Submitted!',
       description: `Your submission for "${contestTitle}" is in. Now spread the word to gather support!`,
+    });
+  };
+
+  const handleShare = (contestTitle: string, action: string) => {
+    const postContent = action === 'Nominate' 
+        ? `I've just nominated ${users[1].name} for the "${contestTitle}" award! Show your support by liking and commenting. #SakhiAwards #${contestTitle.replace(/ /g, '')}`
+        : `I'm excited to participate in the "${contestTitle}" contest! Wish me luck! #SakhiContest #${contestTitle.replace(/ /g, '')}`;
+
+    addPost({
+        id: `post-${Date.now()}`,
+        author: users[0],
+        content: postContent,
+        timestamp: 'Just now',
+        likes: 0,
+        comments: 0,
+        isAnonymous: false,
+    });
+    
+    toast({
+      title: 'Shared to Feed!',
+      description: `A post about your participation has been added to the main dashboard.`,
     });
   };
 
@@ -301,8 +324,8 @@ export default function ContestsPage() {
                   </div>
                 </div>
               </CardContent>
-              <CardFooter className="p-4 pt-0">
-                <Button
+              <CardFooter className="flex flex-col gap-2 p-4 pt-0">
+                 <Button
                   className="w-full"
                   onClick={() => handleNominate(contest.id, contest.title)}
                   disabled={isNominated}
@@ -311,6 +334,11 @@ export default function ContestsPage() {
                   {isNominated ? <Check className="mr-2 h-4 w-4" /> : <Trophy className="mr-2 h-4 w-4" />}
                   {isNominated ? 'Submitted' : contest.action}
                 </Button>
+                <div className="w-full grid grid-cols-3 gap-2">
+                    <Button variant="ghost" className="w-full text-muted-foreground"><Heart className="mr-2 h-4 w-4" />Like</Button>
+                    <Button variant="ghost" className="w-full text-muted-foreground"><MessageCircle className="mr-2 h-4 w-4" />Comment</Button>
+                    <Button variant="ghost" className="w-full text-muted-foreground" onClick={() => handleShare(contest.title, contest.action)}><Share2 className="mr-2 h-4 w-4" />Share</Button>
+                </div>
               </CardFooter>
             </Card>
           );
