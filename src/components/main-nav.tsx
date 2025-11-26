@@ -12,6 +12,7 @@ import {
   Ticket,
   HeartHandshake,
   Briefcase,
+  Shield,
 } from 'lucide-react';
 
 import {
@@ -39,6 +40,11 @@ const navItems = [
     href: '/dashboard/professional-hub',
     icon: Briefcase,
     label: 'Professional Hub',
+  },
+   {
+    href: '/dashboard/admin',
+    icon: Shield,
+    label: 'Admin Panel',
   },
 ];
 
