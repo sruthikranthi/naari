@@ -100,8 +100,10 @@ export function CommunityClient({ community, communityMembers, communityEvents, 
   }
 
   const onResourceSubmit = (data: ResourceFormValues) => {
+    // eslint-disable-next-line react-hooks/purity -- Date.now() is used in event handler, not during render
+    const resourceId = `res${Date.now()}`;
     const newResource: CommunityResource = {
-        id: `res${Date.now()}`,
+        id: resourceId,
         ...data,
     };
     setResources([newResource, ...resources]);

@@ -386,7 +386,7 @@ export function ChatClient() {
                     </div>
                     <div className="flex-1">
                       <p className="mb-2 text-sm text-muted-foreground italic">
-                        For message: "{state.message}"
+                        For message: &quot;{state.message}&quot;
                       </p>
                       <p className="font-medium">Suggested Actions:</p>
                       <ul className="list-disc pl-5 text-sm">
