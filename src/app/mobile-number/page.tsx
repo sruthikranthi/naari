@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, updateDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -130,27 +130,26 @@ export default function MobileNumberPage() {
 
       const userDocRef = doc(firestore, 'users', user.uid);
 
-      // Prepare user profile data
-      const profileData: any = {
-        id: user.uid,
-        mobileNumber: fullMobileNumber,
-      };
-
-      // If profile doesn't exist, initialize with basic user info
+      // If profile doesn't exist, create it with all required fields
       if (!userProfile) {
-        profileData.name = user.displayName || user.email?.split('@')[0] || 'User';
-        profileData.avatar = user.photoURL || `https://picsum.photos/seed/${user.uid}/100/100`;
-        profileData.followerIds = [];
-        profileData.followingIds = [];
+        const newProfileData = {
+          id: user.uid,
+          mobileNumber: fullMobileNumber,
+          name: user.displayName || user.email?.split('@')[0] || 'User',
+          avatar: user.photoURL || `https://picsum.photos/seed/${user.uid}/100/100`,
+          followerIds: [],
+          followingIds: [],
+        };
+        // Use setDoc without merge for new documents (uses create rule)
+        await setDoc(userDocRef, newProfileData);
       } else {
-        // Preserve existing profile data
-        Object.assign(profileData, userProfile);
-        profileData.mobileNumber = fullMobileNumber;
+        // Profile exists, use updateDoc to update only the mobile number
+        // updateDoc only updates the specified fields, preserving others
+        // This satisfies the Firestore rule which requires followerIds to not be in the update
+        await updateDoc(userDocRef, {
+          mobileNumber: fullMobileNumber,
+        });
       }
-
-      // Use setDoc with merge to create or update the user profile
-      // This ensures the document exists even if it wasn't created before
-      await setDoc(userDocRef, profileData, { merge: true });
 
       toast({
         title: 'Mobile Number Saved!',
