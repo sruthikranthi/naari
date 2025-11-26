@@ -18,6 +18,11 @@ import {
   Award,
   Plus,
   UserSearch,
+  FileText,
+  UserCheck,
+  Calendar,
+  GraduationCap,
+  Edit,
 } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
 import {
@@ -182,6 +187,17 @@ export default function AdminPanelPage() {
         title: 'Juror Added!',
         description: `${jurorName} has been added to the jury panel.`
     });
+  }
+
+  const handleUpdateContestDetail = (field: keyof Contest, value: string) => {
+    if(!managingContest) return;
+    const updatedContest = { ...managingContest, [field]: value };
+    setManagingContest(updatedContest);
+    setContests(prev => prev.map(c => c.id === managingContest.id ? updatedContest : c));
+    toast({
+        title: 'Contest Updated',
+        description: `The ${String(field)} has been updated.`
+    })
   }
 
 
@@ -479,110 +495,191 @@ export default function AdminPanelPage() {
       </Tabs>
       
       {/* Contest Management Dialog */}
-      <Dialog open={!!managingContest} onOpenChange={(open) => !open && setManagingContest(null)}>
-        <DialogContent className="sm:max-w-3xl">
-          {managingContest && (
-            <>
-              <DialogHeader>
-                <DialogTitle>Manage: {managingContest.title}</DialogTitle>
-                <DialogDescription>
-                  Oversee the jury, monitor nominees, and manage the contest.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4 max-h-[60vh] overflow-y-auto">
-                 {/* Jury Panel */}
-                <Card>
-                    <CardHeader>
-                        <div className="flex items-center justify-between">
-                            <CardTitle>Jury Panel</CardTitle>
-                            <Dialog>
-                                <DialogTrigger asChild>
-                                    <Button variant="outline" size="sm"><Plus className="mr-2 h-4 w-4" /> Add Juror</Button>
-                                </DialogTrigger>
-                                <DialogContent>
-                                    <DialogHeader>
-                                        <DialogTitle>Add a Juror</DialogTitle>
-                                        <DialogDescription>Search for a user to add to the jury panel.</DialogDescription>
-                                    </DialogHeader>
-                                    <form id="add-juror-form" onSubmit={(e) => {
-                                        e.preventDefault();
-                                        const form = e.target as HTMLFormElement;
-                                        const input = form.elements.namedItem('juror-name') as HTMLInputElement;
-                                        handleAddJuror(managingContest.id, input.value);
-                                        // Ideally, you'd close this specific dialog
-                                    }}>
-                                        <div className="flex items-center gap-2 py-4">
-                                            <Label htmlFor="juror-name" className="sr-only">Juror Name</Label>
-                                            <Input id="juror-name" name="juror-name" placeholder="Enter user name..." />
-                                            <Button type="submit">Add</Button>
-                                        </div>
-                                    </form>
-                                </DialogContent>
-                            </Dialog>
-                        </div>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        {managingContest.jury.map((juror) => (
-                            <div key={juror.name} className="flex items-center gap-3">
-                                <Avatar>
-                                    <AvatarImage src={juror.avatar} />
-                                    <AvatarFallback>{juror.name.split(' ').map(n=>n[0]).join('')}</AvatarFallback>
-                                </Avatar>
-                                <div>
-                                    <p className="font-semibold">{juror.name}</p>
-                                    <p className="text-xs text-muted-foreground">{juror.title}</p>
+        <Dialog open={!!managingContest} onOpenChange={(open) => !open && setManagingContest(null)}>
+            <DialogContent className="sm:max-w-4xl">
+            {managingContest && (
+                <>
+                <DialogHeader>
+                    <DialogTitle>Manage: {managingContest.title}</DialogTitle>
+                    <DialogDescription>
+                    Oversee the jury, monitor nominees, and manage the contest.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 py-4 max-h-[70vh] overflow-y-auto">
+                    {/* Left Column */}
+                    <div className="md:col-span-1 space-y-6">
+                        {/* Contest Details */}
+                        <Card>
+                             <CardHeader>
+                                <CardTitle>Contest Details</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-4 text-sm">
+                                <ContestDetailItem
+                                    icon={FileText}
+                                    label="Rules"
+                                    value={managingContest.rules || 'Not set'}
+                                    onEdit={(value) => handleUpdateContestDetail('rules', value)}
+                                />
+                                <ContestDetailItem
+                                    icon={UserCheck}
+                                    label="Eligibility"
+                                    value={managingContest.eligibility || 'Not set'}
+                                    onEdit={(value) => handleUpdateContestDetail('eligibility', value)}
+                                />
+                                <ContestDetailItem
+                                    icon={Calendar}
+                                    label="Age Range"
+                                    value={managingContest.ageRange || 'Not set'}
+                                    onEdit={(value) => handleUpdateContestDetail('ageRange', value)}
+                                />
+                                <ContestDetailItem
+                                    icon={GraduationCap}
+                                    label="Education"
+                                    value={managingContest.education || 'Not set'}
+                                    onEdit={(value) => handleUpdateContestDetail('education', value)}
+                                />
+                            </CardContent>
+                        </Card>
+                         {/* Jury Panel */}
+                        <Card>
+                            <CardHeader>
+                                <div className="flex items-center justify-between">
+                                    <CardTitle>Jury Panel</CardTitle>
+                                    <Dialog>
+                                        <DialogTrigger asChild>
+                                            <Button variant="outline" size="sm"><Plus className="mr-2 h-4 w-4" /> Add Juror</Button>
+                                        </DialogTrigger>
+                                        <DialogContent>
+                                            <DialogHeader>
+                                                <DialogTitle>Add a Juror</DialogTitle>
+                                                <DialogDescription>Search for a user to add to the jury panel.</DialogDescription>
+                                            </DialogHeader>
+                                            <form id="add-juror-form" onSubmit={(e) => {
+                                                e.preventDefault();
+                                                const form = e.target as HTMLFormElement;
+                                                const input = form.elements.namedItem('juror-name') as HTMLInputElement;
+                                                handleAddJuror(managingContest.id, input.value);
+                                                // Ideally, you'd close this specific dialog
+                                            }}>
+                                                <div className="flex items-center gap-2 py-4">
+                                                    <Label htmlFor="juror-name" className="sr-only">Juror Name</Label>
+                                                    <Input id="juror-name" name="juror-name" placeholder="Enter user name..." />
+                                                    <Button type="submit">Add</Button>
+                                                </div>
+                                            </form>
+                                        </DialogContent>
+                                    </Dialog>
                                 </div>
-                                <Button variant="ghost" size="icon" className="ml-auto h-8 w-8 text-destructive"><XCircle className="h-4 w-4"/></Button>
-                            </div>
-                        ))}
-                    </CardContent>
-                </Card>
-
-                {/* Nominee Overview */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Nominees ({managingContest.nominees.length})</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Nominee</TableHead>
-                                    <TableHead>Votes</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {managingContest.nominees.sort((a,b) => b.votes - a.votes).map(nominee => (
-                                     <TableRow key={nominee.id}>
-                                         <TableCell>{nominee.name}</TableCell>
-                                         <TableCell>{nominee.votes.toLocaleString()}</TableCell>
-                                     </TableRow>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                {managingContest.jury.map((juror) => (
+                                    <div key={juror.name} className="flex items-center gap-3">
+                                        <Avatar>
+                                            <AvatarImage src={juror.avatar} />
+                                            <AvatarFallback>{juror.name.split(' ').map(n=>n[0]).join('')}</AvatarFallback>
+                                        </Avatar>
+                                        <div>
+                                            <p className="font-semibold">{juror.name}</p>
+                                            <p className="text-xs text-muted-foreground">{juror.title}</p>
+                                        </div>
+                                        <Button variant="ghost" size="icon" className="ml-auto h-8 w-8 text-destructive"><XCircle className="h-4 w-4"/></Button>
+                                    </div>
                                 ))}
-                                {managingContest.nominees.length === 0 && (
-                                    <TableRow>
-                                        <TableCell colSpan={2} className="text-center">No nominees yet.</TableCell>
-                                    </TableRow>
-                                )}
-                            </TableBody>
-                        </Table>
-                    </CardContent>
-                </Card>
-              </div>
-              <DialogFooter>
-                <Button variant="destructive" onClick={() => {
-                    toast({ title: 'Winner Declared!', description: 'The winner has been announced to the community.'});
-                    setManagingContest(null);
-                }}>
-                    Declare Winner
-                </Button>
-                <Button onClick={() => setManagingContest(null)}>Close</Button>
-              </DialogFooter>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    {/* Right Column */}
+                    <div className="md:col-span-2">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Nominees ({managingContest.nominees.length})</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Nominee</TableHead>
+                                            <TableHead>Votes</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {managingContest.nominees.sort((a,b) => b.votes - a.votes).map(nominee => (
+                                            <TableRow key={nominee.id}>
+                                                <TableCell>{nominee.name}</TableCell>
+                                                <TableCell>{nominee.votes.toLocaleString()}</TableCell>
+                                            </TableRow>
+                                        ))}
+                                        {managingContest.nominees.length === 0 && (
+                                            <TableRow>
+                                                <TableCell colSpan={2} className="text-center">No nominees yet.</TableCell>
+                                            </TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </CardContent>
+                        </Card>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="destructive" onClick={() => {
+                        toast({ title: 'Winner Declared!', description: 'The winner has been announced to the community.'});
+                        setManagingContest(null);
+                    }}>
+                        Declare Winner
+                    </Button>
+                    <Button onClick={() => setManagingContest(null)}>Close</Button>
+                </DialogFooter>
+                </>
+            )}
+            </DialogContent>
+        </Dialog>
     </div>
   );
+}
+
+
+// Helper component for editable contest details
+function ContestDetailItem({ icon: Icon, label, value, onEdit }: { icon: React.ElementType, label: string, value: string, onEdit: (newValue: string) => void }) {
+    const [isEditing, setIsEditing] = useState(false);
+    const [editValue, setEditValue] = useState(value);
+
+    const handleSave = () => {
+        onEdit(editValue);
+        setIsEditing(false);
+    }
+
+    return (
+        <div className="flex items-start gap-3">
+            <Icon className="h-5 w-5 mt-0.5 text-primary" />
+            <div className="flex-1">
+                <p className="font-semibold">{label}</p>
+                <p className="text-muted-foreground">{value}</p>
+            </div>
+            <Dialog open={isEditing} onOpenChange={setIsEditing}>
+                <DialogTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-6 w-6"><Edit className="h-4 w-4" /></Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Edit {label}</DialogTitle>
+                    </DialogHeader>
+                    <div className="py-4">
+                        <Label htmlFor={`edit-${label}`} className="sr-only">{label}</Label>
+                        {label === 'Rules' || label === 'Eligibility' ? (
+                             <Textarea id={`edit-${label}`} value={editValue} onChange={(e) => setEditValue(e.target.value)} rows={4} />
+                        ) : (
+                             <Input id={`edit-${label}`} value={editValue} onChange={(e) => setEditValue(e.target.value)} />
+                        )}
+                    </div>
+                    <DialogFooter>
+                        <DialogClose asChild><Button variant="ghost">Cancel</Button></DialogClose>
+                        <Button onClick={handleSave}>Save</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </div>
+    );
 }
 
     

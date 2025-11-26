@@ -30,6 +30,10 @@ export type Contest = {
   nominationFee: number;
   nominees: Nominee[];
   jury: JuryMember[];
+  rules?: string;
+  eligibility?: string;
+  ageRange?: string;
+  education?: string;
 };
 
 export const allContestsData: Contest[] = [
@@ -43,6 +47,10 @@ export const allContestsData: Contest[] = [
     endsIn: '45 days',
     image: 'https://picsum.photos/seed/naarimani/800/600',
     nominationFee: 0,
+    rules: 'Nominee must be a registered member of Sakhi Circle. Self-nominations are allowed. Multiple entries for the same person are not allowed.',
+    eligibility: 'Open to all Indian women who have made a significant social impact in the last year.',
+    ageRange: '18+',
+    education: 'Not Applicable',
     jury: [
         { name: 'Roshni Nadar', title: 'Chairperson, HCL', avatar: 'https://picsum.photos/seed/jury1/100/100' },
         { name: 'Falguni Nayar', title: 'Founder, Nykaa', avatar: 'https://picsum.photos/seed/jury2/100/100' },
@@ -85,6 +93,10 @@ export const allContestsData: Contest[] = [
     endsIn: '60 days',
     image: 'https://picsum.photos/seed/entrepreneur/800/600',
     nominationFee: 500,
+    rules: 'Business must be registered and operational for at least one year. Must be a woman-led business (over 50% ownership).',
+    eligibility: 'For women entrepreneurs with a registered business in India.',
+    ageRange: '21+',
+    education: 'Graduate or equivalent experience.',
     jury: [
         { name: 'Vani Kola', title: 'MD, Kalaari Capital', avatar: 'https://picsum.photos/seed/jury4/100/100' },
         { name: 'Radhika Gupta', title: 'CEO, Edelweiss MF', avatar: 'https://picsum.photos/seed/jury5/100/100' },
