@@ -233,7 +233,7 @@ export default function LearningPage() {
               ) : (
                 <div className="col-span-full py-20 text-center text-muted-foreground">
                     <h3 className="text-lg font-semibold">No courses enrolled yet</h3>
-                    <p>Start discovering new skills in the "Discover Courses" tab.</p>
+                    <p>Start discovering new skills in the &quot;Discover Courses&quot; tab.</p>
                 </div>
               )}
             </div>

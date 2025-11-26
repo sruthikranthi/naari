@@ -144,6 +144,7 @@ export default function KittyGroupsPage() {
         });
         return;
       }
+      // eslint-disable-next-line react-hooks/purity -- Math.random() is used in event handler, not during render
       const winner = allUsers[Math.floor(Math.random() * allUsers.length)];
       toast({
         title: '🎉 And the Winner is...',
@@ -343,7 +344,7 @@ export default function KittyGroupsPage() {
                 <div>
                     <h4 className="font-semibold flex items-center gap-2"><Video className="h-4 w-4"/>For Online Kitty Parties</h4>
                     <ul className="list-disc pl-5 mt-2 text-muted-foreground space-y-1">
-                        <li>The designated host starts a "Virtual Party" from the group page.</li>
+                        <li>The designated host starts a &quot;Virtual Party&quot; from the group page.</li>
                         <li>Members receive a notification and can join the live video stream.</li>
                         <li>Interact with everyone using the live chat and send fun reactions.</li>
                         <li>The lucky draw can be held live for full transparency!</li>
@@ -354,8 +355,8 @@ export default function KittyGroupsPage() {
                     <h4 className="font-semibold flex items-center gap-2"><Users className="h-4 w-4"/>For Offline (In-Person) Parties</h4>
                     <ul className="list-disc pl-5 mt-2 text-muted-foreground space-y-1">
                         <li>Use the app as your digital diary for the kitty group.</li>
-                        <li>Track member contributions easily with "Payment Status".</li>
-                        <li>Use the "Members" tab to manage your group and send reminders.</li>
+                        <li>Track member contributions easily with &quot;Payment Status&quot;.</li>
+                        <li>Use the &quot;Members&quot; tab to manage your group and send reminders.</li>
                         <li>Keep a record of hosts and event dates all in one place.</li>
                     </ul>
                 </div>
