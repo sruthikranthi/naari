@@ -1,17 +1,14 @@
 
 'use client';
-import { useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import {
   Award,
   Trophy,
   Plus,
-  Heart,
-  MessageCircle,
-  Share2,
-  Check,
-  IndianRupee,
   Users,
+  Calendar,
+  IndianRupee,
 } from 'lucide-react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -50,8 +47,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { useDashboard } from '@/app/dashboard/page';
-import { users } from '@/lib/mock-data';
+import { useState } from 'react';
 
 const featuredContests = [
   {
@@ -62,9 +58,8 @@ const featuredContests = [
       'Celebrating the most inspirational and impactful woman in our community. Nominate someone who has made a significant difference.',
     prize: '₹1,00,000 + Trophy',
     endsIn: '45 days',
-    participants: 1250,
+    nominees: 12,
     image: 'https://picsum.photos/seed/naarimani/800/600',
-    action: 'Nominate',
     nominationFee: 0,
   },
   {
@@ -75,9 +70,8 @@ const featuredContests = [
       'Recognizing the most innovative and successful woman-led business on our platform. Showcase your venture and win big!',
     prize: '₹50,000 Grant',
     endsIn: '60 days',
-    participants: 480,
+    nominees: 8,
     image: 'https://picsum.photos/seed/entrepreneur/800/600',
-    action: 'Participate',
     nominationFee: 500,
   },
   {
@@ -88,9 +82,8 @@ const featuredContests = [
       'Honoring extraordinary courage and resilience. Share a story of a woman who has overcome immense challenges with grace.',
     prize: 'Trophy + Feature',
     endsIn: '30 days',
-    participants: 970,
+    nominees: 15,
     image: 'https://picsum.photos/seed/bravery/800/600',
-    action: 'Nominate',
     nominationFee: 0,
   },
 ];
@@ -101,7 +94,7 @@ const communityContests = [
     title: 'Best Home Chef',
     category: 'Cooking Contest',
     prize: 'Gift Hamper',
-    participants: 120,
+    nominees: 25,
     nominationFee: 100,
   },
   {
@@ -109,7 +102,7 @@ const communityContests = [
     title: 'DIY Craft Challenge',
     category: 'Creative Contest',
     prize: 'Voucher',
-    participants: 85,
+    nominees: 18,
     nominationFee: 50,
   },
   {
@@ -117,7 +110,7 @@ const communityContests = [
     title: 'Photography Contest: Monsoon',
     category: 'Art Contest',
     prize: 'Feature',
-    participants: 210,
+    nominees: 40,
     nominationFee: 0,
   },
 ];
@@ -135,8 +128,6 @@ type ContestFormValues = z.infer<typeof contestSchema>;
 export default function ContestsPage() {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [nominatedContests, setNominatedContests] = useState<string[]>([]);
-  const { addPost } = useDashboard();
   
   const {
     register,
@@ -148,36 +139,6 @@ export default function ContestsPage() {
     resolver: zodResolver(contestSchema),
   });
   
-  const handleNominate = (contestId: string, contestTitle: string, fee: number) => {
-    if (nominatedContests.includes(contestId)) return;
-    setNominatedContests([...nominatedContests, contestId]);
-    toast({
-      title: 'Nomination Submitted!',
-      description: `Your submission for "${contestTitle}" is in. ${fee > 0 ? `A fee of ₹${fee} has been processed. ` : ''}Now spread the word to gather support!`,
-    });
-  };
-
-  const handleShare = (contestTitle: string, action: string) => {
-    const postContent = action === 'Nominate' 
-        ? `I've just nominated ${users[1].name} for the "${contestTitle}" award! Show your support by liking and commenting. #SakhiAwards #${contestTitle.replace(/ /g, '')}`
-        : `I'm excited to participate in the "${contestTitle}" contest! Wish me luck! #SakhiContest #${contestTitle.replace(/ /g, '')}`;
-
-    addPost({
-        id: `post-${Date.now()}`,
-        author: users[0],
-        content: postContent,
-        timestamp: 'Just now',
-        likes: 0,
-        comments: 0,
-        isAnonymous: false,
-    });
-    
-    toast({
-      title: 'Shared to Feed!',
-      description: `A post about your participation has been added to the main dashboard.`,
-    });
-  };
-
   const handleCreateContest = (data: ContestFormValues) => {
     console.log('New Contest Data:', data);
     toast({
@@ -298,9 +259,7 @@ export default function ContestsPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-        {featuredContests.map((contest) => {
-          const isNominated = nominatedContests.includes(contest.id);
-          return (
+        {featuredContests.map((contest) => (
             <Card
               key={contest.id}
               className="flex flex-col overflow-hidden transition-all hover:shadow-lg"
@@ -324,14 +283,10 @@ export default function ContestsPage() {
                 <CardDescription className="mt-2 flex-grow">
                   {contest.description}
                 </CardDescription>
-                <div className="mt-4 grid grid-cols-4 gap-2 text-center text-sm">
+                <div className="mt-4 grid grid-cols-3 gap-2 text-center text-sm">
                   <div>
                     <p className="font-bold">{contest.prize}</p>
                     <p className="text-xs text-muted-foreground">Prize</p>
-                  </div>
-                   <div>
-                    <p className="font-bold">{contest.nominationFee > 0 ? `₹${contest.nominationFee}` : 'Free'}</p>
-                    <p className="text-xs text-muted-foreground">Entry Fee</p>
                   </div>
                   <div>
                     <p className="font-bold">{contest.endsIn}</p>
@@ -339,33 +294,24 @@ export default function ContestsPage() {
                   </div>
                   <div>
                     <p className="font-bold">
-                      {contest.participants.toLocaleString()}
+                      {contest.nominees.toLocaleString()}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Participants
+                      Nominees
                     </p>
                   </div>
                 </div>
               </CardContent>
-              <CardFooter className="flex flex-col gap-2 p-4 pt-0">
-                 <Button
-                  className="w-full"
-                  onClick={() => handleNominate(contest.id, contest.title, contest.nominationFee)}
-                  disabled={isNominated}
-                  variant={isNominated ? 'secondary' : 'default'}
-                >
-                  {isNominated ? <Check className="mr-2 h-4 w-4" /> : <Trophy className="mr-2 h-4 w-4" />}
-                  {isNominated ? 'Submitted' : `${contest.action} ${contest.nominationFee > 0 ? `(₹${contest.nominationFee})` : '(Free)'}`}
+              <CardFooter className="p-4 pt-0">
+                 <Button asChild className="w-full">
+                  <Link href={`/dashboard/contests/${contest.id}`}>
+                    <Trophy className="mr-2 h-4 w-4" />
+                    View Contest & Nominees
+                  </Link>
                 </Button>
-                <div className="w-full grid grid-cols-3 gap-2">
-                    <Button variant="ghost" className="w-full text-muted-foreground"><Heart className="mr-2 h-4 w-4" />Like</Button>
-                    <Button variant="ghost" className="w-full text-muted-foreground"><MessageCircle className="mr-2 h-4 w-4" />Comment</Button>
-                    <Button variant="ghost" className="w-full text-muted-foreground" onClick={() => handleShare(contest.title, contest.action)}><Share2 className="mr-2 h-4 w-4" />Share</Button>
-                </div>
               </CardFooter>
             </Card>
-          );
-        })}
+        ))}
       </div>
 
       <Separator />
@@ -382,10 +328,12 @@ export default function ContestsPage() {
                     <CardContent className="flex justify-between items-center text-sm">
                         <div className="space-y-1">
                             <p className="flex items-center gap-1.5 text-muted-foreground"><Award className="h-4 w-4" /> {contest.prize}</p>
-                            <p className="flex items-center gap-1.5 text-muted-foreground"><Users className="h-4 w-4" /> {contest.participants.toLocaleString()} participants</p>
+                            <p className="flex items-center gap-1.5 text-muted-foreground"><Users className="h-4 w-4" /> {contest.nominees.toLocaleString()} nominees</p>
                              <p className="flex items-center gap-1.5 text-muted-foreground"><IndianRupee className="h-4 w-4" /> {contest.nominationFee > 0 ? `${contest.nominationFee} entry fee` : 'Free entry'}</p>
                         </div>
-                        <Button>View Details</Button>
+                        <Button asChild>
+                            <Link href={`/dashboard/contests/${contest.id}`}>View</Link>
+                        </Button>
                     </CardContent>
                 </Card>
             ))}

@@ -82,10 +82,10 @@ initialUsers.push({
 });
 
 const allContests = [
-    { id: 'c1', name: 'NAARIMANI of the Year', participants: 1250, status: 'Live', fee: 'Free' },
-    { id: 'c2', name: 'Woman Entrepreneur of The Year', participants: 480, status: 'Live', fee: '₹500' },
-    { id: 'cc1', name: 'Best Home Chef', participants: 120, status: 'Community-run', fee: '₹100' },
-    { id: 'prop1', name: 'Pune Baking Championship', participants: 0, status: 'Pending Approval', fee: '₹200' }
+    { id: 'c1', name: 'NAARIMANI of the Year', nominees: 12, status: 'Live', fee: 'Free' },
+    { id: 'c2', name: 'Woman Entrepreneur of The Year', nominees: 8, status: 'Live', fee: '₹500' },
+    { id: 'cc1', name: 'Best Home Chef', nominees: 25, status: 'Community-run', fee: '₹100' },
+    { id: 'prop1', name: 'Pune Baking Championship', nominees: 0, status: 'Pending Approval', fee: '₹200' }
 ];
 
 export default function AdminPanelPage() {
@@ -421,7 +421,7 @@ export default function AdminPanelPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Contest Name</TableHead>
-                    <TableHead>Participants</TableHead>
+                    <TableHead>Nominees</TableHead>
                     <TableHead>Entry Fee</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
@@ -431,7 +431,7 @@ export default function AdminPanelPage() {
                   {allContests.map((contest) => (
                     <TableRow key={contest.id}>
                       <TableCell className="font-medium">{contest.name}</TableCell>
-                      <TableCell>{contest.participants.toLocaleString()}</TableCell>
+                      <TableCell>{contest.nominees.toLocaleString()}</TableCell>
                       <TableCell>{contest.fee}</TableCell>
                       <TableCell>
                         <Badge variant={getStatusVariant(contest.status)}>{contest.status}</Badge>
