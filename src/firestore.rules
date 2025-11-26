@@ -199,17 +199,17 @@ service cloud.firestore {
      * @path /kitty_groups/{kittyGroupId}
      * @allow (get) User `user_abc` reading a group document where they are in the `memberIds` array.
      * @allow (create) User `user_abc` creating a new group where they are included in the initial `memberIds`.
-     * @deny (list) Any user attempting to discover all kitty groups.
+     * @deny (list) Any user attempting to discover all kitty groups (except super admin).
      * @deny (update) Any member trying to modify the group. This must be handled by a backend function.
      * @principle Enforces strict membership-based access for highly sensitive collaborative data.
      */
     match /kitty_groups/{kittyGroupId} {
-      allow get: if isMember(resource.data, 'memberIds');
-      // Allow list queries where the user is a member.
-      allow list: if isSignedIn() && request.auth.uid in resource.data.memberIds;
+      allow get: if isMember(resource.data, 'memberIds') || isSuperAdmin();
+      // Allow list queries where the user is a member, or if they are a super admin.
+      allow list: if isSignedIn() && (request.auth.uid in resource.data.memberIds || isSuperAdmin());
       allow create: if isSignedIn() && isMember(request.resource.data, 'memberIds');
-      allow update: if false; // Membership and state changes should be handled by a backend function.
-      allow delete: if false;
+      allow update: if isSuperAdmin(); // Allow super admin to update groups.
+      allow delete: if isSuperAdmin(); // Allow super admin to delete groups.
     }
 
     // -------------------------------------------------------------------------
