@@ -2,8 +2,8 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Users, Search, Plus } from 'lucide-react';
-import { useForm } from 'react-hook-form';
+import { Users, Search, Plus, Lock, Globe } from 'lucide-react';
+import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 
@@ -27,14 +27,20 @@ import {
   DialogTrigger,
   DialogFooter,
   DialogClose,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 
 const communitySchema = z.object({
   name: z.string().min(3, { message: 'Name must be at least 3 characters long.' }),
   description: z.string().min(10, { message: 'Description must be at least 10 characters long.' }),
+  objective: z.string().min(10, { message: 'Objective must be at least 10 characters long.' }),
+  category: z.string().nonempty({ message: 'Please select a category.' }),
+  isPrivate: z.boolean().default(false),
 });
 
 type CommunityFormValues = z.infer<typeof communitySchema>;
@@ -48,10 +54,18 @@ export default function CommunitiesPage() {
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
     reset,
   } = useForm<CommunityFormValues>({
     resolver: zodResolver(communitySchema),
+    defaultValues: {
+        name: '',
+        description: '',
+        objective: '',
+        category: '',
+        isPrivate: false,
+    }
   });
 
   const onSubmit = (data: CommunityFormValues) => {
@@ -100,35 +114,109 @@ export default function CommunitiesPage() {
               Create Community
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
+          <DialogContent className="sm:max-w-lg">
             <form onSubmit={handleSubmit(onSubmit)}>
               <DialogHeader>
                 <DialogTitle>Create a New Community</DialogTitle>
+                <DialogDescription>
+                    Fill in the details below to start your own circle.
+                </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="name" className="text-right">
-                    Name
-                  </Label>
-                  <div className="col-span-3">
-                    <Input id="name" placeholder="e.g., Mumbai Moms" {...register('name')} />
-                    {errors.name && <p className="mt-1 text-xs text-destructive">{errors.name.message}</p>}
-                  </div>
+                <div>
+                  <Label htmlFor="name">Community Name</Label>
+                  <Input id="name" placeholder="e.g., Mumbai Moms, Bangalore Bakers" {...register('name')} />
+                  {errors.name && <p className="mt-1 text-xs text-destructive">{errors.name.message}</p>}
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="description" className="text-right">
-                    Description
-                  </Label>
-                   <div className="col-span-3">
-                    <Textarea
-                      id="description"
-                      placeholder="What is your community about?"
-                      rows={4}
-                      {...register('description')}
+                
+                <div>
+                  <Label htmlFor="description">Short Description</Label>
+                  <Textarea
+                    id="description"
+                    placeholder="A brief, catchy description for your community."
+                    rows={2}
+                    {...register('description')}
+                  />
+                  {errors.description && <p className="mt-1 text-xs text-destructive">{errors.description.message}</p>}
+                </div>
+
+                <div>
+                  <Label htmlFor="objective">Objective</Label>
+                  <Textarea
+                    id="objective"
+                    placeholder="What is the main goal or purpose of this community?"
+                    rows={3}
+                    {...register('objective')}
+                  />
+                  {errors.objective && <p className="mt-1 text-xs text-destructive">{errors.objective.message}</p>}
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <Label htmlFor="category">Category</Label>
+                        <Controller
+                            name="category"
+                            control={control}
+                            render={({ field }) => (
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                <SelectTrigger id="category">
+                                    <SelectValue placeholder="Select a category" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="hobbies">Hobbies & Interests</SelectItem>
+                                    <SelectItem value="professional">Professional Networking</SelectItem>
+                                    <SelectItem value="parenting">Parenting Support</SelectItem>
+                                    <SelectItem value="local">Local & City-based</SelectItem>
+                                    <SelectItem value="wellness">Health & Wellness</SelectItem>
+                                </SelectContent>
+                                </Select>
+                            )}
+                        />
+                         {errors.category && <p className="mt-1 text-xs text-destructive">{errors.category.message}</p>}
+                    </div>
+                     <div>
+                        <Label htmlFor="banner-image">Banner Image</Label>
+                        <Input id="banner-image" type="file" accept="image/*" />
+                        <p className="mt-1 text-xs text-muted-foreground">For demonstration only.</p>
+                    </div>
+                </div>
+
+                <div>
+                    <Label>Privacy</Label>
+                    <Controller
+                        name="isPrivate"
+                        control={control}
+                        render={({ field }) => (
+                            <RadioGroup
+                                onValueChange={(value) => field.onChange(value === 'private')}
+                                defaultValue={field.value ? 'private' : 'public'}
+                                className="mt-2 grid grid-cols-2 gap-4"
+                            >
+                                <div>
+                                    <Label htmlFor="public" className="flex items-center gap-4 rounded-md border p-3 cursor-pointer hover:bg-accent has-[[data-state=checked]]:border-primary">
+                                         <Globe className="h-5 w-5 text-primary" />
+                                         <div>
+                                            <p className="font-semibold">Public</p>
+                                            <p className="text-xs text-muted-foreground">Anyone can find and join.</p>
+                                         </div>
+                                        <RadioGroupItem value="public" id="public" className="ml-auto" />
+                                    </Label>
+                                </div>
+                                <div>
+                                    <Label htmlFor="private" className="flex items-center gap-4 rounded-md border p-3 cursor-pointer hover:bg-accent has-[[data-state=checked]]:border-primary">
+                                        <Lock className="h-5 w-5 text-primary" />
+                                         <div>
+                                            <p className="font-semibold">Private</p>
+                                            <p className="text-xs text-muted-foreground">Only invited members can join.</p>
+                                         </div>
+                                        <RadioGroupItem value="private" id="private" className="ml-auto"/>
+                                    </Label>
+                                </div>
+                            </RadioGroup>
+                        )}
                     />
-                    {errors.description && <p className="mt-1 text-xs text-destructive">{errors.description.message}</p>}
-                  </div>
                 </div>
+
               </div>
               <DialogFooter>
                 <DialogClose asChild>
