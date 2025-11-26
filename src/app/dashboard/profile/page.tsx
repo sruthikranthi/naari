@@ -80,7 +80,7 @@ export default function ProfilePage() {
 
   // For demonstration, we'll fetch a few other users as "connections"
   const connectionsQuery = useMemoFirebase(() => (currentUser && user?.followingIds && user.followingIds.length > 0) ? query(collection(firestore, 'users'), where('id', 'in', user.followingIds)) : null, [currentUser, user]);
-  const { data: userConnections, isLoading: areConnectionsLoading } = useCollection<User>(userConnections ? connectionsQuery : null);
+  const { data: userConnections, isLoading: areConnectionsLoading } = useCollection<User>(connectionsQuery);
 
 
   const { register, handleSubmit, formState: { errors }, reset } = useForm<ProfileFormValues>({
