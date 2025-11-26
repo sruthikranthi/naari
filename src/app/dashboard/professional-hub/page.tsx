@@ -11,6 +11,7 @@ import {
   Check,
   X,
   Calendar,
+  MoreVertical,
 } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
 import {
@@ -40,6 +41,15 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+
 
 type IncomingRequest = {
   user: User;
@@ -74,6 +84,9 @@ export default function ProfessionalHubPage() {
   const { toast } = useToast();
   const [incomingRequests, setIncomingRequests] = useState<IncomingRequest[]>(initialRequests);
   const [clients, setClients] = useState<Client[]>(initialClients);
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [isRescheduleOpen, setIsRescheduleOpen] = useState(false);
+  const [newDate, setNewDate] = useState<Date | undefined>();
 
   // Assuming the logged-in user is a professional.
   const professional = directory[0];
@@ -121,6 +134,40 @@ export default function ProfessionalHubPage() {
         return 'destructive';
     }
   };
+
+  const updateClientStatus = (clientId: string, newStatus: Client['status']) => {
+    setClients(prevClients =>
+      prevClients.map(client =>
+        client.user.id === clientId ? { ...client, status: newStatus } : client
+      )
+    );
+    toast({
+        title: 'Status Updated!',
+        description: `Session has been marked as ${newStatus}.`,
+    });
+  };
+
+  const handleReschedule = (client: Client) => {
+    setSelectedClient(client);
+    setIsRescheduleOpen(true);
+  };
+  
+  const handleConfirmReschedule = () => {
+    if(selectedClient && newDate) {
+        setClients(prevClients =>
+            prevClients.map(client =>
+                client.user.id === selectedClient.user.id ? { ...client, sessionDate: newDate.toLocaleDateString() } : client
+            )
+        );
+        toast({
+            title: 'Session Rescheduled!',
+            description: `Session with ${selectedClient.user.name} moved to ${newDate.toLocaleDateString()}`,
+        });
+        setIsRescheduleOpen(false);
+        setSelectedClient(null);
+        setNewDate(undefined);
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -284,10 +331,25 @@ export default function ProfessionalHubPage() {
                                             <Badge variant={getStatusVariant(client.status)}>{client.status}</Badge>
                                         </TableCell>
                                         <TableCell className="text-right">
-                                            <Button variant="ghost" size="icon">
-                                                <Calendar className="h-4 w-4"/>
-                                                <span className="sr-only">Reschedule</span>
-                                            </Button>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" size="icon">
+                                                        <MoreVertical className="h-4 w-4" />
+                                                        <span className="sr-only">Client Actions</span>
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuItem onClick={() => updateClientStatus(client.user.id, 'Completed')}>
+                                                        Mark as Complete
+                                                    </DropdownMenuItem>
+                                                     <DropdownMenuItem onClick={() => handleReschedule(client)}>
+                                                        Reschedule
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem className="text-destructive" onClick={() => updateClientStatus(client.user.id, 'Cancelled')}>
+                                                        Cancel Session
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
                                         </TableCell>
                                     </TableRow>
                                 ))}
@@ -398,6 +460,34 @@ export default function ProfessionalHubPage() {
           </Card>
         </TabsContent>
       </Tabs>
+      
+      {/* Reschedule Dialog */}
+      <Dialog open={isRescheduleOpen} onOpenChange={setIsRescheduleOpen}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Reschedule Session</DialogTitle>
+                <DialogDescription>
+                    Select a new date for your session with {selectedClient?.user.name}.
+                </DialogDescription>
+            </DialogHeader>
+            <div className="flex justify-center py-4">
+                <CalendarComponent
+                    mode="single"
+                    selected={newDate}
+                    onSelect={setNewDate}
+                    disabled={(date) => date < new Date()}
+                />
+            </div>
+            <DialogFooter>
+                <DialogClose asChild>
+                    <Button variant="ghost">Cancel</Button>
+                </DialogClose>
+                <Button onClick={handleConfirmReschedule} disabled={!newDate}>Confirm New Date</Button>
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+
+    
