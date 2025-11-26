@@ -34,6 +34,7 @@ import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
+import { useCart } from '@/context/cart-context';
 
 type ProductClientProps = {
   product: ProductType;
@@ -41,10 +42,12 @@ type ProductClientProps = {
 
 export function ProductClient({ product }: ProductClientProps) {
   const { toast } = useToast();
+  const { addToCart } = useCart();
   const [selectedImage, setSelectedImage] = useState(product.images[0]);
   const [quantity, setQuantity] = useState(1);
 
   const handleAddToCart = () => {
+    addToCart(product, quantity);
     toast({
       title: 'Added to Cart!',
       description: `${quantity} x "${product.name}" has been added to your cart.`,
