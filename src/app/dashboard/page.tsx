@@ -2,7 +2,7 @@
 'use client';
 
 import React from 'react';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { collection, query, orderBy, Timestamp } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { CreatePost } from '@/components/create-post';
 import { PostCard } from '@/components/post-card';
@@ -11,6 +11,67 @@ import { Suggestions } from '@/components/suggestions';
 import { TrendingHashtags } from '@/components/trending-hashtags';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
+import { AdCard, type Ad } from '@/components/ad-card';
+
+type PostFromFirestore = {
+  id: string;
+  author: {
+      id: string;
+      name: string;
+      avatar: string;
+  };
+  content: string;
+  image?: string;
+  timestamp: Timestamp | null;
+  likes: number;
+  comments: number;
+  isAnonymous: boolean;
+  pollOptions?: { text: string; votes: number }[];
+};
+
+
+const mockAds: Ad[] = [
+  {
+    id: 'ad1',
+    advertiser: 'Bloom Wellness',
+    avatar: 'https://picsum.photos/seed/ad-logo-1/100/100',
+    title: 'Your Path to Mindful Living',
+    description: 'Discover our new collection of ethically-sourced yoga mats and wellness journals. Perfect for your daily practice.',
+    image: 'https://picsum.photos/seed/ad-img-1/600/400',
+    ctaText: 'Shop Now',
+    ctaLink: 'https://example.com/shop'
+  },
+  {
+    id: 'ad2',
+    advertiser: 'SheCapital',
+    avatar: 'https://picsum.photos/seed/ad-logo-2/100/100',
+    title: 'Financial Planning for Women',
+    description: 'Take control of your financial future. Join our free webinar on investment strategies for women.',
+    image: 'https://picsum.photos/seed/ad-img-2/600/400',
+    ctaText: 'Register Free',
+    ctaLink: 'https://example.com/webinar'
+  }
+];
+
+// Helper function to intersperse ads into the post feed
+const intersperseAds = (posts: PostFromFirestore[], ads: Ad[]): (PostFromFirestore | Ad)[] => {
+    const feed: (PostFromFirestore | Ad)[] = [];
+    let adIndex = 0;
+    const adInterval = 3; // Show an ad every 3 posts
+
+    posts.forEach((post, index) => {
+        feed.push(post);
+        if ((index + 1) % adInterval === 0) {
+            if (adIndex < ads.length) {
+                feed.push({ ...ads[adIndex], id: `ad-${adIndex}-${index}` });
+                adIndex = (adIndex + 1) % ads.length; // Cycle through ads
+            }
+        }
+    });
+
+    return feed;
+}
+
 
 function PageContent() {
     const firestore = useFirestore();
@@ -20,9 +81,12 @@ function PageContent() {
       () => (firestore && user) ? query(collection(firestore, 'posts'), orderBy('timestamp', 'desc')) : null,
       [firestore, user]
     );
-    const { data: posts, isLoading: arePostsLoading } = useCollection(postsQuery);
+    const { data: posts, isLoading: arePostsLoading } = useCollection<PostFromFirestore>(postsQuery);
 
     const isLoading = isUserLoading || arePostsLoading;
+
+    // Intersperse ads into the main feed
+    const allPostsFeed = posts ? intersperseAds(posts.filter(p => !p.isAnonymous), mockAds) : [];
     const anonymousPosts = posts?.filter(p => p.isAnonymous) || [];
 
     return (
@@ -42,12 +106,17 @@ function PageContent() {
                 <>
                   <Skeleton className="h-48 w-full" />
                   <Skeleton className="h-48 w-full" />
+                  <Skeleton className="h-48 w-full" />
                 </>
               )}
-              {posts && posts.map((post) => (
-                <PostCard key={post.id} post={post} />
-              ))}
-              {!isLoading && posts?.length === 0 && (
+              {allPostsFeed.map((item) => {
+                // Check if the item is a post or an ad
+                if ('advertiser' in item) {
+                  return <AdCard key={item.id} ad={item as Ad} />;
+                }
+                return <PostCard key={item.id} post={item as PostFromFirestore} />;
+              })}
+              {!isLoading && allPostsFeed.length === 0 && (
                 <div className="py-20 text-center text-muted-foreground">
                     <h3 className="text-lg font-semibold">Be the first to post!</h3>
                     <p>Share what's on your mind with the community.</p>
