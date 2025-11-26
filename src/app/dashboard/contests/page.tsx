@@ -50,7 +50,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { useDashboard } from '@/app/dashboard/layout';
+import { useDashboard } from '@/app/dashboard/page';
 import { users } from '@/lib/mock-data';
 
 const featuredContests = [
