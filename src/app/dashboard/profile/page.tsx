@@ -71,11 +71,11 @@ export default function ProfilePage() {
   const { data: user, isLoading: isUserProfileLoading } = useDoc<User>(userDocRef);
 
   // Fetch posts authored by the current user
-  const postsQuery = useMemoFirebase(() => currentUser ? query(collection(firestore, 'posts'), where('author.id', '==', currentUser.uid)) : null, [currentUser, firestore]);
+  const postsQuery = useMemoFirebase(() => currentUser ? query(collection(firestore, 'posts'), where('author.id', '==', currentUser.uid)) : null, [currentUser]);
   const { data: userPosts, isLoading: arePostsLoading } = useCollection<PostType>(postsQuery);
 
   // Fetch communities the user is a member of
-  const communitiesQuery = useMemoFirebase(() => currentUser ? query(collection(firestore, 'communities'), where('memberIds', 'array-contains', currentUser.uid)) : null, [currentUser, firestore]);
+  const communitiesQuery = useMemoFirebase(() => currentUser ? query(collection(firestore, 'communities'), where('memberIds', 'array-contains', currentUser.uid)) : null, [currentUser]);
   const { data: userCommunities, isLoading: areCommunitiesLoading } = useCollection<Community>(communitiesQuery);
 
   // Fetch profiles of users the current user is FOLLOWING
@@ -361,9 +361,9 @@ export default function ProfilePage() {
               </Card>
 
               <div>
-                <h3 className="mb-2 font-semibold">Interests</h3>
+                <h3 className="font-semibold mb-2">Interests</h3>
                 <div className="flex flex-wrap gap-2">
-                  {user.interests.map((interest) => (
+                  {user.interests && user.interests.map((interest) => (
                     <Badge key={interest} variant="secondary">
                       {interest}
                     </Badge>
@@ -371,7 +371,7 @@ export default function ProfilePage() {
                 </div>
               </div>
               <div>
-                <h3 className="mb-2 font-semibold">Badges</h3>
+                <h3 className="font-semibold mb-2">Badges</h3>
                 <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
                   {userBadges.map((badge) => (
                     <div
@@ -389,7 +389,7 @@ export default function ProfilePage() {
                 </div>
               </div>
               <div>
-                <h3 className="mb-2 font-semibold">Stats</h3>
+                <h3 className="font-semibold mb-2">Stats</h3>
                 <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
                   <div className="rounded-lg bg-secondary p-3 text-center">
                     <p className="text-2xl font-bold">{userPosts?.length || 0}</p>
@@ -502,47 +502,7 @@ export default function ProfilePage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="communities" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Communities</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {userCommunities && userCommunities.map((community) => (
-                <div
-                  key={community.id}
-                  className="flex items-center gap-4 rounded-lg border p-3"
-                >
-                  <div className="relative h-16 w-16 shrink-0">
-                    <Image
-                      src={community.image}
-                      alt={community.name}
-                      fill
-                      className="rounded-md object-cover"
-                      data-ai-hint="community people"
-                    />
-                  </div>
-                  <div>
-                    <p className="font-semibold">{community.name}</p>
-                    <p className="flex items-center text-sm text-muted-foreground">
-                      <Users className="mr-1 h-3 w-3" />
-                      {community.memberCount.toLocaleString()} members
-                    </p>
-                  </div>
-                  <Button variant="outline" size="sm" className="ml-auto">
-                    View
-                  </Button>
-                </div>
-              ))}
-               {(!userCommunities || userCommunities.length === 0) && (
-                    <p className="py-10 text-center text-muted-foreground">Not a member of any communities yet.</p>
-                )}
-            </CardContent>
-          </Card>
-        </TabsContent>
       </Tabs>
     </div>
   );
 }
-
-    
