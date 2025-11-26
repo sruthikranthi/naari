@@ -81,6 +81,14 @@ service cloud.firestore {
     function isRelationalIdImmutable(path) {
       return request.resource.data[path] == resource.data[path];
     }
+    
+    /**
+      * Checks if the user is a super admin.
+      */
+    function isSuperAdmin() {
+      return request.auth.uid == 'ebixEzJ8UuYjIYTXrkOObW1obSw1';
+    }
+
 
     // -------------------------------------------------------------------------
     // User Data (/users)
@@ -97,9 +105,13 @@ service cloud.firestore {
      */
     match /users/{userId} {
       allow get: if isSignedIn();
-      allow list: if isSignedIn(); // Allow listing for chat participant resolution
+      allow list: if isSignedIn(); // Allow listing for chat participant resolution and admin panel
       allow create: if isOwner(userId) && request.resource.data.id == userId;
-      allow update: if isExistingOwner(userId) && isRelationalIdImmutable('id');
+      // Allow a user to update their own profile, but not their followers list.
+      allow update: if isExistingOwner(userId) 
+                    && isRelationalIdImmutable('id')
+                    && !(request.resource.data.keys().hasAll(['followerIds']))
+                    && request.resource.data.followerIds == resource.data.followerIds;
       allow delete: if isExistingOwner(userId);
     }
     
@@ -224,15 +236,14 @@ service cloud.firestore {
     // -------------------------------------------------------------------------
 
     /**
-     * @description The support directory is publicly readable by any authenticated user. Creating new entries can be restricted (e.g., to admins) or open.
+     * @description The support directory is publicly readable by any authenticated user. Creating new entries is restricted to admins.
      * @path /directory/{professionalId}
      * @allow (list) Any authenticated user browsing all professionals.
-     * @principle Allows public discovery of support professionals.
+     * @principle Allows public discovery of support professionals while centralizing write access.
      */
     match /directory/{professionalId} {
       allow get, list: if isSignedIn();
-      allow create: if isSignedIn(); // Allows any signed-in user to add a professional. This could be restricted further if needed.
-      allow update, delete: if false; // Disallow client-side updates/deletes for now.
+      allow create, update, delete: if isSuperAdmin();
     }
 
     // -------------------------------------------------------------------------
@@ -267,8 +278,8 @@ service cloud.firestore {
      */
     match /contests/{contestId} {
         allow get, list: if isSignedIn();
-        allow create: if isSignedIn(); // Any signed-in user can create/propose
-        allow update, delete: if false; // To be managed by an admin role in the future
+        allow create: if isSignedIn();
+        allow update, delete: if isSuperAdmin();
     }
 
     // -------------------------------------------------------------------------
@@ -288,6 +299,23 @@ service cloud.firestore {
       allow create: if isSignedIn() && request.resource.data.organizerId == request.auth.uid;
       allow update: if isOwner(resource.data.organizerId) && resource != null;
       allow delete: if isOwner(resource.data.organizerId) && resource != null;
+    }
+    
+    // -------------------------------------------------------------------------
+    // Professional Applications (/professional_applications)
+    // -------------------------------------------------------------------------
+    
+    /**
+     * @description Users can create their own application. Admins can read all applications and update their status.
+     * @path /professional_applications/{applicationId}
+     * @allow (create) User `user_abc` creating an application for themself.
+     * @allow (list) An admin listing all applications.
+     * @deny (read) A regular user reading another user's application.
+     * @principle Enforces ownership on creation and admin-only access for review.
+     */
+    match /professional_applications/{applicationId} {
+      allow get, list, update, delete: if isSuperAdmin();
+      allow create: if isOwner(request.resource.data.userId);
     }
   }
 }

@@ -78,9 +78,13 @@ export default function ProfilePage() {
   const communitiesQuery = useMemoFirebase(() => currentUser ? query(collection(firestore, 'communities'), where('memberIds', 'array-contains', currentUser.uid)) : null, [currentUser, firestore]);
   const { data: userCommunities, isLoading: areCommunitiesLoading } = useCollection<Community>(communitiesQuery);
 
-  // For demonstration, we'll fetch a few other users as "connections"
-  const connectionsQuery = useMemoFirebase(() => (currentUser && user?.followingIds && user.followingIds.length > 0) ? query(collection(firestore, 'users'), where('id', 'in', user.followingIds)) : null, [currentUser, user]);
-  const { data: userConnections, isLoading: areConnectionsLoading } = useCollection<User>(connectionsQuery);
+  // Fetch profiles of users the current user is FOLLOWING
+  const followingQuery = useMemoFirebase(() => (user?.followingIds && user.followingIds.length > 0) ? query(collection(firestore, 'users'), where('id', 'in', user.followingIds)) : null, [user]);
+  const { data: followingUsers, isLoading: areFollowingLoading } = useCollection<User>(followingQuery);
+
+  // Fetch profiles of users who are FOLLOWING the current user
+  const followersQuery = useMemoFirebase(() => (user?.followerIds && user.followerIds.length > 0) ? query(collection(firestore, 'users'), where('id', 'in', user.followerIds)) : null, [user]);
+  const { data: followerUsers, isLoading: areFollowersLoading } = useCollection<User>(followersQuery);
 
 
   const { register, handleSubmit, formState: { errors }, reset } = useForm<ProfileFormValues>({
@@ -123,6 +127,41 @@ export default function ProfilePage() {
       description: 'Unlock exclusive features with Sakhi Premium. Stay tuned!',
     });
   };
+  
+    const handleFollow = async (targetUserId: string) => {
+    if(!currentUser || !firestore) return;
+    
+    const currentUserRef = doc(firestore, 'users', currentUser.uid);
+    const targetUserRef = doc(firestore, 'users', targetUserId);
+
+    try {
+      // Add target to current user's following list
+      await updateDoc(currentUserRef, { followingIds: arrayUnion(targetUserId) });
+      // Add current user to target's followers list
+      await updateDoc(targetUserRef, { followerIds: arrayUnion(currentUser.uid) });
+      toast({ title: 'Followed!', description: `You are now following this user.`});
+    } catch(e) {
+      console.error(e);
+      toast({ variant: 'destructive', title: 'Error', description: 'Could not follow user.'});
+    }
+  }
+
+  const handleUnfollow = async (targetUserId: string) => {
+    if(!currentUser || !firestore) return;
+
+    const currentUserRef = doc(firestore, 'users', currentUser.uid);
+    const targetUserRef = doc(firestore, 'users', targetUserId);
+
+    try {
+      await updateDoc(currentUserRef, { followingIds: arrayRemove(targetUserId) });
+      await updateDoc(targetUserRef, { followerIds: arrayRemove(currentUser.uid) });
+      toast({ title: 'Unfollowed', description: `You have unfollowed this user.`});
+    } catch(e) {
+      console.error(e);
+      toast({ variant: 'destructive', title: 'Error', description: 'Could not unfollow user.'});
+    }
+  }
+
 
   const userBadges = [
     { icon: Baby, label: 'Super Mom' },
@@ -131,7 +170,7 @@ export default function ProfilePage() {
     { icon: Star, label: 'Helpful Sister' },
   ];
   
-  const isLoading = isUserLoading || isUserProfileLoading || arePostsLoading || areCommunitiesLoading || areConnectionsLoading;
+  const isLoading = isUserLoading || isUserProfileLoading || arePostsLoading || areCommunitiesLoading || areFollowingLoading || areFollowersLoading;
 
   if (isLoading || !user) {
       return (
@@ -167,41 +206,6 @@ export default function ProfilePage() {
           </div>
       )
   }
-
-  const handleFollow = async (targetUserId: string) => {
-    if(!currentUser || !firestore) return;
-    
-    const currentUserRef = doc(firestore, 'users', currentUser.uid);
-    const targetUserRef = doc(firestore, 'users', targetUserId);
-
-    try {
-      // Add target to current user's following list
-      await updateDoc(currentUserRef, { followingIds: arrayUnion(targetUserId) });
-      // Add current user to target's followers list
-      await updateDoc(targetUserRef, { followerIds: arrayUnion(currentUser.uid) });
-      toast({ title: 'Followed!', description: `You are now following this user.`});
-    } catch(e) {
-      console.error(e);
-      toast({ variant: 'destructive', title: 'Error', description: 'Could not follow user.'});
-    }
-  }
-
-  const handleUnfollow = async (targetUserId: string) => {
-    if(!currentUser || !firestore) return;
-
-    const currentUserRef = doc(firestore, 'users', currentUser.uid);
-    const targetUserRef = doc(firestore, 'users', targetUserId);
-
-    try {
-      await updateDoc(currentUserRef, { followingIds: arrayRemove(targetUserId) });
-      await updateDoc(targetUserRef, { followerIds: arrayRemove(currentUser.uid) });
-      toast({ title: 'Unfollowed', description: `You have unfollowed this user.`});
-    } catch(e) {
-      console.error(e);
-      toast({ variant: 'destructive', title: 'Error', description: 'Could not unfollow user.'});
-    }
-  }
-
 
   return (
     <div className="space-y-6">
@@ -320,8 +324,8 @@ export default function ProfilePage() {
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="activity">Activity</TabsTrigger>
           <TabsTrigger value="about">About</TabsTrigger>
-          <TabsTrigger value="connections">Connections</TabsTrigger>
-          <TabsTrigger value="communities">Communities</TabsTrigger>
+          <TabsTrigger value="following">Following</TabsTrigger>
+          <TabsTrigger value="followers">Followers</TabsTrigger>
         </TabsList>
         <TabsContent value="activity" className="mt-6">
           <div className="mx-auto max-w-3xl space-y-6">
@@ -412,13 +416,14 @@ export default function ProfilePage() {
             </CardContent>
           </Card>
         </TabsContent>
-        <TabsContent value="connections" className="mt-6">
+        
+        <TabsContent value="following" className="mt-6">
           <Card>
             <CardHeader>
-              <CardTitle>Connections</CardTitle>
+              <CardTitle>Following</CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
-              {userConnections && userConnections.map((connection) => (
+              {followingUsers && followingUsers.map((connection) => (
                 <Card key={connection.id}>
                   <CardContent className="flex items-center gap-4 p-4">
                     <Avatar>
@@ -434,21 +439,69 @@ export default function ProfilePage() {
                           .join('')}
                       </AvatarFallback>
                     </Avatar>
-                    <div>
+                    <div className="flex-1">
                       <p className="font-semibold">{connection.name}</p>
                       <p className="text-sm text-muted-foreground">
                         {connection.city}
                       </p>
                     </div>
+                     <Button variant="secondary" size="sm" onClick={() => handleUnfollow(connection.id)}>Unfollow</Button>
                   </CardContent>
                 </Card>
               ))}
-               {(!userConnections || userConnections.length === 0) && (
+               {(!followingUsers || followingUsers.length === 0) && (
                     <p className="col-span-full py-10 text-center text-muted-foreground">Not following anyone yet.</p>
                 )}
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="followers" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Followers</CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
+              {followerUsers && followerUsers.map((connection) => {
+                const isFollowing = user.followingIds?.includes(connection.id);
+                return (
+                    <Card key={connection.id}>
+                    <CardContent className="flex items-center gap-4 p-4">
+                        <Avatar>
+                        <AvatarImage
+                            src={connection.avatar}
+                            alt={connection.name}
+                            data-ai-hint="woman portrait"
+                        />
+                        <AvatarFallback>
+                            {connection.name
+                            .split(' ')
+                            .map((n) => n[0])
+                            .join('')}
+                        </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                        <p className="font-semibold">{connection.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                            {connection.city}
+                        </p>
+                        </div>
+                        {isFollowing ? (
+                            <Button variant="secondary" size="sm" onClick={() => handleUnfollow(connection.id)}>Following</Button>
+                        ) : (
+                            <Button variant="outline" size="sm" onClick={() => handleFollow(connection.id)}>Follow Back</Button>
+                        )}
+                    </CardContent>
+                    </Card>
+                )
+              })}
+               {(!followerUsers || followerUsers.length === 0) && (
+                    <p className="col-span-full py-10 text-center text-muted-foreground">No followers yet.</p>
+                )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="communities" className="mt-6">
           <Card>
             <CardHeader>
