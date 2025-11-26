@@ -1,21 +1,35 @@
 
 'use client';
 import { useState } from 'react';
-import { users } from '@/lib/mock-data';
-import type { User } from '@/lib/mock-data';
+import type { User, StoryItem } from '@/lib/mock-data';
+import { useCollection, useFirestore, useUser, useMemoFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Plus } from 'lucide-react';
 import { Card } from './ui/card';
 import { StoryViewer } from './story-viewer';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { CameraCapture } from './camera-capture';
+import { Skeleton } from './ui/skeleton';
 
 export function Stories() {
-  const [storyUsers, setStoryUsers] = useState(users.filter(u => u.stories && u.stories.length > 0));
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isViewerOpen, setIsViewerOpen] = useState(false);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
+  
+  const { user: loggedInUser, isUserLoading } = useUser();
+  const firestore = useFirestore();
 
+  // For now, we'll fetch all users and filter client-side.
+  // In a real app, you'd query for users with recent stories.
+  const usersQuery = useMemoFirebase(
+    () => (firestore && loggedInUser ? collection(firestore, 'users') : null),
+    [firestore, loggedInUser]
+  );
+  const { data: allUsers, isLoading: areUsersLoading } = useCollection<User>(usersQuery);
+
+  const storyUsers = allUsers?.filter(u => u.id !== loggedInUser?.uid && u.stories && u.stories.length > 0) || [];
+  
   const handleStoryClick = (user: User) => {
     setCurrentUser(user);
     setIsViewerOpen(true);
@@ -32,6 +46,8 @@ export function Stories() {
     setIsCameraOpen(false);
   };
 
+  const isLoading = isUserLoading || areUsersLoading;
+
   return (
     <>
       <Card>
@@ -42,19 +58,20 @@ export function Stories() {
               <DialogTrigger asChild>
                 <div className="flex flex-col items-center space-y-1 cursor-pointer">
                   <button className="relative flex h-16 w-16 items-center justify-center rounded-full bg-secondary">
-                    <Avatar className="h-[60px] w-[60px] border-2 border-card">
-                      <AvatarImage
-                        src={users[0].avatar}
-                        alt={users[0].name}
-                        data-ai-hint="woman portrait"
-                      />
-                      <AvatarFallback>
-                        {users[0].name
-                          .split(' ')
-                          .map((n) => n[0])
-                          .join('')}
-                      </AvatarFallback>
-                    </Avatar>
+                     {isLoading ? (
+                        <Skeleton className="h-[60px] w-[60px] rounded-full" />
+                     ) : (
+                        <Avatar className="h-[60px] w-[60px] border-2 border-card">
+                          <AvatarImage
+                            src={loggedInUser?.photoURL || `https://picsum.photos/seed/${loggedInUser?.uid}/100/100`}
+                            alt={loggedInUser?.displayName || 'You'}
+                            data-ai-hint="woman portrait"
+                          />
+                          <AvatarFallback>
+                            {loggedInUser?.displayName?.split(' ').map((n) => n[0]).join('') || 'U'}
+                          </AvatarFallback>
+                        </Avatar>
+                     )}
                     <div className="absolute bottom-0 right-0 flex h-5 w-5 items-center justify-center rounded-full border-2 border-card bg-primary text-primary-foreground">
                       <Plus className="h-3 w-3" />
                     </div>
@@ -71,7 +88,13 @@ export function Stories() {
             </Dialog>
 
             {/* User Stories */}
-            {storyUsers.map((user, index) => (
+            {isLoading && [...Array(4)].map((_, i) => (
+                <div key={i} className="flex flex-col items-center space-y-1">
+                    <Skeleton className="h-16 w-16 rounded-full" />
+                    <Skeleton className="h-4 w-12" />
+                </div>
+            ))}
+            {!isLoading && storyUsers.map((user, index) => (
               <div
                 key={user.id}
                 className="flex flex-col items-center space-y-1 cursor-pointer"
