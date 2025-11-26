@@ -49,13 +49,18 @@ export function useDoc<T = any>(
 
   useEffect(() => {
     if (!memoizedDocRef) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Need to reset state when ref becomes null
       setData(null);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsLoading(false);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setError(null);
       return;
     }
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Need to set loading state when starting new subscription
     setIsLoading(true);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setError(null);
 
     const unsubscribe = onSnapshot(

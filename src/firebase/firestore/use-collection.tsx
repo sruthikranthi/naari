@@ -64,13 +64,18 @@ export function useCollection<T = any>(
 
   useEffect(() => {
     if (!memoizedTargetRefOrQuery) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Need to reset state when query becomes null
       setData(null);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsLoading(false);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setError(null);
       return;
     }
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Need to set loading state when starting new subscription
     setIsLoading(true);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setError(null);
 
     // Directly use memoizedTargetRefOrQuery as it's assumed to be the final query
