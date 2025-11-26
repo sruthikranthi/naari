@@ -108,6 +108,7 @@ export default function ContestsPage() {
       category: data.category,
       nominationFee: data.nominationFee || 0,
       endsIn: '30 days',
+      // eslint-disable-next-line react-hooks/purity -- Date.now() is used in event handler, not during render
       image: `https://picsum.photos/seed/contest${Date.now()}/800/600`,
       status: 'Pending Approval',
       nominees: [],
@@ -140,6 +141,7 @@ export default function ContestsPage() {
         toast({ variant: 'destructive', title: 'Please log in to share.' });
         return;
     }
+    // eslint-disable-next-line react-hooks/purity -- Date.now() is used in event handler, not during render
     const newPost: Post = {
         id: `post-${Date.now()}`,
         author: {

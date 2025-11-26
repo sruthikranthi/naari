@@ -337,7 +337,7 @@ export function KittyGroupClient({ group, groupMembers, upcomingEvent, currentUs
                         Secure Kitty System
                     </CardTitle>
                     <CardDescription>
-                        This group is protected by Sakhi's Secure Kitty System.
+                        This group is protected by Sakhi&apos;s Secure Kitty System.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-2 text-sm">
