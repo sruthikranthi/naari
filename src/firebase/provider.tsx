@@ -61,27 +61,28 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   firestore,
   auth,
 }) => {
-  const [userAuthState, setUserAuthState] = useState<UserAuthState>({
-    user: null,
-    isUserLoading: true, // Start loading until first auth event
-    userError: null,
+  // Initialize state based on auth availability
+  const [userAuthState, setUserAuthState] = useState<UserAuthState>(() => {
+    if (!auth) {
+      return { user: null, isUserLoading: false, userError: new Error("Auth service not provided.") };
+    }
+    return { user: null, isUserLoading: true, userError: null };
   });
 
   // Effect to subscribe to Firebase auth state changes
   useEffect(() => {
     if (!auth) { // If no Auth service instance, cannot determine user state
-      setUserAuthState({ user: null, isUserLoading: false, userError: new Error("Auth service not provided.") });
       return;
     }
 
-    setUserAuthState({ user: null, isUserLoading: true, userError: null }); // Reset on auth instance change
-
+    // onAuthStateChanged will fire immediately with current auth state, then on changes
+    // No need to reset state here - the callback will handle it
     const unsubscribe = onAuthStateChanged(
       auth,
-      (firebaseUser) => { // Auth state determined
+      (firebaseUser) => { // Auth state determined - callback is allowed
         setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
       },
-      (error) => { // Auth listener error
+      (error) => { // Auth listener error - callback is allowed
         console.error("FirebaseProvider: onAuthStateChanged error:", error);
         setUserAuthState({ user: null, isUserLoading: false, userError: error });
       }
@@ -157,7 +158,7 @@ export const useFirebaseApp = (): FirebaseApp => {
 type MemoFirebase <T> = T & {__memo?: boolean};
 
 export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T | (MemoFirebase<T>) {
-  // eslint-disable-next-line react-hooks/use-memo -- Wrapper function that intentionally takes factory and deps as parameters
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- Wrapper function that intentionally takes factory and deps as parameters
   const memoized = useMemo(factory, deps);
   
   if(typeof memoized !== 'object' || memoized === null) return memoized;
