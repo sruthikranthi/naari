@@ -1,6 +1,6 @@
 
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { User, StoryItem } from '@/lib/mock-data';
@@ -25,6 +25,26 @@ export function StoryViewer({ users, initialUser, onClose }: StoryViewerProps) {
   const currentUser = users[currentUserIndex];
   const currentStory = currentUser.stories?.[currentStoryIndex];
 
+  const handleNextUser = useCallback(() => {
+    if (currentUserIndex < users.length - 1) {
+      setCurrentUserIndex((prev) => prev + 1);
+      setCurrentStoryIndex(0);
+    } else {
+      onClose();
+    }
+  }, [currentUserIndex, users.length, onClose]);
+
+  const handleNextStory = useCallback(() => {
+    if (
+      currentUser.stories &&
+      currentStoryIndex < currentUser.stories.length - 1
+    ) {
+      setCurrentStoryIndex((prev) => prev + 1);
+    } else {
+      handleNextUser();
+    }
+  }, [currentUser, currentStoryIndex, handleNextUser]);
+
   useEffect(() => {
     if (!currentStory) return;
 
@@ -43,40 +63,26 @@ export function StoryViewer({ users, initialUser, onClose }: StoryViewerProps) {
     startTimers();
 
     return () => {
-      clearInterval(timerRef.current);
-      clearInterval(progressTimerRef.current);
+      if (timerRef.current) clearTimeout(timerRef.current);
+      if (progressTimerRef.current) clearInterval(progressTimerRef.current);
     };
-  }, [currentStoryIndex, currentUserIndex]);
+  }, [currentStory, currentStoryIndex, currentUserIndex, handleNextStory]);
 
-  const handleNextStory = () => {
-    if (
-      currentUser.stories &&
-      currentStoryIndex < currentUser.stories.length - 1
-    ) {
-      setCurrentStoryIndex((prev) => prev + 1);
-    } else {
-      handleNextUser();
+  const handlePrevUser = useCallback(() => {
+    if (currentUserIndex > 0) {
+      setCurrentUserIndex((prev) => prev - 1);
+      const prevUser = users[currentUserIndex - 1];
+      setCurrentStoryIndex((prevUser.stories?.length || 1) - 1);
     }
-  };
+  }, [currentUserIndex, users]);
 
-  const handlePrevStory = () => {
+  const handlePrevStory = useCallback(() => {
     if (currentStoryIndex > 0) {
       setCurrentStoryIndex((prev) => prev - 1);
     } else {
       handlePrevUser();
     }
-  };
-
-  const handleNextUser = () => {
-    if (currentUserIndex < users.length - 1) {
-      setCurrentUserIndex((prev) => prev + 1);
-      setCurrentStoryIndex(0);
-    } else {
-      onClose();
-    }
-  };
-
-  const handlePrevUser = () => {
+  }, [currentStoryIndex, handlePrevUser]);
     if (currentUserIndex > 0) {
       setCurrentUserIndex((prev) => prev - 1);
       const prevUser = users[currentUserIndex - 1];
