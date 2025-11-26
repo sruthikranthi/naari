@@ -164,6 +164,7 @@ export default function WellnessPage() {
       if (customAudioRef.current) {
         customAudioRef.current.src = customMeditationState.result.media;
         customAudioRef.current.play();
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- Need to update playing state when audio starts
         setIsPlayingCustom(true);
       }
     }
@@ -258,7 +259,7 @@ export default function WellnessPage() {
             Personalized Session
           </CardTitle>
           <CardDescription>
-            Tell us what you need, and we'll generate a unique meditation just
+            Tell us what you need, and we&apos;ll generate a unique meditation just
             for you, in your preferred language.
           </CardDescription>
         </CardHeader>
@@ -305,7 +306,7 @@ export default function WellnessPage() {
           </form>
           {customMeditationState.result && (
              <div className="mt-6 rounded-lg border bg-secondary/50 p-4">
-                <p className="text-sm font-medium text-muted-foreground">Your custom session for: "{customMeditationState.prompt}"</p>
+                <p className="text-sm font-medium text-muted-foreground">Your custom session for: &quot;{customMeditationState.prompt}&quot;</p>
                 <div className="mt-2 flex items-center gap-4">
                      <Button onClick={handlePlayPauseCustom} size="icon" disabled={!customMeditationState.result.media}>
                         {isPlayingCustom ? <Pause /> : <Play />}
@@ -494,7 +495,7 @@ function GratitudeJournal() {
                 <DialogHeader>
                     <DialogTitle>Gratitude Journal</DialogTitle>
                     <DialogDescription>
-                        Take a moment to write down what you're grateful for today.
+                        Take a moment to write down what you&apos;re grateful for today.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">

@@ -30,8 +30,8 @@ export default function RefundPolicyPage() {
 
       <h2>3. Marketplace Physical Goods</h2>
       <p>
-        Refunds for physical goods purchased through the marketplace are subject to the individual seller's return and refund policy.
-        Sakhi Circle facilitates the connection but is not directly responsible for the seller's products. Please check the seller's policy on the product page before purchasing.
+        Refunds for physical goods purchased through the marketplace are subject to the individual seller&apos;s return and refund policy.
+        Sakhi Circle facilitates the connection but is not directly responsible for the seller&apos;s products. Please check the seller&apos;s policy on the product page before purchasing.
       </p>
 
       <h2>4. Contact Us</h2>
