@@ -10,13 +10,16 @@ import { cn } from '@/lib/utils';
  * Shows when the user is offline and hides when back online
  */
 export function OfflineIndicator() {
-  const [isOnline, setIsOnline] = useState(true);
+  // Use lazy initializer to avoid SSR issues and setState in effect
+  const [isOnline, setIsOnline] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return navigator.onLine;
+    }
+    return true;
+  });
   const [wasOffline, setWasOffline] = useState(false);
 
   useEffect(() => {
-    // Set initial state
-    setIsOnline(navigator.onLine);
-
     const handleOnline = () => {
       setIsOnline(true);
       // Show a brief "back online" message
