@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Separator } from '@/components/ui/separator';
 import { FileText, Shield, ScrollText, FileX2 } from 'lucide-react';
 import Link from 'next/link';
+import React from 'react';
 
 const policyLinks = [
   { href: '/policies/terms', icon: FileText, title: 'Terms & Conditions', description: 'The rules for using our service.' },
@@ -30,8 +31,8 @@ export default function SettingsPage() {
         <CardContent>
           <div className="space-y-4">
             {policyLinks.map((link, index) => (
-              <>
-                <Link href={link.href} key={link.href} className="block rounded-lg p-4 transition-colors hover:bg-secondary">
+              <React.Fragment key={link.href}>
+                <Link href={link.href} className="block rounded-lg p-4 transition-colors hover:bg-secondary">
                   <div className="flex items-start gap-4">
                     <link.icon className="h-6 w-6 shrink-0 text-primary mt-1" />
                     <div>
@@ -41,7 +42,7 @@ export default function SettingsPage() {
                   </div>
                 </Link>
                 {index < policyLinks.length - 1 && <Separator />}
-              </>
+              </React.Fragment>
             ))}
           </div>
         </CardContent>
