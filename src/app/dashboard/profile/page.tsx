@@ -14,6 +14,9 @@ import {
   Zap,
   Loader,
   UserPlus,
+  Book,
+  Heart,
+  Building,
 } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, updateDoc, arrayUnion, arrayRemove, collection, query, where, limit } from 'firebase/firestore';
@@ -43,19 +46,24 @@ import {
   DialogTrigger,
   DialogFooter,
   DialogClose,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const profileSchema = z.object({
     name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
     city: z.string().min(2, { message: 'City must be at least 2 characters.' }),
-    interests: z.string(),
+    interests: z.string().optional(),
+    education: z.string().optional(),
+    profession: z.string().optional(),
+    maritalStatus: z.string().optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
@@ -87,12 +95,15 @@ export default function ProfilePage() {
   const { data: followerUsers, isLoading: areFollowersLoading } = useCollection<User>(followersQuery);
 
 
-  const { register, handleSubmit, formState: { errors }, reset } = useForm<ProfileFormValues>({
+  const { control, register, handleSubmit, formState: { errors }, reset } = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     values: { // Use values to auto-populate the form when user data loads
         name: user?.name || '',
         city: user?.city || '',
         interests: user?.interests?.join(', ') || '',
+        education: user?.education || '',
+        profession: user?.profession || '',
+        maritalStatus: user?.maritalStatus || '',
     }
   });
 
@@ -103,9 +114,8 @@ export default function ProfilePage() {
     };
 
     const updatedData = {
-      name: data.name,
-      city: data.city,
-      interests: data.interests.split(',').map(interest => interest.trim()).filter(Boolean),
+      ...data,
+      interests: data.interests?.split(',').map(interest => interest.trim()).filter(Boolean),
     };
 
     try {
@@ -253,47 +263,77 @@ export default function ProfilePage() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+               <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogTrigger asChild>
                   <Button variant="outline" onClick={() => reset()}>
                     <Edit className="mr-2 h-4 w-4" /> Edit Profile
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-[425px]">
+                <DialogContent className="sm:max-w-md">
                   <form onSubmit={handleSubmit(onSubmit)}>
                   <DialogHeader>
                     <DialogTitle>Edit profile</DialogTitle>
+                     <DialogDescription>
+                        Make changes to your profile here. Click save when you're done.
+                    </DialogDescription>
                   </DialogHeader>
                   <div className="grid gap-4 py-4">
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="name" className="text-right">
-                        Name
-                      </Label>
-                      <div className="col-span-3">
-                        <Input
-                          id="name"
-                          {...register('name')}
-                        />
+                     <div>
+                        <Label htmlFor="name">Name</Label>
+                        <Input id="name" {...register('name')} />
                         {errors.name && <p className="text-destructive text-xs mt-1">{errors.name.message}</p>}
                       </div>
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="city" className="text-right">
-                        City
-                      </Label>
-                       <div className="col-span-3">
-                        <Input
-                          id="city"
-                          {...register('city')}
-                        />
+                      <div>
+                        <Label htmlFor="city">City</Label>
+                        <Input id="city" {...register('city')} />
                          {errors.city && <p className="text-destructive text-xs mt-1">{errors.city.message}</p>}
                       </div>
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="interests" className="text-right">
-                        Interests
-                      </Label>
-                       <div className="col-span-3">
+                      <div>
+                        <Label htmlFor="education">Education</Label>
+                        <Input id="education" placeholder="e.g., MBA in Marketing" {...register('education')} />
+                      </div>
+                       <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <Label htmlFor="profession">Profession</Label>
+                             <Controller
+                                name="profession"
+                                control={control}
+                                render={({ field }) => (
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                        <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="Working Professional">Working Professional</SelectItem>
+                                            <SelectItem value="Homemaker">Homemaker</SelectItem>
+                                            <SelectItem value="Student">Student</SelectItem>
+                                            <SelectItem value="Business Owner">Business Owner</SelectItem>
+                                            <SelectItem value="Looking for work">Looking for work</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                )}
+                            />
+                        </div>
+                         <div>
+                            <Label htmlFor="maritalStatus">Marital Status</Label>
+                             <Controller
+                                name="maritalStatus"
+                                control={control}
+                                render={({ field }) => (
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                        <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="Single">Single</SelectItem>
+                                            <SelectItem value="Married">Married</SelectItem>
+                                            <SelectItem value="In a Relationship">In a Relationship</SelectItem>
+                                            <SelectItem value="Divorced">Divorced</SelectItem>
+                                            <SelectItem value="Widowed">Widowed</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                )}
+                            />
+                        </div>
+                       </div>
+                      <div>
+                        <Label htmlFor="interests">Interests</Label>
                         <Input
                           id="interests"
                           {...register('interests')}
@@ -301,7 +341,6 @@ export default function ProfilePage() {
                         />
                          <p className="text-xs text-muted-foreground mt-1">Separate interests with a comma.</p>
                       </div>
-                    </div>
                   </div>
                   <DialogFooter>
                     <DialogClose asChild>
@@ -312,9 +351,6 @@ export default function ProfilePage() {
                   </form>
                 </DialogContent>
               </Dialog>
-              <Button onClick={handleGoPremium}>
-                <Zap className="mr-2 h-4 w-4" /> Go Premium
-              </Button>
             </div>
           </div>
         </CardContent>
@@ -343,22 +379,12 @@ export default function ProfilePage() {
               <CardTitle>About {user.name}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <Card className="bg-gradient-to-r from-primary/10 to-accent/10">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-xl">
-                    <Zap className="text-primary" />
-                    Unlock Premium Features!
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
-                  <ul className="list-inside list-disc space-y-1 text-sm text-muted-foreground">
-                    <li>Ad-free experience</li>
-                    <li>Access to premium communities & courses</li>
-                    <li>Advanced Kitty Party tools</li>
-                  </ul>
-                  <Button onClick={handleGoPremium}>Upgrade Now</Button>
-                </CardContent>
-              </Card>
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+                 {user.profession && <div className="flex items-center gap-3"><Briefcase className="h-5 w-5 text-primary" /> <div><p className="font-semibold">Profession</p><p className="text-muted-foreground">{user.profession}</p></div></div>}
+                 {user.education && <div className="flex items-center gap-3"><Book className="h-5 w-5 text-primary" /> <div><p className="font-semibold">Education</p><p className="text-muted-foreground">{user.education}</p></div></div>}
+                 {user.maritalStatus && <div className="flex items-center gap-3"><Heart className="h-5 w-5 text-primary" /> <div><p className="font-semibold">Marital Status</p><p className="text-muted-foreground">{user.maritalStatus}</p></div></div>}
+                 {user.city && <div className="flex items-center gap-3"><Building className="h-5 w-5 text-primary" /> <div><p className="font-semibold">City</p><p className="text-muted-foreground">{user.city}</p></div></div>}
+               </div>
 
               <div>
                 <h3 className="font-semibold mb-2">Interests</h3>
@@ -420,7 +446,7 @@ export default function ProfilePage() {
         <TabsContent value="following" className="mt-6">
           <Card>
             <CardHeader>
-              <CardTitle>Following</CardTitle>
+              <CardTitle>Following ({followingUsers?.length || 0})</CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
               {followingUsers && followingUsers.map((connection) => (
@@ -459,7 +485,7 @@ export default function ProfilePage() {
         <TabsContent value="followers" className="mt-6">
           <Card>
             <CardHeader>
-              <CardTitle>Followers</CardTitle>
+              <CardTitle>Followers ({followerUsers?.length || 0})</CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
               {followerUsers && followerUsers.map((connection) => {
@@ -506,3 +532,5 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+    
