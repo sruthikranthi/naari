@@ -108,10 +108,10 @@ service cloud.firestore {
       allow list: if isSignedIn(); // Allow listing for chat participant resolution and admin panel
       allow create: if isOwner(userId) && request.resource.data.id == userId;
       // Allow a user to update their own profile, but not their followers list.
+      // The rule allows updates if followerIds is not being changed (not in update keys OR matches existing value)
       allow update: if isExistingOwner(userId) 
                     && isRelationalIdImmutable('id')
-                    && !(request.resource.data.keys().hasAll(['followerIds']))
-                    && request.resource.data.followerIds == resource.data.followerIds;
+                    && (!('followerIds' in request.resource.data) || request.resource.data.followerIds == resource.data.followerIds);
       allow delete: if isExistingOwner(userId);
     }
     

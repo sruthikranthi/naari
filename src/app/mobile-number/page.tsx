@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { doc, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -143,12 +143,13 @@ export default function MobileNumberPage() {
         // Use setDoc without merge for new documents (uses create rule)
         await setDoc(userDocRef, newProfileData);
       } else {
-        // Profile exists, use updateDoc to update only the mobile number
-        // updateDoc only updates the specified fields, preserving others
-        // This satisfies the Firestore rule which requires followerIds to not be in the update
-        await updateDoc(userDocRef, {
+        // Profile exists - use setDoc with merge to update only mobileNumber
+        // The updated Firestore rule allows updates if followerIds is not in the update
+        // or if it matches the existing value. Since we're only updating mobileNumber,
+        // followerIds won't be in the update, so it will be preserved automatically.
+        await setDoc(userDocRef, {
           mobileNumber: fullMobileNumber,
-        });
+        }, { merge: true });
       }
 
       toast({
