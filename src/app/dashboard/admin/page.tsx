@@ -73,9 +73,9 @@ import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { allContestsData } from '@/lib/contests-data';
 import type { Contest, JuryMember } from '@/lib/contests-data';
-import { useUser } from '@/firebase';
+import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
 
 type UserWithRole = User & { role: 'User' | 'Professional' | 'Creator'; status: 'Active' | 'Inactive' | 'Pending' };
 
@@ -97,22 +97,22 @@ initialUsers.push({
     status: 'Pending'
 });
 
-const allContests = allContestsData.map(c => ({
-    id: c.id,
-    name: c.title,
-    nominees: c.nominees.length,
-    status: c.endsIn.includes('days') ? 'Live' : 'Ended',
-    fee: c.nominationFee > 0 ? `₹${c.nominationFee}`: 'Free',
-}));
-
-allContests.push({ id: 'prop1', name: 'Pune Baking Championship', nominees: 0, status: 'Pending Approval', fee: '₹200' });
 
 export default function AdminPanelPage() {
   const { user, isUserLoading } = useUser();
   const router = useRouter();
   const { toast } = useToast();
+  const firestore = useFirestore();
+
   const [users, setUsers] = useState<UserWithRole[]>(initialUsers);
-  const [contests, setContests] = useState(allContestsData);
+  
+  const contestsQuery = useMemoFirebase(
+    () => (firestore ? collection(firestore, 'contests') : null),
+    [firestore]
+  );
+  const { data: contestsData, isLoading: areContestsLoading } = useCollection<Contest>(contestsQuery);
+  const [contests, setContests] = useState<Contest[]>([]);
+
   const [filterRole, setFilterRole] = useState('All');
   const [commissions, setCommissions] = useState({
     marketplace: 10,
@@ -134,6 +134,27 @@ export default function AdminPanelPage() {
       router.push('/dashboard');
     }
   }, [isUserLoading, isSuperAdmin, router, toast]);
+
+  useEffect(() => {
+    if (contestsData) {
+      setContests(contestsData);
+    }
+  }, [contestsData]);
+
+  const allContestsForTable = useMemo(() => {
+    const fromData = (contests || []).map(c => ({
+        id: c.id,
+        name: c.title,
+        nominees: c.nominees.length,
+        status: c.status || 'Pending Approval',
+        fee: c.nominationFee > 0 ? `₹${c.nominationFee}`: 'Free',
+    }));
+    if (!fromData.some(c => c.name === 'Pune Baking Championship')) {
+        fromData.push({ id: 'prop1', name: 'Pune Baking Championship', nominees: 0, status: 'Pending Approval', fee: '₹200' });
+    }
+    return fromData;
+  }, [contests]);
+
 
   const filteredUsers = useMemo(() => {
     if (filterRole === 'All') return users;
@@ -490,34 +511,40 @@ export default function AdminPanelPage() {
               <CardDescription>Oversee all contests and awards on the platform.</CardDescription>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Contest Name</TableHead>
-                    <TableHead>Nominees</TableHead>
-                    <TableHead>Entry Fee</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {allContests.map((contest) => (
-                    <TableRow key={contest.id}>
-                      <TableCell className="font-medium">{contest.name}</TableCell>
-                      <TableCell>{contest.nominees.toLocaleString()}</TableCell>
-                      <TableCell>{contest.fee}</TableCell>
-                      <TableCell>
-                        <Badge variant={getStatusVariant(contest.status)}>{contest.status}</Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="outline" size="sm" onClick={() => handleManageContest(contest.id)}>
-                          Manage
-                        </Button>
-                      </TableCell>
+              {areContestsLoading ? (
+                 <div className="flex h-48 w-full items-center justify-center">
+                    <Loader className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Contest Name</TableHead>
+                      <TableHead>Nominees</TableHead>
+                      <TableHead>Entry Fee</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {allContestsForTable.map((contest) => (
+                      <TableRow key={contest.id}>
+                        <TableCell className="font-medium">{contest.name}</TableCell>
+                        <TableCell>{contest.nominees.toLocaleString()}</TableCell>
+                        <TableCell>{contest.fee}</TableCell>
+                        <TableCell>
+                          <Badge variant={getStatusVariant(contest.status)}>{contest.status}</Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="outline" size="sm" onClick={() => handleManageContest(contest.id)}>
+                            Manage
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -722,5 +749,7 @@ function ContestDetailItem({ icon: Icon, label, value, onEdit }: { icon: React.E
         </div>
     );
 }
+
+      
 
     
