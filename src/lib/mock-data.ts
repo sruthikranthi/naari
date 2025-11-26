@@ -16,6 +16,7 @@ export type User = {
   avatar: string;
   city: string;
   interests: string[];
+  mobileNumber?: string;
   stories?: StoryItem[];
   kittyScore?: number;
   paymentStatus?: 'Paid' | 'Unpaid' | 'Overdue';

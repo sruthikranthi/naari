@@ -19,9 +19,10 @@ import {
   Building,
   Camera,
   Upload,
+  Phone,
 } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { doc, updateDoc, arrayUnion, arrayRemove, collection, query, where, limit } from 'firebase/firestore';
+import { doc, updateDoc, arrayUnion, arrayRemove, collection, query, where, deleteField } from 'firebase/firestore';
 
 import type { User, Post as PostType, Community } from '@/lib/mock-data';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -64,6 +65,13 @@ const profileSchema = z.object({
     name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
     username: z.string().min(3, 'Username must be at least 3 characters.').regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores.'),
     city: z.string().min(2, { message: 'City must be at least 2 characters.' }),
+    mobileNumber: z
+      .string()
+      .trim()
+      .optional()
+      .refine((value) => !value || /^\+?[0-9]{10,15}$/.test(value), {
+        message: 'Enter a valid mobile number.',
+      }),
     interests: z.string().optional(),
     education: z.string().optional(),
     profession: z.string().optional(),
@@ -107,6 +115,7 @@ export default function ProfilePage() {
         name: user?.name || '',
         username: user?.username || '',
         city: user?.city || '',
+        mobileNumber: user?.mobileNumber || '',
         interests: user?.interests?.join(', ') || '',
         education: user?.education || '',
         profession: user?.profession || '',
@@ -120,10 +129,16 @@ export default function ProfilePage() {
         return;
     };
 
-    const updatedData = {
+    const updatedData: Record<string, unknown> = {
       ...data,
       interests: data.interests?.split(',').map(interest => interest.trim()).filter(Boolean),
     };
+    const trimmedMobile = data.mobileNumber?.trim();
+    if (trimmedMobile) {
+      updatedData.mobileNumber = trimmedMobile;
+    } else {
+      updatedData.mobileNumber = deleteField();
+    }
 
     try {
         await updateDoc(userDocRef, updatedData);
@@ -374,6 +389,11 @@ export default function ProfilePage() {
                          {errors.city && <p className="text-destructive text-xs mt-1">{errors.city.message}</p>}
                       </div>
                       <div>
+                        <Label htmlFor="mobileNumber">Mobile Number</Label>
+                        <Input id="mobileNumber" {...register('mobileNumber')} placeholder="+911234567890" />
+                        {errors.mobileNumber && <p className="text-destructive text-xs mt-1">{errors.mobileNumber.message}</p>}
+                      </div>
+                      <div>
                         <Label htmlFor="education">Education</Label>
                         <Input id="education" placeholder="e.g., MBA in Marketing" {...register('education')} />
                       </div>
@@ -468,6 +488,7 @@ export default function ProfilePage() {
                  {user.profession && <div className="flex items-center gap-3"><Briefcase className="h-5 w-5 text-primary" /> <div><p className="font-semibold">Profession</p><p className="text-muted-foreground">{user.profession}</p></div></div>}
                  {user.education && <div className="flex items-center gap-3"><Book className="h-5 w-5 text-primary" /> <div><p className="font-semibold">Education</p><p className="text-muted-foreground">{user.education}</p></div></div>}
                  {user.maritalStatus && <div className="flex items-center gap-3"><Heart className="h-5 w-5 text-primary" /> <div><p className="font-semibold">Marital Status</p><p className="text-muted-foreground">{user.maritalStatus}</p></div></div>}
+                {user.mobileNumber && <div className="flex items-center gap-3"><Phone className="h-5 w-5 text-primary" /> <div><p className="font-semibold">Mobile Number</p><p className="text-muted-foreground">{user.mobileNumber}</p></div></div>}
                  {user.city && <div className="flex items-center gap-3"><Building className="h-5 w-5 text-primary" /> <div><p className="font-semibold">City</p><p className="text-muted-foreground">{user.city}</p></div></div>}
                </div>
 
