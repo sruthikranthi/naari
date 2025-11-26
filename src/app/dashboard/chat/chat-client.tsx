@@ -78,8 +78,8 @@ export function ChatClient() {
 
   // Fetch all users to find participants' details
   const usersQuery = useMemoFirebase(
-    () => (firestore ? collection(firestore, 'users') : null),
-    [firestore]
+    () => (firestore && user ? collection(firestore, 'users') : null),
+    [firestore, user]
   );
   const { data: allUsers, isLoading: areUsersLoading } = useCollection<User>(usersQuery);
 
