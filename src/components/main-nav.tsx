@@ -13,6 +13,7 @@ import {
   HeartHandshake,
   Briefcase,
   Shield,
+  Award,
 } from 'lucide-react';
 
 import {
@@ -35,6 +36,11 @@ const navItems = [
     href: '/dashboard/support-directory',
     icon: HeartHandshake,
     label: 'Support Directory',
+  },
+  {
+    href: '/dashboard/contests',
+    icon: Award,
+    label: 'Contests',
   },
   {
     href: '/dashboard/professional-hub',
