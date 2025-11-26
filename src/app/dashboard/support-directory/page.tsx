@@ -1,3 +1,4 @@
+
 'use client';
 import { useState, useMemo } from 'react';
 import { PageHeader } from '@/components/page-header';
@@ -14,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Search, CheckCircle, MessageSquare, Plus } from 'lucide-react';
+import { Search, CheckCircle, MessageSquare, Plus, IndianRupee } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { directory as initialDirectory, type Professional } from '@/lib/directory';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
@@ -29,6 +30,7 @@ const professionalSchema = z.object({
     specialties: z.string().min(3, "Please list at least one specialty."),
     description: z.string().min(10, "Description must be at least 10 characters long."),
     verified: z.boolean().default(false),
+    fees: z.coerce.number().min(0, "Fees cannot be negative.").optional(),
 });
 
 type ProfessionalFormValues = z.infer<typeof professionalSchema>;
@@ -82,6 +84,7 @@ export default function SupportDirectoryPage() {
       specialties: data.specialties.split(',').map(s => s.trim()).filter(Boolean),
       description: data.description,
       verified: data.verified,
+      fees: data.fees,
     };
     setProfessionals([newProfessional, ...professionals]);
     toast({
@@ -130,10 +133,17 @@ export default function SupportDirectoryPage() {
                   <Textarea id="description" {...register('description')} />
                   {errors.description && <p className="mt-1 text-xs text-destructive">{errors.description.message}</p>}
                 </div>
-                <div>
-                    <Label htmlFor="avatar">Avatar Image</Label>
-                    <Input id="avatar" type="file" accept="image/*" />
-                    <p className="mt-1 text-xs text-muted-foreground">For demonstration only.</p>
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <Label htmlFor="fees">Consultation Fee (₹)</Label>
+                        <Input id="fees" type="number" placeholder="e.g., 1500" {...register('fees')} />
+                        {errors.fees && <p className="mt-1 text-xs text-destructive">{errors.fees.message}</p>}
+                    </div>
+                    <div>
+                        <Label htmlFor="avatar">Avatar Image</Label>
+                        <Input id="avatar" type="file" accept="image/*" />
+                        <p className="mt-1 text-xs text-muted-foreground">For demonstration only.</p>
+                    </div>
                 </div>
                 <div className="flex items-center space-x-2">
                     <Checkbox id="verified" {...register('verified')} />
@@ -219,13 +229,23 @@ export default function SupportDirectoryPage() {
                             )}
                         </div>
                         <div className="flex-1">
-                            <CardTitle className="text-2xl">{prof.name}</CardTitle>
-                            <div className="flex flex-wrap gap-2 my-2">
-                                {prof.specialties.map(spec => (
-                                    <Badge key={spec} variant="outline">{spec}</Badge>
-                                ))}
+                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start">
+                                <div>
+                                    <CardTitle className="text-2xl">{prof.name}</CardTitle>
+                                    <div className="flex flex-wrap gap-2 my-2">
+                                        {prof.specialties.map(spec => (
+                                            <Badge key={spec} variant="outline">{spec}</Badge>
+                                        ))}
+                                    </div>
+                                </div>
+                                {prof.fees && (
+                                    <Badge className="text-lg mt-2 sm:mt-0">
+                                        <IndianRupee className="mr-1 h-4 w-4" />
+                                        {prof.fees.toLocaleString()}/session
+                                    </Badge>
+                                )}
                             </div>
-                            <CardDescription>{prof.description}</CardDescription>
+                            <CardDescription className="mt-2">{prof.description}</CardDescription>
                              <Button className="mt-4 w-full md:w-auto" onClick={() => handleContact(prof.name)}>
                                 <MessageSquare className="mr-2 h-4 w-4" />
                                 Contact {prof.name.split(' ')[0]}

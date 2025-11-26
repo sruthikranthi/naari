@@ -2,7 +2,7 @@
 'use client';
 import { useState } from 'react';
 import Image from 'next/image';
-import { Clock, User, BarChart2, BookCheck, Plus } from 'lucide-react';
+import { Clock, User, BarChart2, BookCheck, Plus, IndianRupee } from 'lucide-react';
 import { courses as allCourses } from '@/lib/mock-data';
 import type { Course } from '@/lib/mock-data';
 import { PageHeader } from '@/components/page-header';
@@ -45,6 +45,7 @@ const courseSchema = z.object({
   duration: z.string().min(2, 'Duration is required.'),
   category: z.string().nonempty('Please select a category.'),
   level: z.string().nonempty('Please select a level.'),
+  price: z.coerce.number().min(0, 'Price cannot be negative.'),
 });
 
 type CourseFormValues = z.infer<typeof courseSchema>;
@@ -76,6 +77,7 @@ export default function LearningPage() {
         instructor: data.instructor,
         duration: data.duration,
         level: data.level as Course['level'],
+        price: data.price,
         image: `https://picsum.photos/seed/newCourse${courses.length + 1}/600/400`,
     };
     setCourses([newCourse, ...courses]);
@@ -157,11 +159,18 @@ export default function LearningPage() {
                             {errors.level && <p className="text-destructive text-xs mt-1">{errors.level.message}</p>}
                         </div>
                      </div>
-                    <div>
-                        <Label htmlFor="image">Course Image</Label>
-                        <Input id="image" type="file" accept="image/*" />
-                        <p className="text-xs text-muted-foreground mt-1">For demonstration purposes only.</p>
-                    </div>
+                     <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <Label htmlFor="price">Price (₹)</Label>
+                            <Input id="price" type="number" placeholder="e.g., 499 or 0 for free" {...register("price")} />
+                            {errors.price && <p className="text-destructive text-xs mt-1">{errors.price.message}</p>}
+                        </div>
+                         <div>
+                            <Label htmlFor="image">Course Image</Label>
+                            <Input id="image" type="file" accept="image/*" />
+                            <p className="text-xs text-muted-foreground mt-1">For demonstration purposes only.</p>
+                        </div>
+                     </div>
 
                     <DialogFooter className="pt-4">
                         <DialogClose asChild><Button type="button" variant="ghost">Cancel</Button></DialogClose>
@@ -252,6 +261,9 @@ function CourseCard({ course, onEnroll, isEnrolled }: { course: Course; onEnroll
             className="object-cover"
             data-ai-hint="online course"
           />
+           <Badge className="absolute top-2 right-2 text-base">
+            {course.price > 0 ? `₹${course.price.toLocaleString()}` : 'Free'}
+           </Badge>
         </div>
       </CardHeader>
       <CardContent className="flex flex-1 flex-col p-4">
@@ -278,7 +290,7 @@ function CourseCard({ course, onEnroll, isEnrolled }: { course: Course; onEnroll
       </CardContent>
       <CardFooter className="p-4 pt-0">
         <Button className="w-full" onClick={() => onEnroll(course)} disabled={isEnrolled}>
-            {isEnrolled ? 'Enrolled' : 'Enroll Now'}
+            {isEnrolled ? 'Enrolled' : `Enroll for ${course.price > 0 ? `₹${course.price}` : 'Free'}`}
         </Button>
       </CardFooter>
     </Card>
@@ -321,5 +333,3 @@ function EnrolledCourseCard({ course }: { course: Course }) {
     </Card>
   );
 }
-
-    

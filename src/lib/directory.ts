@@ -1,3 +1,4 @@
+
 export type Professional = {
   id: string;
   name: string;
@@ -5,6 +6,7 @@ export type Professional = {
   specialties: string[];
   description: string;
   verified: boolean;
+  fees?: number;
 };
 
 export const directory: Professional[] = [
@@ -15,6 +17,7 @@ export const directory: Professional[] = [
     specialties: ['Anxiety', 'Depression', 'Stress Management'],
     description: 'A compassionate psychologist with over 10 years of experience helping women navigate life\'s challenges. Her approach is rooted in CBT and mindfulness.',
     verified: true,
+    fees: 1500,
   },
   {
     id: 'prof2',
@@ -23,6 +26,7 @@ export const directory: Professional[] = [
     specialties: ['Relationship Counseling', 'Family Therapy'],
     description: 'A licensed therapist specializing in helping individuals and couples build healthier, more fulfilling relationships.',
     verified: true,
+    fees: 1200,
   },
   {
     id: 'prof3',
@@ -31,6 +35,7 @@ export const directory: Professional[] = [
     specialties: ['Postpartum Depression', 'Parenting Support'],
     description: 'A psychiatrist with a focus on perinatal mental health, providing support to new mothers and families.',
     verified: true,
+    fees: 2000,
   },
   {
     id: 'prof4',
@@ -47,6 +52,7 @@ export const directory: Professional[] = [
     specialties: ['Grief & Loss', 'Trauma'],
     description: 'A therapist dedicated to providing a safe space for healing and growth after significant life events.',
     verified: true,
+    fees: 1800,
   },
     {
     id: 'prof6',
@@ -55,5 +61,6 @@ export const directory: Professional[] = [
     specialties: ['Nutritional Counseling', 'Holistic Wellness'],
     description: 'A holistic wellness coach who combines nutritional advice with lifestyle changes for overall well-being.',
     verified: false,
+    fees: 800,
   },
 ];

@@ -1,3 +1,4 @@
+
 import { directory } from './directory';
 import type { Professional } from './directory';
 
@@ -83,6 +84,7 @@ export type Course = {
   duration: string;
   image: string;
   level: 'Beginner' | 'Intermediate' | 'Advanced';
+  price: number;
 };
 
 export type SelfCareActivity = {
@@ -364,6 +366,7 @@ export const courses: Course[] = [
     duration: '4 Weeks',
     image: 'https://picsum.photos/seed/course-business1/600/400',
     level: 'Beginner',
+    price: 499,
   },
   {
     id: 'c2',
@@ -373,6 +376,7 @@ export const courses: Course[] = [
     duration: '6 Weeks',
     image: 'https://picsum.photos/seed/course-business2/600/400',
     level: 'Intermediate',
+    price: 999,
   },
   {
     id: 'c3',
@@ -382,6 +386,7 @@ export const courses: Course[] = [
     duration: '5 Sessions',
     image: 'https://picsum.photos/seed/course-beauty1/600/400',
     level: 'Beginner',
+    price: 0,
   },
   {
     id: 'c4',
@@ -391,6 +396,7 @@ export const courses: Course[] = [
     duration: '4 Weeks',
     image: 'https://picsum.photos/seed/course-wellness1/600/400',
     level: 'Beginner',
+    price: 299,
   },
   {
     id: 'c5',
@@ -400,6 +406,7 @@ export const courses: Course[] = [
     duration: '8 Weeks',
     image: 'https://picsum.photos/seed/course-crafts1/600/400',
     level: 'Advanced',
+    price: 1499,
   },
   {
     id: 'c6',
@@ -409,6 +416,7 @@ export const courses: Course[] = [
     duration: '6 Sessions',
     image: 'https://picsum.photos/seed/course-wellness2/600/400',
     level: 'Intermediate',
+    price: 0,
   },
 ];
 
@@ -438,5 +446,3 @@ export const selfCareActivities: SelfCareActivity[] = [
 
 export { directory };
 export type { Professional };
-
-    
