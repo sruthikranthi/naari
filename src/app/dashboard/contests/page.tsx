@@ -9,6 +9,9 @@ import {
   Users,
   Calendar,
   IndianRupee,
+  MessageSquare,
+  Share2,
+  Heart,
 } from 'lucide-react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -48,6 +51,9 @@ import {
 } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { useState } from 'react';
+import { useDashboard } from '../page';
+import { users } from '@/lib/mock-data';
+import type { Post } from '@/lib/mock-data';
 
 const featuredContests = [
   {
@@ -61,6 +67,8 @@ const featuredContests = [
     nominees: 12,
     image: 'https://picsum.photos/seed/naarimani/800/600',
     nominationFee: 0,
+    likes: 1200,
+    comments: 250,
   },
   {
     id: 'c2',
@@ -73,6 +81,8 @@ const featuredContests = [
     nominees: 8,
     image: 'https://picsum.photos/seed/entrepreneur/800/600',
     nominationFee: 500,
+    likes: 850,
+    comments: 180,
   },
   {
     id: 'c3',
@@ -85,6 +95,8 @@ const featuredContests = [
     nominees: 15,
     image: 'https://picsum.photos/seed/bravery/800/600',
     nominationFee: 0,
+    likes: 2100,
+    comments: 400,
   },
 ];
 
@@ -128,6 +140,7 @@ type ContestFormValues = z.infer<typeof contestSchema>;
 export default function ContestsPage() {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const { addPost } = useDashboard();
   
   const {
     register,
@@ -148,6 +161,23 @@ export default function ContestsPage() {
     reset();
     setIsDialogOpen(false);
   };
+  
+  const handleShareContest = (contestTitle: string) => {
+    const newPost: Post = {
+        id: `post-${Date.now()}`,
+        author: users[0],
+        content: `Check out the "${contestTitle}" contest! So many inspiring women to support. #SakhiContests`,
+        timestamp: 'Just now',
+        likes: 0,
+        comments: 0,
+        isAnonymous: false,
+    };
+    addPost(newPost);
+    toast({
+      title: 'Contest Shared!',
+      description: `A post about "${contestTitle}" has been added to your feed.`,
+    });
+  }
 
   return (
     <div className="space-y-8">
@@ -302,13 +332,24 @@ export default function ContestsPage() {
                   </div>
                 </div>
               </CardContent>
-              <CardFooter className="p-4 pt-0">
+              <CardFooter className="flex flex-col items-stretch gap-2 p-4 pt-0">
                  <Button asChild className="w-full">
                   <Link href={`/dashboard/contests/${contest.id}`}>
                     <Trophy className="mr-2 h-4 w-4" />
                     View Contest & Nominees
                   </Link>
                 </Button>
+                <div className="flex justify-around">
+                     <Button variant="ghost" size="sm" className="flex-1 text-muted-foreground">
+                        <Heart className="mr-2 h-4 w-4" /> {contest.likes}
+                    </Button>
+                    <Button variant="ghost" size="sm" className="flex-1 text-muted-foreground">
+                        <MessageSquare className="mr-2 h-4 w-4" /> {contest.comments}
+                    </Button>
+                    <Button variant="ghost" size="sm" className="flex-1 text-muted-foreground" onClick={() => handleShareContest(contest.title)}>
+                        <Share2 className="mr-2 h-4 w-4" /> Share
+                    </Button>
+                </div>
               </CardFooter>
             </Card>
         ))}
@@ -342,3 +383,5 @@ export default function ContestsPage() {
     </div>
   );
 }
+
+    

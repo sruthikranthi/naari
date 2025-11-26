@@ -31,6 +31,9 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { useDashboard } from '../../page';
+import { users as allUsers } from '@/lib/mock-data';
+import type { Post } from '@/lib/mock-data';
 
 type ContestClientProps = {
   contest: Contest;
@@ -38,6 +41,7 @@ type ContestClientProps = {
 
 export function ContestClient({ contest }: ContestClientProps) {
   const { toast } = useToast();
+  const { addPost } = useDashboard();
   const [searchTerm, setSearchTerm] = useState('');
   const [nominees, setNominees] = useState<Nominee[]>(contest.nominees);
   const [isNominationOpen, setIsNominationOpen] = useState(false);
@@ -82,6 +86,18 @@ export function ContestClient({ contest }: ContestClientProps) {
           : n
       )
     );
+    
+    const newPost: Post = {
+        id: `post-${Date.now()}`,
+        author: allUsers[0],
+        content: `I'm supporting ${nomineeName} in the "${contest.title}" contest! Show them some love! #SakhiContest`,
+        timestamp: 'Just now',
+        likes: 0,
+        comments: 0,
+        isAnonymous: false,
+    };
+    addPost(newPost);
+    
      toast({
       title: 'Shared!',
       description: `A post to support ${nomineeName} has been created on your feed.`,
@@ -326,7 +342,7 @@ export function ContestClient({ contest }: ContestClientProps) {
                                 <span className="font-bold text-lg">{nominee.votes.toLocaleString()} Votes</span>
                                 <Button
                                     variant={nominee.hasVoted ? "secondary" : "default"}
-                                    onClick={() => handleVote(nominee.id)}
+                                    onClick={(e) => { e.stopPropagation(); handleVote(nominee.id); }}
                                     disabled={nominee.hasVoted}
                                 >
                                     <Trophy className="mr-2 h-4 w-4" />
@@ -339,7 +355,7 @@ export function ContestClient({ contest }: ContestClientProps) {
                         <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleComment(nominee.id)}
+                            onClick={(e) => { e.stopPropagation(); handleComment(nominee.id); }}
                         >
                             <MessageSquare className="mr-2 h-4 w-4" />
                             Comment ({nominee.comments})
@@ -347,7 +363,7 @@ export function ContestClient({ contest }: ContestClientProps) {
                         <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleShare(nominee.id, nominee.name)}
+                            onClick={(e) => { e.stopPropagation(); handleShare(nominee.id, nominee.name); }}
                         >
                             <Share2 className="mr-2 h-4 w-4" />
                             Share ({nominee.shares})
@@ -368,3 +384,5 @@ export function ContestClient({ contest }: ContestClientProps) {
     </div>
   );
 }
+
+    
