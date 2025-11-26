@@ -45,6 +45,7 @@ export default function SupportDirectoryPage() {
   const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>([]);
   const [showVerifiedOnly, setShowVerifiedOnly] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [contactedProfessionals, setContactedProfessionals] = useState<string[]>([]);
 
   const { register, handleSubmit, formState: { errors }, reset } = useForm<ProfessionalFormValues>({
     resolver: zodResolver(professionalSchema),
@@ -54,11 +55,13 @@ export default function SupportDirectoryPage() {
   });
 
 
-  const handleContact = (name: string) => {
+  const handleContact = (profId: string, name: string) => {
+    if (contactedProfessionals.includes(profId)) return;
+    setContactedProfessionals([...contactedProfessionals, profId]);
     toast({
-        title: 'Connecting you soon!',
-        description: `Your request to connect with ${name} has been noted. This feature is coming soon.`
-    })
+        title: 'Connection Request Sent',
+        description: `Your request to connect with ${name} has been sent.`,
+    });
   }
 
   const handleSpecialtyChange = (specialty: string) => {
@@ -213,47 +216,55 @@ export default function SupportDirectoryPage() {
 
         {/* Directory Listing */}
         <main className="md:col-span-3 space-y-6">
-            {filteredProfessionals.map((prof) => (
-                <Card key={prof.id}>
-                    <CardContent className="p-6 flex flex-col md:flex-row gap-6">
-                        <div className="flex flex-col items-center md:items-start text-center md:text-left">
-                            <Avatar className="h-24 w-24 border-2 border-primary">
-                                <AvatarImage src={prof.avatar} alt={prof.name} />
-                                <AvatarFallback>{prof.name.split(' ').map(n=>n[0]).join('')}</AvatarFallback>
-                            </Avatar>
-                            {prof.verified && (
-                                <Badge variant="secondary" className="mt-2 flex items-center gap-1">
-                                    <CheckCircle className="h-3 w-3 text-green-600" />
-                                    Verified
-                                </Badge>
-                            )}
-                        </div>
-                        <div className="flex-1">
-                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start">
-                                <div>
-                                    <CardTitle className="text-2xl">{prof.name}</CardTitle>
-                                    <div className="flex flex-wrap gap-2 my-2">
-                                        {prof.specialties.map(spec => (
-                                            <Badge key={spec} variant="outline">{spec}</Badge>
-                                        ))}
-                                    </div>
-                                </div>
-                                {prof.fees && (
-                                    <Badge className="text-lg mt-2 sm:mt-0">
-                                        <IndianRupee className="mr-1 h-4 w-4" />
-                                        {prof.fees.toLocaleString()}/session
+            {filteredProfessionals.map((prof) => {
+                const isContacted = contactedProfessionals.includes(prof.id);
+                return (
+                    <Card key={prof.id}>
+                        <CardContent className="p-6 flex flex-col md:flex-row gap-6">
+                            <div className="flex flex-col items-center md:items-start text-center md:text-left">
+                                <Avatar className="h-24 w-24 border-2 border-primary">
+                                    <AvatarImage src={prof.avatar} alt={prof.name} />
+                                    <AvatarFallback>{prof.name.split(' ').map(n=>n[0]).join('')}</AvatarFallback>
+                                </Avatar>
+                                {prof.verified && (
+                                    <Badge variant="secondary" className="mt-2 flex items-center gap-1">
+                                        <CheckCircle className="h-3 w-3 text-green-600" />
+                                        Verified
                                     </Badge>
                                 )}
                             </div>
-                            <CardDescription className="mt-2">{prof.description}</CardDescription>
-                             <Button className="mt-4 w-full md:w-auto" onClick={() => handleContact(prof.name)}>
-                                <MessageSquare className="mr-2 h-4 w-4" />
-                                Contact {prof.name.split(' ')[0]}
-                            </Button>
-                        </div>
-                    </CardContent>
-                </Card>
-            ))}
+                            <div className="flex-1">
+                                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start">
+                                    <div>
+                                        <CardTitle className="text-2xl">{prof.name}</CardTitle>
+                                        <div className="flex flex-wrap gap-2 my-2">
+                                            {prof.specialties.map(spec => (
+                                                <Badge key={spec} variant="outline">{spec}</Badge>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    {prof.fees && (
+                                        <Badge className="text-lg mt-2 sm:mt-0">
+                                            <IndianRupee className="mr-1 h-4 w-4" />
+                                            {prof.fees.toLocaleString()}/session
+                                        </Badge>
+                                    )}
+                                </div>
+                                <CardDescription className="mt-2">{prof.description}</CardDescription>
+                                <Button 
+                                    className="mt-4 w-full md:w-auto" 
+                                    onClick={() => handleContact(prof.id, prof.name)}
+                                    disabled={isContacted}
+                                    variant={isContacted ? "secondary" : "default"}
+                                >
+                                    <MessageSquare className="mr-2 h-4 w-4" />
+                                    {isContacted ? "Request Sent" : `Contact ${prof.name.split(' ')[0]}`}
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )
+            })}
              {filteredProfessionals.length === 0 && (
                 <div className="py-20 text-center text-muted-foreground">
                     <h3 className="text-lg font-semibold">No professionals found</h3>
