@@ -65,6 +65,7 @@ const featuredContests = [
     participants: 1250,
     image: 'https://picsum.photos/seed/naarimani/800/600',
     action: 'Nominate',
+    nominationFee: 0,
   },
   {
     id: 'c2',
@@ -77,6 +78,7 @@ const featuredContests = [
     participants: 480,
     image: 'https://picsum.photos/seed/entrepreneur/800/600',
     action: 'Participate',
+    nominationFee: 500,
   },
   {
     id: 'c3',
@@ -89,6 +91,7 @@ const featuredContests = [
     participants: 970,
     image: 'https://picsum.photos/seed/bravery/800/600',
     action: 'Nominate',
+    nominationFee: 0,
   },
 ];
 
@@ -99,6 +102,7 @@ const communityContests = [
     category: 'Cooking Contest',
     prize: 'Gift Hamper',
     participants: 120,
+    nominationFee: 100,
   },
   {
     id: 'cc2',
@@ -106,6 +110,7 @@ const communityContests = [
     category: 'Creative Contest',
     prize: 'Voucher',
     participants: 85,
+    nominationFee: 50,
   },
   {
     id: 'cc3',
@@ -113,6 +118,7 @@ const communityContests = [
     category: 'Art Contest',
     prize: 'Feature',
     participants: 210,
+    nominationFee: 0,
   },
 ];
 
@@ -121,6 +127,7 @@ const contestSchema = z.object({
   description: z.string().min(10, 'Description is required.'),
   prize: z.string().min(3, 'Prize details are required.'),
   category: z.string().nonempty('Please select a category.'),
+  nominationFee: z.coerce.number().min(0, "Fee can't be negative.").optional(),
 });
 
 type ContestFormValues = z.infer<typeof contestSchema>;
@@ -141,12 +148,12 @@ export default function ContestsPage() {
     resolver: zodResolver(contestSchema),
   });
   
-  const handleNominate = (contestId: string, contestTitle: string) => {
+  const handleNominate = (contestId: string, contestTitle: string, fee: number) => {
     if (nominatedContests.includes(contestId)) return;
     setNominatedContests([...nominatedContests, contestId]);
     toast({
       title: 'Nomination Submitted!',
-      description: `Your submission for "${contestTitle}" is in. Now spread the word to gather support!`,
+      description: `Your submission for "${contestTitle}" is in. ${fee > 0 ? `A fee of ₹${fee} has been processed. ` : ''}Now spread the word to gather support!`,
     });
   };
 
@@ -266,6 +273,16 @@ export default function ContestsPage() {
                     )}
                   </div>
                 </div>
+                <div>
+                  <Label htmlFor="nominationFee">Nomination Fee (₹) (Optional)</Label>
+                  <Input
+                    id="nominationFee"
+                    type="number"
+                    placeholder="e.g. 50 or leave blank for free"
+                    {...register('nominationFee')}
+                  />
+                  {errors.nominationFee && <p className="text-destructive text-xs mt-1">{errors.nominationFee.message}</p>}
+                </div>
               </div>
               <DialogFooter>
                 <DialogClose asChild>
@@ -307,10 +324,14 @@ export default function ContestsPage() {
                 <CardDescription className="mt-2 flex-grow">
                   {contest.description}
                 </CardDescription>
-                <div className="mt-4 grid grid-cols-3 gap-2 text-center text-sm">
+                <div className="mt-4 grid grid-cols-4 gap-2 text-center text-sm">
                   <div>
                     <p className="font-bold">{contest.prize}</p>
                     <p className="text-xs text-muted-foreground">Prize</p>
+                  </div>
+                   <div>
+                    <p className="font-bold">{contest.nominationFee > 0 ? `₹${contest.nominationFee}` : 'Free'}</p>
+                    <p className="text-xs text-muted-foreground">Entry Fee</p>
                   </div>
                   <div>
                     <p className="font-bold">{contest.endsIn}</p>
@@ -329,12 +350,12 @@ export default function ContestsPage() {
               <CardFooter className="flex flex-col gap-2 p-4 pt-0">
                  <Button
                   className="w-full"
-                  onClick={() => handleNominate(contest.id, contest.title)}
+                  onClick={() => handleNominate(contest.id, contest.title, contest.nominationFee)}
                   disabled={isNominated}
                   variant={isNominated ? 'secondary' : 'default'}
                 >
                   {isNominated ? <Check className="mr-2 h-4 w-4" /> : <Trophy className="mr-2 h-4 w-4" />}
-                  {isNominated ? 'Submitted' : contest.action}
+                  {isNominated ? 'Submitted' : `${contest.action} ${contest.nominationFee > 0 ? `(₹${contest.nominationFee})` : '(Free)'}`}
                 </Button>
                 <div className="w-full grid grid-cols-3 gap-2">
                     <Button variant="ghost" className="w-full text-muted-foreground"><Heart className="mr-2 h-4 w-4" />Like</Button>
@@ -360,8 +381,9 @@ export default function ContestsPage() {
                     </CardHeader>
                     <CardContent className="flex justify-between items-center text-sm">
                         <div className="space-y-1">
-                            <p className="flex items-center gap-1.5 text-muted-foreground"><IndianRupee className="h-4 w-4" /> {contest.prize}</p>
+                            <p className="flex items-center gap-1.5 text-muted-foreground"><Award className="h-4 w-4" /> {contest.prize}</p>
                             <p className="flex items-center gap-1.5 text-muted-foreground"><Users className="h-4 w-4" /> {contest.participants.toLocaleString()} participants</p>
+                             <p className="flex items-center gap-1.5 text-muted-foreground"><IndianRupee className="h-4 w-4" /> {contest.nominationFee > 0 ? `${contest.nominationFee} entry fee` : 'Free entry'}</p>
                         </div>
                         <Button>View Details</Button>
                     </CardContent>

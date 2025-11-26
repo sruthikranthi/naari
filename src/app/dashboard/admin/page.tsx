@@ -1,3 +1,4 @@
+
 'use client';
 import { useState, useMemo } from 'react';
 import {
@@ -81,10 +82,10 @@ initialUsers.push({
 });
 
 const allContests = [
-    { id: 'c1', name: 'NAARIMANI of the Year', participants: 1250, status: 'Live' },
-    { id: 'c2', name: 'Woman Entrepreneur of The Year', participants: 480, status: 'Live' },
-    { id: 'cc1', name: 'Best Home Chef', participants: 120, status: 'Community-run' },
-    { id: 'prop1', name: 'Pune Baking Championship', participants: 0, status: 'Pending Approval' }
+    { id: 'c1', name: 'NAARIMANI of the Year', participants: 1250, status: 'Live', fee: 'Free' },
+    { id: 'c2', name: 'Woman Entrepreneur of The Year', participants: 480, status: 'Live', fee: '₹500' },
+    { id: 'cc1', name: 'Best Home Chef', participants: 120, status: 'Community-run', fee: '₹100' },
+    { id: 'prop1', name: 'Pune Baking Championship', participants: 0, status: 'Pending Approval', fee: '₹200' }
 ];
 
 export default function AdminPanelPage() {
@@ -421,6 +422,7 @@ export default function AdminPanelPage() {
                   <TableRow>
                     <TableHead>Contest Name</TableHead>
                     <TableHead>Participants</TableHead>
+                    <TableHead>Entry Fee</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -430,6 +432,7 @@ export default function AdminPanelPage() {
                     <TableRow key={contest.id}>
                       <TableCell className="font-medium">{contest.name}</TableCell>
                       <TableCell>{contest.participants.toLocaleString()}</TableCell>
+                      <TableCell>{contest.fee}</TableCell>
                       <TableCell>
                         <Badge variant={getStatusVariant(contest.status)}>{contest.status}</Badge>
                       </TableCell>
