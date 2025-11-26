@@ -352,7 +352,8 @@ export const products: Product[] = [
 export type KittyGroup = {
   id: string;
   name: string;
-  members: number;
+  memberIds?: string[];
+  members?: number; // This will be deprecated in favor of memberIds.length
   nextTurn: string;
   contribution: number;
   nextDate: string;

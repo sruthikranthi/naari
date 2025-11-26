@@ -21,7 +21,6 @@ import {
   Video,
   BookOpen,
 } from 'lucide-react';
-import { kittyGroups as initialKittyGroups, users } from '@/lib/mock-data';
 import type { KittyGroup as KittyGroupType } from '@/lib/mock-data';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -49,6 +48,10 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Controller } from 'react-hook-form';
+import { useCollection, useFirestore, useUser, useMemoFirebase } from '@/firebase';
+import { collection, addDoc, query, where } from 'firebase/firestore';
+import { Skeleton } from '@/components/ui/skeleton';
+import { users as mockUsers } from '@/lib/mock-data';
 
 
 const tools = [
@@ -77,8 +80,15 @@ type KittyGroupFormValues = z.infer<typeof kittyGroupSchema>;
 
 export default function KittyGroupsPage() {
   const { toast } = useToast();
-  const [kittyGroups, setKittyGroups] = useState(initialKittyGroups);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const firestore = useFirestore();
+  const { user, isUserLoading } = useUser();
+
+  const kittyGroupsQuery = useMemoFirebase(
+    () => (firestore && user ? query(collection(firestore, 'kitty_groups'), where('memberIds', 'array-contains', user.uid)) : null),
+    [firestore, user]
+  );
+  const { data: kittyGroups, isLoading: areGroupsLoading } = useCollection<KittyGroupType>(kittyGroupsQuery);
 
   const { register, handleSubmit, formState: { errors }, reset, control } = useForm<KittyGroupFormValues>({
     resolver: zodResolver(kittyGroupSchema),
@@ -90,27 +100,38 @@ export default function KittyGroupsPage() {
     }
   });
 
-  const onSubmit = (data: KittyGroupFormValues) => {
-    const newGroup: KittyGroupType = {
-      id: `k${Date.now()}`,
+  const onSubmit = async (data: KittyGroupFormValues) => {
+    if (!user) {
+      toast({ variant: 'destructive', title: 'Not authenticated' });
+      return;
+    }
+
+    const newGroup = {
       name: data.name,
-      members: data.members,
       contribution: data.contribution,
       nextTurn: 'TBD',
       nextDate: 'TBD',
+      memberIds: [user.uid], // Creator is the first member
+      // 'members' field from mock data is now derived from memberIds.length
     };
-    setKittyGroups([newGroup, ...kittyGroups]);
-    toast({
-      title: 'Kitty Group Created!',
-      description: `The group "${data.name}" has been successfully created.`,
-    });
-    reset();
-    setIsDialogOpen(false);
+
+    try {
+        await addDoc(collection(firestore, 'kitty_groups'), newGroup);
+        toast({
+          title: 'Kitty Group Created!',
+          description: `The group "${data.name}" has been successfully created.`,
+        });
+        reset();
+        setIsDialogOpen(false);
+    } catch(e) {
+        console.error("Error creating kitty group: ", e);
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not create kitty group.' });
+    }
   };
   
   const handleToolClick = (toolId: string) => {
     if (toolId === 'winner-selection') {
-      const allMembers = users.map(u => u.name);
+      const allMembers = mockUsers.map(u => u.name);
       const winner = allMembers[Math.floor(Math.random() * allMembers.length)];
       toast({
         title: '🎉 And the Winner is...',
@@ -124,6 +145,8 @@ export default function KittyGroupsPage() {
       });
     }
   };
+  
+  const isLoading = isUserLoading || areGroupsLoading;
 
   return (
     <div>
@@ -134,7 +157,23 @@ export default function KittyGroupsPage() {
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
           <h2 className="text-2xl font-bold font-headline">Your Groups</h2>
-          {kittyGroups.map((group) => (
+          {isLoading && (
+             [...Array(2)].map((_, i) => (
+                <Card key={i}>
+                    <CardHeader><Skeleton className="h-7 w-1/2" /></CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                            {[...Array(4)].map((_, j) => <Skeleton key={j} className="h-10 w-full" />)}
+                        </div>
+                        <Separator />
+                        <div className="flex justify-end">
+                            <Skeleton className="h-10 w-28" />
+                        </div>
+                    </CardContent>
+                </Card>
+             ))
+          )}
+          {!isLoading && kittyGroups && kittyGroups.map((group) => (
             <Card key={group.id}>
               <CardHeader>
                 <CardTitle className="font-headline">{group.name}</CardTitle>
@@ -144,7 +183,7 @@ export default function KittyGroupsPage() {
                   <div className="flex items-center gap-2">
                     <Users className="h-5 w-5 text-muted-foreground" />
                     <div>
-                      <p className="font-semibold">{group.members}</p>
+                      <p className="font-semibold">{group.memberIds?.length || 1}</p>
                       <p className="text-xs text-muted-foreground">Members</p>
                     </div>
                   </div>
@@ -183,6 +222,12 @@ export default function KittyGroupsPage() {
               </CardContent>
             </Card>
           ))}
+           {!isLoading && kittyGroups?.length === 0 && (
+                <div className="py-20 text-center text-muted-foreground rounded-lg border-2 border-dashed">
+                    <h3 className="text-lg font-semibold">No Kitty Groups Joined</h3>
+                    <p className="mt-1">Create or join a group to see it here.</p>
+                </div>
+            )}
         </div>
         <div className="space-y-6 lg:col-span-1">
            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -231,7 +276,7 @@ export default function KittyGroupsPage() {
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="members" className="text-right">
-                      Members
+                      Max Members
                     </Label>
                     <div className="col-span-3">
                       <Input
