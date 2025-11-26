@@ -11,6 +11,8 @@ import {
   User,
   Users,
   Plus,
+  MessageSquare,
+  Share2,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { type Contest, type Nominee } from '@/lib/contests-data';
@@ -55,12 +57,26 @@ export function ContestClient({ contest }: ContestClientProps) {
       }.`,
     });
   };
+  
+  const handleComment = () => {
+    toast({
+      title: 'Commenting coming soon!',
+      description: 'You will be able to comment on nominees here.',
+    });
+  }
+  
+  const handleShare = (nomineeName: string) => {
+     toast({
+      title: 'Shared!',
+      description: `A post to support ${nomineeName} has been created on your feed.`,
+    });
+  }
 
   const handleNominate = () => {
     setIsNominationOpen(false);
     toast({
-        title: 'Nomination Submitted!',
-        description: 'Your entry is under review. Good luck!'
+        title: 'Participation Submitted!',
+        description: 'Your entry is under review. You are now a nominee! Good luck!'
     });
   }
 
@@ -124,7 +140,7 @@ export function ContestClient({ contest }: ContestClientProps) {
                  <Dialog open={isNominationOpen} onOpenChange={setIsNominationOpen}>
                     <DialogTrigger asChild>
                        <Button className="w-full">
-                            <Plus className="mr-2 h-4 w-4" /> Nominate Now
+                            <Plus className="mr-2 h-4 w-4" /> Participate Now
                         </Button>
                     </DialogTrigger>
                     <DialogContent>
@@ -135,7 +151,7 @@ export function ContestClient({ contest }: ContestClientProps) {
                         <div className="space-y-4 py-4">
                             <div>
                                 <Label htmlFor="story">Your Story / Achievement</Label>
-                                <Textarea id="story" placeholder="Tell us why you (or your nominee) should win..." rows={5} />
+                                <Textarea id="story" placeholder="Tell us why you should win..." rows={5} />
                             </div>
                              <div>
                                 <Label htmlFor="image-upload">Upload a supporting image</Label>
@@ -149,7 +165,7 @@ export function ContestClient({ contest }: ContestClientProps) {
                         </div>
                         <DialogFooter>
                             <Button variant="ghost" onClick={() => setIsNominationOpen(false)}>Cancel</Button>
-                            <Button onClick={handleNominate}>Submit Nomination</Button>
+                            <Button onClick={handleNominate}>Submit Entry</Button>
                         </DialogFooter>
                     </DialogContent>
                 </Dialog>
@@ -200,7 +216,7 @@ export function ContestClient({ contest }: ContestClientProps) {
           </div>
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             {filteredNominees.map((nominee) => (
-              <Card key={nominee.id} className="overflow-hidden">
+              <Card key={nominee.id} className="overflow-hidden flex flex-col">
                 <CardHeader className="p-0">
                   <div className="relative aspect-video w-full">
                     <Image
@@ -215,7 +231,7 @@ export function ContestClient({ contest }: ContestClientProps) {
                     </Badge>
                   </div>
                 </CardHeader>
-                <CardContent className="p-4">
+                <CardContent className="p-4 flex-1">
                   <div className="flex items-center gap-3">
                     <Avatar>
                       <AvatarImage src={nominee.avatar} alt={nominee.name} />
@@ -232,14 +248,34 @@ export function ContestClient({ contest }: ContestClientProps) {
                     {nominee.story.text}
                   </CardDescription>
                 </CardContent>
-                <CardFooter>
-                  <Button
-                    className="w-full"
+                <CardFooter className="flex justify-between gap-2 p-2">
+                   <Button
+                    variant="ghost"
+                    size="sm"
+                    className="flex-1"
                     onClick={() => handleVote(nominee.id)}
                     disabled={nominee.hasVoted}
                   >
                     <Trophy className="mr-2 h-4 w-4" />
                     {nominee.hasVoted ? 'Voted' : 'Vote'}
+                  </Button>
+                   <Button
+                    variant="ghost"
+                    size="sm"
+                    className="flex-1"
+                    onClick={handleComment}
+                  >
+                    <MessageSquare className="mr-2 h-4 w-4" />
+                    Comment
+                  </Button>
+                   <Button
+                    variant="ghost"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => handleShare(nominee.name)}
+                  >
+                    <Share2 className="mr-2 h-4 w-4" />
+                    Share
                   </Button>
                 </CardFooter>
               </Card>
@@ -248,7 +284,7 @@ export function ContestClient({ contest }: ContestClientProps) {
           {filteredNominees.length === 0 && (
             <div className="py-20 text-center text-muted-foreground">
               <h3 className="text-lg font-semibold">No nominees found</h3>
-              <p>Try clearing your search. Be the first to nominate!</p>
+              <p>Try clearing your search. Be the first to participate!</p>
             </div>
           )}
         </div>
