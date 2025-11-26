@@ -16,10 +16,13 @@ import { useToast } from '@/hooks/use-toast';
 import { useUser, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import type { User } from '@/lib/mock-data';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 
 export default function VerificationPage() {
   const [isVerificationOpen, setIsVerificationOpen] = useState(false);
   const [verificationStep, setVerificationStep] = useState<'capture' | 'verifying' | 'success'>('capture');
+  const [hasAgreedToPolicies, setHasAgreedToPolicies] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
   const { user: authUser, isUserLoading: isAuthLoading } = useUser();
@@ -129,10 +132,22 @@ export default function VerificationPage() {
           <Separator />
 
           <div className="space-y-4">
+             <div className="flex items-start space-x-3">
+                <Checkbox id="terms" checked={hasAgreedToPolicies} onCheckedChange={(checked) => setHasAgreedToPolicies(checked as boolean)} className="mt-1" />
+                <Label htmlFor="terms" className="text-sm text-muted-foreground font-normal">
+                  I agree to the Sakhi Circle 
+                  <Link href="/policies/terms" className="text-primary hover:underline" target="_blank"> Terms & Conditions</Link>, 
+                  <Link href="/policies/privacy" className="text-primary hover:underline" target="_blank"> Privacy Policy</Link>, 
+                  <Link href="/policies/refund" className="text-primary hover:underline" target="_blank"> Refund Policy</Link>, and 
+                  <Link href="/policies/cancellation" className="text-primary hover:underline" target="_blank"> Cancellation Policy</Link>.
+                </Label>
+              </div>
+
             <Button
               className="w-full"
               size="lg"
               onClick={() => setIsVerificationOpen(true)}
+              disabled={!hasAgreedToPolicies}
             >
               <Video className="mr-2 h-5 w-5" />
               Start Video Verification
