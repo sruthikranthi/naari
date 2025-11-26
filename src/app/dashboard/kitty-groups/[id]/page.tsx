@@ -1,3 +1,4 @@
+
 import { notFound } from 'next/navigation';
 import { kittyGroups, users } from '@/lib/mock-data';
 import { KittyGroupClient } from './kitty-group-client';
@@ -11,6 +12,7 @@ export default function KittyGroupDetailPage({
   const { id } = params;
   const group = kittyGroups.find((g) => g.id === id);
   const groupMembers = users.slice(0, group?.members);
+  const currentUser = users[0]; // Assuming u1 is the current user
 
   if (!group) {
     notFound();
@@ -28,6 +30,7 @@ export default function KittyGroupDetailPage({
       group={group}
       groupMembers={groupMembers}
       upcomingEvent={upcomingEvent}
+      currentUser={currentUser}
     />
   );
 }

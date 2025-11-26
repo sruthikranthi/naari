@@ -68,11 +68,13 @@ type KittyGroupClientProps = {
   group: KittyGroup;
   groupMembers: UserType[];
   upcomingEvent: UpcomingEvent;
+  currentUser: UserType;
 };
 
-export function KittyGroupClient({ group, groupMembers, upcomingEvent }: KittyGroupClientProps) {
+export function KittyGroupClient({ group, groupMembers, upcomingEvent, currentUser }: KittyGroupClientProps) {
   const { toast } = useToast();
   const [isPartyDialogOpen, setIsPartyDialogOpen] = useState(false);
+  const isHost = currentUser.name === group.nextTurn;
 
   const handleAction = (title: string, description: string) => {
     toast({ title, description });
@@ -185,27 +187,29 @@ export function KittyGroupClient({ group, groupMembers, upcomingEvent }: KittyGr
                   <p><strong>Location:</strong> {upcomingEvent.location}</p>
                   <div className="mt-4 flex gap-2">
                     <Button onClick={() => handleAction('RSVP Confirmed!', `You are attending the next Kitty Party hosted by ${upcomingEvent.host}.`)}>RSVP</Button>
-                    <Dialog open={isPartyDialogOpen} onOpenChange={setIsPartyDialogOpen}>
-                        <DialogTrigger asChild>
-                            <Button variant="outline"><Video className="mr-2 h-4 w-4" /> Start Virtual Party</Button>
-                        </DialogTrigger>
-                        <DialogContent className="sm:max-w-2xl">
-                            <DialogHeader>
-                                <DialogTitle>Start a Virtual Kitty Party</DialogTitle>
-                                <DialogDescription>
-                                    Get ready to host your kitty party live! Your camera will be used.
-                                </DialogDescription>
-                            </DialogHeader>
-                            <div className="space-y-4">
-                                <Input placeholder="Enter a title for your party..." defaultValue={`${group.name} - Live!`} />
-                                <CameraCapture onMediaCaptured={handleMediaCaptured} />
-                            </div>
-                            <DialogFooter>
-                                <Button variant="ghost" onClick={() => setIsPartyDialogOpen(false)}>Cancel</Button>
-                                <Button onClick={handleStartParty}>Go Live</Button>
-                            </DialogFooter>
-                        </DialogContent>
-                    </Dialog>
+                    {isHost && (
+                        <Dialog open={isPartyDialogOpen} onOpenChange={setIsPartyDialogOpen}>
+                            <DialogTrigger asChild>
+                                <Button variant="outline"><Video className="mr-2 h-4 w-4" /> Start Virtual Party</Button>
+                            </DialogTrigger>
+                            <DialogContent className="sm:max-w-2xl">
+                                <DialogHeader>
+                                    <DialogTitle>Start a Virtual Kitty Party</DialogTitle>
+                                    <DialogDescription>
+                                        Get ready to host your kitty party live! Your camera will be used.
+                                    </DialogDescription>
+                                </DialogHeader>
+                                <div className="space-y-4">
+                                    <Input placeholder="Enter a title for your party..." defaultValue={`${group.name} - Live!`} />
+                                    <CameraCapture onMediaCaptured={handleMediaCaptured} />
+                                </div>
+                                <DialogFooter>
+                                    <Button variant="ghost" onClick={() => setIsPartyDialogOpen(false)}>Cancel</Button>
+                                    <Button onClick={handleStartParty}>Go Live</Button>
+                                </DialogFooter>
+                            </DialogContent>
+                        </Dialog>
+                    )}
                   </div>
               </CardContent>
           </Card>
