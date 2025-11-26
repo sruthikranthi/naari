@@ -31,6 +31,16 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+    DialogFooter,
+    DialogClose,
+    DialogDescription,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -38,6 +48,7 @@ import { selfCareActivities } from '@/lib/mock-data';
 import type { SelfCareActivity } from '@/lib/mock-data';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 
 const moods = [
   { icon: Sparkles, label: 'Great' },
@@ -78,12 +89,11 @@ const guidedMeditations = [
   },
 ];
 
-const quickTools = [
-  { icon: Droplets, label: 'Period Tracker' },
-  { icon: PenSquare, label: 'Gratitude Journal' },
-  { icon: BarChart, label: 'Sleep Diary' },
-  { icon: Brain, label: 'Therapy Notes' },
-];
+type JournalEntry = {
+    id: number;
+    text: string;
+    date: string;
+}
 
 export default function WellnessPage() {
   const [selectedMood, setSelectedMood] = useState<string | null>(null);
@@ -378,22 +388,10 @@ export default function WellnessPage() {
           <Card>
             <CardContent className="p-4">
               <div className="grid grid-cols-2 gap-4">
-                {quickTools.map((tool) => (
-                  <Button
-                    key={tool.label}
-                    variant="outline"
-                    className="flex h-24 flex-col items-center justify-center gap-2"
-                    onClick={() =>
-                      toast({
-                        title: 'Coming Soon!',
-                        description: `${tool.label} will be available soon.`,
-                      })
-                    }
-                  >
-                    <tool.icon className="h-6 w-6 text-primary" />
-                    <span className="text-center text-xs">{tool.label}</span>
-                  </Button>
-                ))}
+                <QuickToolButton icon={Droplets} label="Period Tracker" />
+                <GratitudeJournal />
+                <QuickToolButton icon={BarChart} label="Sleep Diary" />
+                <QuickToolButton icon={Brain} label="Therapy Notes" />
               </div>
             </CardContent>
           </Card>
@@ -426,4 +424,90 @@ export default function WellnessPage() {
       <audio ref={customAudioRef} onEnded={handleCustomAudioEnded} className="hidden" />
     </div>
   );
+}
+
+function QuickToolButton({ icon: Icon, label }: { icon: React.ElementType, label: string }) {
+  const { toast } = useToast();
+  return (
+    <Button
+      variant="outline"
+      className="flex h-24 flex-col items-center justify-center gap-2"
+      onClick={() =>
+        toast({
+          title: 'Coming Soon!',
+          description: `${label} will be available soon.`,
+        })
+      }
+    >
+      <Icon className="h-6 w-6 text-primary" />
+      <span className="text-center text-xs">{label}</span>
+    </Button>
+  );
+}
+
+function GratitudeJournal() {
+    const { toast } = useToast();
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [entries, setEntries] = useState<JournalEntry[]>([]);
+    const [newEntry, setNewEntry] = useState('');
+
+    const handleSaveEntry = () => {
+        if(newEntry.trim()){
+            const entry: JournalEntry = {
+                id: Date.now(),
+                text: newEntry,
+                date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+            };
+            setEntries([entry, ...entries]);
+            setNewEntry('');
+            toast({
+                title: 'Entry Saved!',
+                description: 'Your gratitude has been recorded.',
+            });
+        }
+    }
+    
+    return (
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+                 <Button
+                    variant="outline"
+                    className="flex h-24 flex-col items-center justify-center gap-2"
+                  >
+                    <PenSquare className="h-6 w-6 text-primary" />
+                    <span className="text-center text-xs">Gratitude Journal</span>
+                  </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-lg">
+                <DialogHeader>
+                    <DialogTitle>Gratitude Journal</DialogTitle>
+                    <DialogDescription>
+                        Take a moment to write down what you're grateful for today.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                    <Textarea 
+                        placeholder="Today, I am grateful for..."
+                        value={newEntry}
+                        onChange={(e) => setNewEntry(e.target.value)}
+                        rows={4}
+                    />
+                     <Button onClick={handleSaveEntry}>Save Entry</Button>
+                </div>
+                <div className="max-h-64 space-y-4 overflow-y-auto pr-2">
+                    <h3 className="font-semibold">Your Entries</h3>
+                     {entries.length > 0 ? (
+                        entries.map(entry => (
+                            <div key={entry.id} className="rounded-md border bg-secondary/50 p-3">
+                                <p className="text-sm">{entry.text}</p>
+                                <p className="text-xs text-muted-foreground mt-2">{entry.date}</p>
+                            </div>
+                        ))
+                     ) : (
+                        <p className="text-center text-sm text-muted-foreground">You have no entries yet.</p>
+                     )}
+                </div>
+            </DialogContent>
+        </Dialog>
+    )
 }
