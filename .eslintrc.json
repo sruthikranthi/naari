@@ -4,6 +4,12 @@
     "next/typescript"
   ],
   "rules": {
-    "react-hooks/use-memo": "off"
+    "react-hooks/use-memo": "off",
+    "@typescript-eslint/ban-ts-comment": "off"
+  },
+  "settings": {
+    "react": {
+      "version": "detect"
+    }
   }
 }

@@ -7,7 +7,7 @@ export default function TermsPage() {
       
       <p>
         Welcome to Sakhi Circle! These terms and conditions outline the rules and regulations for the use of
-        Sakhi Circle's Website, located at [Your Website URL].
+        Sakhi Circle&apos;s Website, located at [Your Website URL].
       </p>
 
       <p>
@@ -17,7 +17,7 @@ export default function TermsPage() {
 
       <h2>1. The Basics</h2>
       <p>
-        This is placeholder text. You should replace this with your own Terms and Conditions. It's highly recommended
+        This is placeholder text. You should replace this with your own Terms and Conditions. It&apos;s highly recommended
         to consult with a legal professional to draft policies that are tailored to your specific business,
         jurisdiction, and data handling practices.
       </p>
@@ -32,7 +32,7 @@ export default function TermsPage() {
       <h2>3. Content</h2>
       <p>
         Our Service allows you to post, link, store, share and otherwise make available certain information, text,
-        graphics, videos, or other material ("Content"). You are responsible for the Content that you post on or through
+        graphics, videos, or other material (&quot;Content&quot;). You are responsible for the Content that you post on or through
         the Service, including its legality, reliability, and appropriateness.
       </p>
 

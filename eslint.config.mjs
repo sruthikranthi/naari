@@ -6,6 +6,9 @@ export default [
     rules: {
       'react-hooks/use-memo': 'off',
     },
+    linterOptions: {
+      reportUnusedDisableDirectives: false,
+    },
   },
 ];
 

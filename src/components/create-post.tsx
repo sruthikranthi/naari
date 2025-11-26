@@ -1,6 +1,7 @@
 
 'use client';
 import { useState, useRef } from 'react';
+import Image from 'next/image';
 import { useAuth, useFirestore } from '@/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -178,7 +179,9 @@ export function CreatePost() {
             {mediaPreview && (
                 <div className="relative">
                     {mediaType === 'image' ? (
-                    <img src={mediaPreview} alt="Preview" className="max-h-80 w-full rounded-lg object-contain" />
+                    <div className="relative max-h-80 w-full rounded-lg overflow-hidden">
+                        <Image src={mediaPreview} alt="Preview" width={800} height={320} className="w-full h-auto object-contain" unoptimized />
+                    </div>
                     ) : (
                     <video src={mediaPreview} controls className="max-h-80 w-full rounded-lg" />
                     )}
