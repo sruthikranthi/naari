@@ -4,10 +4,12 @@
 import { useState, useMemo } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Star, Plus, SlidersHorizontal, ChevronDown } from 'lucide-react';
+import { Star, Plus, SlidersHorizontal, ChevronDown, Loader } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { useCollection, useFirestore, useUser, useMemoFirebase } from '@/firebase';
 
 import {
   Card,
@@ -15,8 +17,8 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { products as initialProducts, users } from '@/lib/mock-data';
-import type { Product } from '@/lib/mock-data';
+import { products as initialProducts, users as mockUsers } from '@/lib/mock-data';
+import type { Product, User } from '@/lib/mock-data';
 import { PageHeader } from '@/components/page-header';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -39,6 +41,7 @@ import { Slider } from '@/components/ui/slider';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const productSchema = z.object({
   name: z.string().min(3, { message: 'Product name must be at least 3 characters.' }),
@@ -53,16 +56,21 @@ const allCategories = [...new Set(initialProducts.map(p => p.category))];
 const maxPrice = Math.max(...initialProducts.map(p => p.price));
 
 export default function MarketplacePage() {
-  const [products, setProducts] = useState<Product[]>(initialProducts);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
+  const firestore = useFirestore();
+  const { user, isUserLoading } = useUser();
 
-  // Filter and sort state
+  const productsQuery = useMemoFirebase(
+    () => (firestore && user ? collection(firestore, 'marketplace_listings') : null),
+    [firestore, user]
+  );
+  const { data: products, isLoading: areProductsLoading } = useCollection<Product>(productsQuery);
+
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [priceRange, setPriceRange] = useState([maxPrice]);
   const [selectedRating, setSelectedRating] = useState(0);
   const [sortBy, setSortBy] = useState('newest');
-
 
   const {
     register,
@@ -73,26 +81,44 @@ export default function MarketplacePage() {
     resolver: zodResolver(productSchema),
   });
 
-  const onSubmit = (data: ProductFormValues) => {
-    const newProduct: Product = {
-      id: `prod${Date.now()}`,
+  const onSubmit = async (data: ProductFormValues) => {
+    if (!user) {
+        toast({ variant: 'destructive', title: 'Authentication required' });
+        return;
+    }
+    const sellerInfo = mockUsers.find(u => u.id === user.uid) || {
+        id: user.uid,
+        name: user.displayName || 'Anonymous Seller',
+        avatar: user.photoURL || `https://picsum.photos/seed/${user.uid}/100/100`,
+        city: 'Unknown'
+    };
+
+    const newProduct = {
       name: data.name,
       description: data.description,
       price: data.price,
       category: data.category,
-      seller: users[0], // Mocking the seller as the current user
-      images: [`https://picsum.photos/seed/newProd${products.length + 1}/600/400`],
+      sellerId: user.uid,
+      seller: sellerInfo, // Denormalized for display
+      images: [`https://picsum.photos/seed/newProd${products?.length || 0 + 1}/600/400`],
       rating: 0,
       reviewCount: 0,
       reviews: [],
+      createdAt: serverTimestamp(),
     };
-    setProducts([newProduct, ...products]);
-    toast({
-      title: 'Product Listed!',
-      description: `Your product "${data.name}" is now live on the marketplace.`,
-    });
-    reset();
-    setIsDialogOpen(false);
+
+    try {
+        await addDoc(collection(firestore, 'marketplace_listings'), newProduct);
+        toast({
+          title: 'Product Listed!',
+          description: `Your product "${data.name}" is now live on the marketplace.`,
+        });
+        reset();
+        setIsDialogOpen(false);
+    } catch(e) {
+        console.error("Error creating product:", e);
+        toast({ variant: 'destructive', title: 'Error listing product' });
+    }
   };
   
   const handleCategoryChange = (category: string) => {
@@ -104,6 +130,8 @@ export default function MarketplacePage() {
   };
 
   const filteredAndSortedProducts = useMemo(() => {
+    if (!products) return [];
+
     let filtered = products
       .filter(p => selectedCategories.length === 0 || selectedCategories.includes(p.category))
       .filter(p => p.price <= priceRange[0])
@@ -118,11 +146,13 @@ export default function MarketplacePage() {
             break;
         case 'newest':
         default:
-            // Assuming newer products are at the beginning of the original array
+            // Assuming newer products are at the beginning of the original array (default from Firestore)
             break;
     }
     return filtered;
   }, [products, selectedCategories, priceRange, selectedRating, sortBy]);
+  
+  const isLoading = isUserLoading || areProductsLoading;
 
   return (
     <div>
@@ -269,59 +299,77 @@ export default function MarketplacePage() {
                     </SelectContent>
                 </Select>
             </div>
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
-                {filteredAndSortedProducts.map((product) => (
-                <Link key={product.id} href={`/dashboard/marketplace/${product.id}`} className="group">
-                    <Card className="overflow-hidden h-full flex flex-col">
-                    <CardHeader className="p-0">
-                        <div className="relative aspect-4/3 w-full">
-                        <Image
-                            src={product.images[0]}
-                            alt={product.name}
-                            fill
-                            className="object-cover transition-transform duration-300 group-hover:scale-105"
-                            data-ai-hint="product lifestyle"
-                        />
-                        </div>
-                    </CardHeader>
-                    <CardContent className="p-4 flex flex-col flex-grow">
-                        <p className="mb-1 text-lg font-headline flex-grow">{product.name}</p>
-                        <div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground">
-                        <Avatar className="h-5 w-5">
-                            <AvatarImage
-                            src={`https://picsum.photos/seed/${product.seller.id}/100/100`}
-                            alt={product.seller.name}
-                            data-ai-hint="woman seller"
+            {isLoading ? (
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
+                    {[...Array(6)].map((_, i) => (
+                        <Card key={i} className="overflow-hidden h-full flex flex-col">
+                            <Skeleton className="aspect-4/3 w-full" />
+                            <CardContent className="p-4 flex flex-col flex-grow">
+                                <Skeleton className="h-5 w-3/4 mb-2" />
+                                <Skeleton className="h-4 w-1/2 mb-4" />
+                                <div className="flex items-center justify-between mt-auto">
+                                    <Skeleton className="h-6 w-16" />
+                                    <Skeleton className="h-5 w-12" />
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
+                    {filteredAndSortedProducts.map((product) => (
+                    <Link key={product.id} href={`/dashboard/marketplace/${product.id}`} className="group">
+                        <Card className="overflow-hidden h-full flex flex-col">
+                        <CardHeader className="p-0">
+                            <div className="relative aspect-4/3 w-full">
+                            <Image
+                                src={product.images[0]}
+                                alt={product.name}
+                                fill
+                                className="object-cover transition-transform duration-300 group-hover:scale-105"
+                                data-ai-hint="product lifestyle"
                             />
-                            <AvatarFallback>
-                            {product.seller.name
-                                .split(' ')
-                                .map((n) => n[0])
-                                .join('')}
-                            </AvatarFallback>
-                        </Avatar>
-                        <span>{product.seller.name}</span>
-                        </div>
-                        <div className="flex items-center justify-between mt-auto">
-                        <Badge variant="secondary" className="text-base">
-                            ₹{product.price.toLocaleString()}
-                        </Badge>
-                        <div className="flex items-center gap-1 text-sm text-amber-500">
-                            <Star className="h-4 w-4 fill-current" />
-                            <span className="font-semibold text-foreground">
-                            {product.rating.toFixed(1)}
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                            ({product.reviewCount})
-                            </span>
-                        </div>
-                        </div>
-                    </CardContent>
-                    </Card>
-                </Link>
-                ))}
-            </div>
-            {filteredAndSortedProducts.length === 0 && (
+                            </div>
+                        </CardHeader>
+                        <CardContent className="p-4 flex flex-col flex-grow">
+                            <p className="mb-1 text-lg font-headline flex-grow">{product.name}</p>
+                            <div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground">
+                            <Avatar className="h-5 w-5">
+                                <AvatarImage
+                                src={product.seller.avatar || `https://picsum.photos/seed/${product.sellerId}/100/100`}
+                                alt={product.seller.name}
+                                data-ai-hint="woman seller"
+                                />
+                                <AvatarFallback>
+                                {product.seller.name
+                                    ?.split(' ')
+                                    .map((n) => n[0])
+                                    .join('')}
+                                </AvatarFallback>
+                            </Avatar>
+                            <span>{product.seller.name}</span>
+                            </div>
+                            <div className="flex items-center justify-between mt-auto">
+                            <Badge variant="secondary" className="text-base">
+                                ₹{product.price.toLocaleString()}
+                            </Badge>
+                            <div className="flex items-center gap-1 text-sm text-amber-500">
+                                <Star className="h-4 w-4 fill-current" />
+                                <span className="font-semibold text-foreground">
+                                {product.rating.toFixed(1)}
+                                </span>
+                                <span className="text-xs text-muted-foreground">
+                                ({product.reviewCount})
+                                </span>
+                            </div>
+                            </div>
+                        </CardContent>
+                        </Card>
+                    </Link>
+                    ))}
+                </div>
+            )}
+            {!isLoading && filteredAndSortedProducts.length === 0 && (
                 <div className="col-span-full py-20 text-center text-muted-foreground">
                     <h3 className="text-lg font-semibold">No products found</h3>
                     <p>Try adjusting your filters.</p>

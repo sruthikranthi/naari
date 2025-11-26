@@ -1,4 +1,5 @@
 
+
 'use client';
 import { useState } from 'react';
 import Image from 'next/image';
@@ -188,10 +189,10 @@ export function ProductClient({ product }: ProductClientProps) {
               <CardTitle className="flex items-center gap-3">
                  <Avatar className="h-10 w-10">
                   <AvatarImage
-                    src={`https://picsum.photos/seed/${product.seller.id}/100/100`}
+                    src={product.seller.avatar || `https://picsum.photos/seed/${product.sellerId}/100/100`}
                     alt={product.seller.name}
                   />
-                  <AvatarFallback>{product.seller.name.split(' ').map(n=>n[0]).join('')}</AvatarFallback>
+                  <AvatarFallback>{product.seller.name?.split(' ').map(n=>n[0]).join('')}</AvatarFallback>
                 </Avatar>
                 <div>
                     <p className="text-sm text-muted-foreground">Sold by</p>
@@ -247,7 +248,7 @@ export function ProductClient({ product }: ProductClientProps) {
             <Separator />
             
             <div className="space-y-6">
-                {product.reviews.map(review => (
+                {product.reviews && product.reviews.map(review => (
                 <div key={review.id} className="flex gap-4">
                     <Avatar>
                         <AvatarFallback>{review.author[0]}</AvatarFallback>
@@ -274,7 +275,7 @@ export function ProductClient({ product }: ProductClientProps) {
                 </div>
                 ))}
             </div>
-            {product.reviews.length > 0 && <Button variant="outline" className="w-full">Load More Reviews</Button>}
+            {product.reviews?.length > 0 && <Button variant="outline" className="w-full">Load More Reviews</Button>}
         </CardContent>
       </Card>
     </div>

@@ -1,15 +1,61 @@
 
-import { notFound } from 'next/navigation';
-import { products } from '@/lib/mock-data';
+'use client';
+import { notFound, useParams } from 'next/navigation';
+import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
 import { ProductClient } from './product-client';
+import type { Product } from '@/lib/mock-data';
+import { Skeleton } from '@/components/ui/skeleton';
 
-export default function ProductDetailPage({ params }: { params: { id: string } }) {
-  const { id } = params;
-  const product = products.find((p) => p.id === id);
+function ProductDetailPageContent() {
+    const params = useParams();
+    const { id } = params;
+    const firestore = useFirestore();
 
-  if (!product) {
-    notFound();
-  }
+    const productRef = useMemoFirebase(
+        () => (firestore && id ? doc(firestore, 'marketplace_listings', id as string) : null),
+        [firestore, id]
+    );
 
-  return <ProductClient product={product} />;
+    const { data: product, isLoading, error } = useDoc<Product>(productRef);
+
+    if (isLoading) {
+        return (
+             <div className="space-y-6">
+                <Skeleton className="h-6 w-1/2" />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-4">
+                        <Skeleton className="aspect-square w-full" />
+                        <div className="grid grid-cols-5 gap-2">
+                            {[...Array(5)].map((_, i) => <Skeleton key={i} className="aspect-square w-full" />)}
+                        </div>
+                    </div>
+                     <div className="space-y-6">
+                        <Skeleton className="h-6 w-1/4" />
+                        <Skeleton className="h-10 w-3/4" />
+                        <Skeleton className="h-5 w-1/3" />
+                        <Skeleton className="h-12 w-full" />
+                        <Skeleton className="h-8 w-1/2" />
+                        <Skeleton className="h-24 w-full" />
+                    </div>
+                </div>
+             </div>
+        );
+    }
+    
+    if (error) {
+        console.error("Error fetching product:", error);
+        return <p>Error loading product.</p>;
+    }
+
+    if (!product) {
+        notFound();
+    }
+
+    return <ProductClient product={product} />;
+}
+
+
+export default function ProductDetailPage() {
+    return <ProductDetailPageContent />;
 }

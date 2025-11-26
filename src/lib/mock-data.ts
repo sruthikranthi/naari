@@ -1,4 +1,5 @@
 
+
 import { directory } from './directory';
 import type { Professional } from './directory';
 import { PlaceHolderImages } from './placeholder-images';
@@ -75,6 +76,7 @@ export type Review = {
 export type Product = {
   id: string;
   name: string;
+  sellerId: string;
   seller: User;
   price: number;
   description: string;
@@ -222,6 +224,7 @@ export const products: Product[] = [
   {
     id: 'prod1',
     name: 'Handmade Scented Candles',
+    sellerId: 'u5',
     seller: users[4],
     price: 499,
     description: 'Relax and unwind with our beautiful, handcrafted scented candles. Made with natural soy wax and premium fragrance oils, these candles come in a variety of soothing scents like Lavender, Vanilla, and Jasmine. Each candle is hand-poured into an elegant glass jar, perfect for any home decor. Burn time is approximately 40 hours.',
@@ -238,6 +241,7 @@ export const products: Product[] = [
   {
     id: 'prod2',
     name: 'Gourmet Chocolate Box',
+    sellerId: 'u2',
     seller: users[1],
     price: 899,
     description: 'Indulge in a box of our finest gourmet chocolates, made with love. This assorted box includes a variety of flavors like dark chocolate sea salt, milk chocolate almond, and white chocolate raspberry. Perfect for gifting or treating yourself. Contains 12 handcrafted chocolates.',
@@ -254,6 +258,7 @@ export const products: Product[] = [
   {
     id: 'prod3',
     name: 'Embroidered Kurti',
+    sellerId: 'u4',
     seller: users[3],
     price: 1299,
     description: 'A beautifully designed cotton kurti with intricate embroidery. This comfortable and stylish piece is perfect for both casual and semi-formal occasions. Available in multiple sizes. Fabric: 100% Cotton. Care: Hand wash recommended.',
@@ -270,6 +275,7 @@ export const products: Product[] = [
   {
     id: 'prod4',
     name: 'Terracotta Wall Art',
+    sellerId: 'u1',
     seller: users[0],
     price: 750,
     description: 'Add a touch of traditional elegance to your home with this handcrafted terracotta wall art. This piece is inspired by folk art and is hand-painted by our talented artist, Priya. Dimensions: 12-inch diameter.',
@@ -285,6 +291,7 @@ export const products: Product[] = [
   {
     id: 'prod5',
     name: 'Organic Rose Water Toner',
+    sellerId: 'u5',
     seller: users[4],
     price: 350,
     description: 'Refresh and hydrate your skin with our pure, organic rose water toner. Steam-distilled from fresh rose petals, this toner helps balance skin pH, tighten pores, and provides a youthful glow. Free from alcohol and parabens. Size: 100ml.',
@@ -300,6 +307,7 @@ export const products: Product[] = [
   {
     id: 'prod6',
     name: 'Custom Calligraphy Service',
+    sellerId: 'u4',
     seller: users[3],
     price: 1500,
     description: 'Personalize your wedding invitations, letters, or special announcements with our elegant calligraphy services. Price is for a set of 25 invitations. Please contact us for custom quotes and designs. We offer various scripts and ink colors.',
@@ -315,6 +323,7 @@ export const products: Product[] = [
   {
     id: 'prod7',
     name: 'Hand-painted Jute Bag',
+    sellerId: 'u4',
     seller: users[3],
     price: 650,
     description: 'A stylish and eco-friendly jute bag, hand-painted with a unique design. Perfect for shopping, college, or a casual day out. Durable and spacious.',
@@ -327,6 +336,7 @@ export const products: Product[] = [
   {
     id: 'prod8',
     name: 'Spice Box (Masala Dabba)',
+    sellerId: 'u1',
     seller: users[0],
     price: 950,
     description: 'A traditional stainless steel spice box with 7 compartments and a lid to keep your spices fresh. An essential for any Indian kitchen.',
