@@ -137,7 +137,7 @@ export default function AdminPanelPage() {
     if (allUsers && allProfessionals) {
       const combinedUsers: UserWithRole[] = allUsers.map(u => ({
           ...u,
-          role: u.id === 'u1' || u.id === 'u3' ? 'Creator' : (allProfessionals.some(p => p.id.includes(u.id)) ? 'Professional' : 'User'),
+          role: u.id === 'u1' || u.id === 'u3' ? 'Creator' : (allProfessionals.some(p => p.id && u.id && p.id.includes(u.id)) ? 'Professional' : 'User'),
           status: 'Active'
       }));
       // eslint-disable-next-line react-hooks/set-state-in-effect -- Need to combine users and professionals data
@@ -160,7 +160,7 @@ export default function AdminPanelPage() {
     return contestsData.map(c => ({
         id: c.id,
         name: c.title,
-        nominees: c.nominees.length,
+        nominees: (c.nominees || []).length,
         status: c.status || 'Pending Approval',
         fee: c.nominationFee > 0 ? `₹${c.nominationFee}`: 'Free',
     }));
@@ -219,9 +219,9 @@ export default function AdminPanelPage() {
         avatar: `https://picsum.photos/seed/${jurorName.replace(/\s+/g, '-')}/100/100`
     };
     setContests(prev => prev.map(c => 
-        c.id === contestId ? { ...c, jury: [...c.jury, newJuror] } : c
+        c.id === contestId ? { ...c, jury: [...(c.jury || []), newJuror] } : c
     ));
-     setManagingContest(prev => prev ? { ...prev, jury: [...prev.jury, newJuror] } : null);
+     setManagingContest(prev => prev ? { ...prev, jury: [...(prev.jury || []), newJuror] } : null);
     toast({
         title: 'Juror Added!',
         description: `${jurorName} has been added to the jury panel.`
@@ -485,9 +485,9 @@ export default function AdminPanelPage() {
                           <div className="flex items-center gap-3">
                             <Avatar>
                               <AvatarImage src={app.userAvatar} />
-                              <AvatarFallback>{app.userName.split(' ').map(n=>n[0]).join('')}</AvatarFallback>
+                              <AvatarFallback>{(app.userName || '').split(' ').map(n=>n[0]).join('')}</AvatarFallback>
                             </Avatar>
-                            <p className="font-medium">{app.userName}</p>
+                            <p className="font-medium">{app.userName || 'Unknown'}</p>
                           </div>
                         </TableCell>
                         <TableCell>{app.specialty}</TableCell>
@@ -765,7 +765,7 @@ export default function AdminPanelPage() {
                                 </div>
                             </CardHeader>
                             <CardContent className="space-y-4">
-                                {managingContest.jury.map((juror) => (
+                                {(managingContest.jury || []).map((juror) => (
                                     <div key={juror.name} className="flex items-center gap-3">
                                         <Avatar>
                                             <AvatarImage src={juror.avatar} />
@@ -786,7 +786,7 @@ export default function AdminPanelPage() {
                     <div className="md:col-span-2">
                         <Card>
                             <CardHeader>
-                                <CardTitle>Nominees ({managingContest.nominees.length})</CardTitle>
+                                <CardTitle>Nominees ({(managingContest.nominees || []).length})</CardTitle>
                             </CardHeader>
                             <CardContent>
                                 <Table>
@@ -797,13 +797,13 @@ export default function AdminPanelPage() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {managingContest.nominees.sort((a,b) => b.votes - a.votes).map(nominee => (
+                                        {(managingContest.nominees || []).sort((a,b) => b.votes - a.votes).map(nominee => (
                                             <TableRow key={nominee.id}>
                                                 <TableCell>{nominee.name}</TableCell>
                                                 <TableCell>{nominee.votes.toLocaleString()}</TableCell>
                                             </TableRow>
                                         ))}
-                                        {managingContest.nominees.length === 0 && (
+                                        {(managingContest.nominees || []).length === 0 && (
                                             <TableRow>
                                                 <TableCell colSpan={2} className="text-center">No nominees yet.</TableCell>
                                             </TableRow>
