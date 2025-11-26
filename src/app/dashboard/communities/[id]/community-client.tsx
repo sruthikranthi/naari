@@ -1,8 +1,11 @@
 'use client';
 import { useState } from 'react';
 import Image from 'next/image';
-import { Plus, Calendar, User, MapPin, Check } from 'lucide-react';
+import { Plus, Calendar, User, MapPin, Check, Link as LinkIcon, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 
 import { type Community, type Post, type User as UserType } from '@/lib/mock-data';
 import { Button } from '@/components/ui/button';
@@ -18,11 +21,15 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 
 type CommunityEvent = {
     id: string;
@@ -32,17 +39,38 @@ type CommunityEvent = {
     platform: string;
 }
 
+type CommunityResource = {
+    id: string;
+    title: string;
+    description: string;
+    link: string;
+}
+
 type CommunityClientProps = {
     community: Community;
     communityMembers: UserType[];
     communityEvents: CommunityEvent[];
     posts: Post[];
+    initialResources: CommunityResource[];
 }
 
-export function CommunityClient({ community, communityMembers, communityEvents, posts }: CommunityClientProps) {
+const resourceSchema = z.object({
+  title: z.string().min(3, "Title must be at least 3 characters."),
+  description: z.string().min(10, "Description must be at least 10 characters."),
+  link: z.string().url("Please enter a valid URL."),
+});
+
+type ResourceFormValues = z.infer<typeof resourceSchema>;
+
+export function CommunityClient({ community, communityMembers, communityEvents, posts, initialResources }: CommunityClientProps) {
   const { toast } = useToast();
   const [isJoined, setIsJoined] = useState(true);
   const [connectedMembers, setConnectedMembers] = useState<string[]>([]);
+  const [resources, setResources] = useState(initialResources);
+  
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<ResourceFormValues>({
+    resolver: zodResolver(resourceSchema),
+  });
 
   const handleRsvp = (eventTitle: string) => {
     toast({
@@ -67,6 +95,19 @@ export function CommunityClient({ community, communityMembers, communityEvents, 
         description: isJoined ? `You have left the community.` : 'Welcome to the community!',
     })
   }
+
+  const onResourceSubmit = (data: ResourceFormValues) => {
+    const newResource: CommunityResource = {
+        id: `res${Date.now()}`,
+        ...data,
+    };
+    setResources([newResource, ...resources]);
+    toast({
+        title: 'Resource Shared!',
+        description: 'Your resource has been added for the community.',
+    });
+    reset();
+  };
 
   return (
     <div className="space-y-6">
@@ -191,8 +232,62 @@ export function CommunityClient({ community, communityMembers, communityEvents, 
           )}
         </TabsContent>
         <TabsContent value="resources" className="mt-6">
-          <div className="py-12 text-center text-muted-foreground">
-            Shared resources and files will be shown here.
+          <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
+             <div className="space-y-6 md:col-span-2">
+                {resources.length > 0 ? (
+                    resources.map((resource) => (
+                        <Card key={resource.id}>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                <FileText className="h-5 w-5 text-primary" />
+                                {resource.title}
+                                </CardTitle>
+                                <CardDescription>{resource.description}</CardDescription>
+                            </CardHeader>
+                            <CardFooter>
+                                <Button asChild variant="outline">
+                                    <a href={resource.link} target="_blank" rel="noopener noreferrer">
+                                        <LinkIcon className="mr-2 h-4 w-4" />
+                                        View Resource
+                                    </a>
+                                </Button>
+                            </CardFooter>
+                        </Card>
+                    ))
+                ) : (
+                    <div className="py-12 text-center text-muted-foreground">
+                        No resources shared yet. Be the first!
+                    </div>
+                )}
+             </div>
+             <div className="md:col-span-1">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Share a Resource</CardTitle>
+                        <CardDescription>Add a helpful link for the community.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <form onSubmit={handleSubmit(onResourceSubmit)} className="space-y-4">
+                            <div>
+                                <Label htmlFor="title">Title</Label>
+                                <Input id="title" {...register("title")} />
+                                {errors.title && <p className="mt-1 text-xs text-destructive">{errors.title.message}</p>}
+                            </div>
+                             <div>
+                                <Label htmlFor="link">Link (URL)</Label>
+                                <Input id="link" {...register("link")} placeholder="https://example.com" />
+                                {errors.link && <p className="mt-1 text-xs text-destructive">{errors.link.message}</p>}
+                            </div>
+                            <div>
+                                <Label htmlFor="description">Description</Label>
+                                <Textarea id="description" {...register("description")} />
+                                {errors.description && <p className="mt-1 text-xs text-destructive">{errors.description.message}</p>}
+                            </div>
+                            <Button type="submit" className="w-full">Share</Button>
+                        </form>
+                    </CardContent>
+                </Card>
+             </div>
           </div>
         </TabsContent>
       </Tabs>

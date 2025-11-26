@@ -1,27 +1,6 @@
 
-import Image from 'next/image';
 import { notFound } from 'next/navigation';
-import { Plus, Calendar, User, MapPin } from 'lucide-react';
-
 import { communities, posts, users } from '@/lib/mock-data';
-import { Button } from '@/components/ui/button';
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '@/components/ui/tabs';
-import { CreatePost } from '@/components/create-post';
-import { PostCard } from '@/components/post-card';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 import { CommunityClient } from './community-client';
 
 const communityEvents = [
@@ -40,6 +19,21 @@ const communityEvents = [
     platform: 'Google Meet',
   },
 ];
+
+const communityResources = [
+    {
+        id: 'res1',
+        title: 'Startup Funding Guide',
+        description: 'A comprehensive guide on how to secure funding for your new venture.',
+        link: 'https://www.forbes.com/advisor/business/startup-funding/'
+    },
+    {
+        id: 'res2',
+        title: 'Effective Marketing Strategies',
+        description: 'Learn about the most effective marketing strategies for small businesses in 2024.',
+        link: 'https://neilpatel.com/blog/marketing-strategies/'
+    }
+]
 
 export default function CommunityDetailPage({
   params,
@@ -60,6 +54,7 @@ export default function CommunityDetailPage({
         communityMembers={communityMembers}
         communityEvents={communityEvents}
         posts={posts}
+        initialResources={community.id === 'comm3' ? communityResources : []}
     />
   );
 }
