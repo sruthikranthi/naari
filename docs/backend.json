@@ -79,10 +79,6 @@
           "type": "number",
           "description": "Number of likes."
         },
-        "comments": {
-            "type": "number",
-            "description": "Number of comments."
-        },
         "image": {
           "type": "string",
           "description": "URL of an image attached to the post (optional)."
@@ -110,7 +106,6 @@
         "content",
         "timestamp",
         "likes",
-        "comments",
         "isAnonymous"
       ]
     },
@@ -430,6 +425,24 @@
         "fees": { "type": "number" }
       },
       "required": ["id", "name", "avatar", "specialties", "description", "verified"]
+    },
+    "Contest": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "Contest",
+        "type": "object",
+        "description": "Represents a contest or award in the application.",
+        "properties": {
+            "id": { "type": "string" },
+            "title": { "type": "string" },
+            "category": { "type": "string" },
+            "description": { "type": "string" },
+            "prize": { "type": "string" },
+            "endsIn": { "type": "string" },
+            "image": { "type": "string", "format": "uri" },
+            "nominationFee": { "type": "number" },
+            "status": { "type": "string", "enum": ["Live", "Ended", "Pending Approval", "Community-run"] }
+        },
+        "required": ["id", "title", "category", "description", "prize", "endsIn", "image", "nominationFee", "status"]
     }
   },
   "auth": {
@@ -588,6 +601,22 @@
           ]
         }
       },
+       {
+        "path": "/contests/{contestId}",
+        "definition": {
+          "entityName": "Contest",
+          "schema": {
+            "$ref": "#/backend/entities/Contest"
+          },
+          "description": "Stores contest data. Publicly readable.",
+          "params": [
+            {
+              "name": "contestId",
+              "description": "The unique identifier for the contest."
+            }
+          ]
+        }
+      },
       {
         "path": "/events/{eventId}",
         "definition": {
@@ -608,3 +637,5 @@
     "reasoning": "This Firestore structure prioritizes security, scalability, and debuggability for the Sakhi Circle application. It strictly adheres to Authorization Independence by denormalizing authorization data, avoiding `get()` calls in security rules, and enabling atomic operations. Structural Segregation is used to maintain homogeneous security postures within collections, enhancing rule simplicity. Access Modeling employs consistent patterns, using path-based ownership for user-owned data and membership maps for collaborative resources. A top-level `/posts` collection has been added for efficient querying of the global feed, which is a common requirement for social applications. \n\n**Authorization Independence:**\n\n*   **UserProfile:** User profiles are stored under `/users/{userId}`. This provides inherent ownership and eliminates the need to check parent documents for authorization. The `userId` is implicitly the document owner.\n*   **Posts:** All posts are stored in a top-level `/posts` collection. Each post document contains a denormalized `author` object with the author's ID, which allows security rules to verify ownership on writes (`create`, `update`, `delete`).\n*   **Chats & Messages:** Chats are stored in `/chats/{chatId}` with a `members` map containing user IDs and roles. Messages are stored in `/chats/{chatId}/messages/{messageId}` and inherit authorization context from the parent `chatId`. The `chats` document includes the denormalized `members` map to avoid server-side `get()` calls in security rules.\n*   **Communities:** Communities are stored in `/communities/{communityId}` with a `members` map. The leader is stored inside the document. This enables membership-based authorization. \n*   **Kitty Groups:** Kitty Groups are stored in `/kitty_groups/{kittyGroupId}` with a `members` map to define group members. This membership map is leveraged for authorization. \n*   **Marketplace Listings:** Listings are stored under `/marketplace_listings/{listingId}` with a denormalized `sellerId` field. This allows rules to directly verify the seller.\n*   **Directory:** Professional profiles are stored in the top-level `/directory` collection for public discovery by authenticated users.\n*   **Courses:** Courses are stored in `/courses/{courseId}` with denormalized `enrolledUserIds` and `instructorId` fields. Instructor and enrolled users can be quickly verified in rules.\n*   **Events:** Events are stored in `/events/{eventId}` with denormalized `attendeeIds` and `organizerId` fields. Organizer and attendees can be quickly verified in rules.\n\n**QAPs (Rules are not Filters):**\n\n*   **List Operations:** The data structure supports secure list operations. Listing all posts is done by querying the top-level `/posts` collection. Listing communities where a user is a member is done by querying `/communities` filtering on the `members` map. Segregation of data based on ownership and clear membership maps enables efficient and secure filtering.\n\n**Invariants:**\n\n*   **Ownership:** The structure clearly defines ownership, either through denormalized fields (`author` object in `/posts`, `sellerId` in `/marketplace_listings`).\n*   **Timestamps:** Timestamps can be enforced in rules. Using serverTimestamp() is highly encouraged.\n*   **Denormalized Data:** The design explicitly defines which data is denormalized (e.g., `author`, `members` maps, `sellerId`, `instructorId`) to maintain consistency and avoid server-side reads during authorization."
   }
 }
+
+    

@@ -6,24 +6,24 @@ import {
   Edit,
   MapPin,
   Users,
-  Heart,
   Briefcase,
-  GraduationCap,
   Award,
   Star,
   Baby,
   CheckCircle,
   Zap,
+  Loader,
 } from 'lucide-react';
-import { users, posts as initialPosts, communities } from '@/lib/mock-data';
-import type { User } from '@/lib/mock-data';
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { doc, updateDoc, collection, query, where } from 'firebase/firestore';
+
+import type { User, Post as PostType, Community } from '@/lib/mock-data';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -49,6 +49,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const profileSchema = z.object({
     name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
@@ -60,31 +61,59 @@ type ProfileFormValues = z.infer<typeof profileSchema>;
 
 export default function ProfilePage() {
   const { toast } = useToast();
-  const [user, setUser] = useState<User>(users[0]);
+  const { user: currentUser, isUserLoading } = useUser();
+  const firestore = useFirestore();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  const { register, handleSubmit, formState: { errors }, setValue } = useForm<ProfileFormValues>({
+  // Fetch the current user's profile document
+  const userDocRef = useMemoFirebase(() => currentUser ? doc(firestore, 'users', currentUser.uid) : null, [currentUser, firestore]);
+  const { data: user, isLoading: isUserProfileLoading } = useDoc<User>(userDocRef);
+
+  // Fetch posts authored by the current user
+  const postsQuery = useMemoFirebase(() => currentUser ? query(collection(firestore, 'posts'), where('author.id', '==', currentUser.uid)) : null, [currentUser, firestore]);
+  const { data: userPosts, isLoading: arePostsLoading } = useCollection<PostType>(postsQuery);
+
+  // Fetch communities the user is a member of
+  const communitiesQuery = useMemoFirebase(() => currentUser ? query(collection(firestore, 'communities'), where('memberIds', 'array-contains', currentUser.uid)) : null, [currentUser, firestore]);
+  const { data: userCommunities, isLoading: areCommunitiesLoading } = useCollection<Community>(communitiesQuery);
+
+  // For demonstration, we'll fetch a few other users as "connections"
+  const connectionsQuery = useMemoFirebase(() => currentUser ? query(collection(firestore, 'users'), where('id', '!=', currentUser.uid), limit(4)) : null, [currentUser, firestore]);
+  const { data: userConnections, isLoading: areConnectionsLoading } = useCollection<User>(connectionsQuery);
+
+
+  const { register, handleSubmit, formState: { errors }, reset } = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
-    defaultValues: {
-      name: user.name,
-      city: user.city,
-      interests: user.interests.join(', '),
+    values: { // Use values to auto-populate the form when user data loads
+        name: user?.name || '',
+        city: user?.city || '',
+        interests: user?.interests?.join(', ') || '',
     }
   });
 
-  const onSubmit = (data: ProfileFormValues) => {
-    const updatedUser = {
-      ...user,
+  const onSubmit = async (data: ProfileFormValues) => {
+    if (!userDocRef) {
+        toast({ variant: 'destructive', title: 'Error', description: 'User not found.'});
+        return;
+    };
+
+    const updatedData = {
       name: data.name,
       city: data.city,
       interests: data.interests.split(',').map(interest => interest.trim()).filter(Boolean),
     };
-    setUser(updatedUser);
-    toast({
-      title: 'Profile Updated',
-      description: 'Your profile information has been successfully saved.',
-    });
-    setIsDialogOpen(false);
+
+    try {
+        await updateDoc(userDocRef, updatedData);
+        toast({
+          title: 'Profile Updated',
+          description: 'Your profile information has been successfully saved.',
+        });
+        setIsDialogOpen(false);
+    } catch(e) {
+        console.error('Error updating profile: ', e);
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not update your profile.' });
+    }
   };
 
   const handleGoPremium = () => {
@@ -94,16 +123,42 @@ export default function ProfilePage() {
     });
   };
 
-  const userPosts = initialPosts.filter((p) => p.author.id === user.id);
-  const userCommunities = communities.slice(0, 3);
-  const userConnections = users.slice(1, 5);
-
   const userBadges = [
     { icon: Baby, label: 'Super Mom' },
     { icon: Briefcase, label: 'Top Seller' },
     { icon: Award, label: 'Kitty Leader' },
     { icon: Star, label: 'Helpful Sister' },
   ];
+  
+  const isLoading = isUserLoading || isUserProfileLoading || arePostsLoading || areCommunitiesLoading || areConnectionsLoading;
+
+  if (isLoading) {
+      return (
+          <div className="space-y-6">
+              <Card><Skeleton className="h-64 w-full" /></Card>
+              <Tabs defaultValue="activity">
+                  <TabsList className="grid w-full grid-cols-4">
+                      <TabsTrigger value="activity">Activity</TabsTrigger>
+                      <TabsTrigger value="about">About</TabsTrigger>
+                      <TabsTrigger value="connections">Connections</TabsTrigger>
+                      <TabsTrigger value="communities">Communities</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="activity" className="mt-6">
+                       <Skeleton className="h-48 w-full" />
+                  </TabsContent>
+              </Tabs>
+          </div>
+      )
+  }
+
+  if (!user) {
+      return (
+          <div className="text-center py-20">
+              <Loader className="mx-auto h-12 w-12 animate-spin text-primary" />
+              <p className="mt-4">Loading your profile...</p>
+          </div>
+      )
+  }
 
   return (
     <div className="space-y-6">
@@ -149,7 +204,7 @@ export default function ProfilePage() {
             <div className="flex items-center gap-2">
               <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button variant="outline">
+                  <Button variant="outline" onClick={() => reset()}>
                     <Edit className="mr-2 h-4 w-4" /> Edit Profile
                   </Button>
                 </DialogTrigger>
@@ -224,10 +279,10 @@ export default function ProfilePage() {
         <TabsContent value="activity" className="mt-6">
           <div className="mx-auto max-w-3xl space-y-6">
             <h2 className="text-xl font-bold">Recent Activity</h2>
-            {userPosts.length > 0 ? (
+            {userPosts && userPosts.length > 0 ? (
               userPosts.map((post) => <PostCard key={post.id} post={post} />)
             ) : (
-              <p className="text-center text-muted-foreground">No posts yet.</p>
+              <p className="text-center text-muted-foreground py-10">No posts yet.</p>
             )}
           </div>
         </TabsContent>
@@ -286,7 +341,7 @@ export default function ProfilePage() {
                 <h3 className="mb-2 font-semibold">Stats</h3>
                 <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
                   <div className="rounded-lg bg-secondary p-3 text-center">
-                    <p className="text-2xl font-bold">{userPosts.length}</p>
+                    <p className="text-2xl font-bold">{userPosts?.length || 0}</p>
                     <p className="text-sm text-muted-foreground">Posts</p>
                   </div>
                   <div className="rounded-lg bg-secondary p-3 text-center">
@@ -295,13 +350,13 @@ export default function ProfilePage() {
                   </div>
                   <div className="rounded-lg bg-secondary p-3 text-center">
                     <p className="text-2xl font-bold">
-                      {userConnections.length}
+                      {userConnections?.length || 0}
                     </p>
                     <p className="text-sm text-muted-foreground">Connections</p>
                   </div>
                   <div className="rounded-lg bg-secondary p-3 text-center">
                     <p className="text-2xl font-bold">
-                      {userCommunities.length}
+                      {userCommunities?.length || 0}
                     </p>
                     <p className="text-sm text-muted-foreground">Communities</p>
                   </div>
@@ -314,12 +369,9 @@ export default function ProfilePage() {
           <Card>
             <CardHeader>
               <CardTitle>Connections</CardTitle>
-              <CardDescription>
-                {user.name} is connected with {userConnections.length} people.
-              </CardDescription>
             </CardHeader>
             <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
-              {userConnections.map((connection) => (
+              {userConnections && userConnections.map((connection) => (
                 <Card key={connection.id}>
                   <CardContent className="flex items-center gap-4 p-4">
                     <Avatar>
@@ -351,12 +403,9 @@ export default function ProfilePage() {
           <Card>
             <CardHeader>
               <CardTitle>Communities</CardTitle>
-              <CardDescription>
-                {user.name} is a member of {userCommunities.length} communities.
-              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {userCommunities.map((community) => (
+              {userCommunities && userCommunities.map((community) => (
                 <div
                   key={community.id}
                   className="flex items-center gap-4 rounded-lg border p-3"
@@ -389,3 +438,5 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+    

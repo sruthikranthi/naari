@@ -68,6 +68,15 @@ export type Community = {
   memberIds: string[];
 };
 
+export type KittyGroup = {
+    id: string;
+    name: string;
+    contribution: number;
+    nextTurn: string;
+    nextDate: string;
+    memberIds: string[];
+}
+
 export type Review = {
     id: string;
     author: string;
@@ -145,3 +154,5 @@ export const selfCareActivities: SelfCareActivity[] = [
     description: 'Spend 15 minutes outdoors, observing your surroundings.',
   },
 ];
+
+    
