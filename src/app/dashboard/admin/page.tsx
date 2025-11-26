@@ -10,6 +10,10 @@ import {
   CheckCircle,
   XCircle,
   Filter,
+  Megaphone,
+  AreaChart,
+  Server,
+  Hammer,
 } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
 import {
@@ -54,6 +58,8 @@ import {
 } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 
 type UserWithRole = User & { role: 'User' | 'Professional' | 'Creator'; status: 'Active' | 'Inactive' | 'Pending' };
 
@@ -83,6 +89,7 @@ export default function AdminPanelPage() {
     consultations: 15,
     courses: 20,
   });
+  const [isBroadcastOpen, setIsBroadcastOpen] = useState(false);
 
   const filteredUsers = useMemo(() => {
     if (filterRole === 'All') return users;
@@ -118,6 +125,14 @@ export default function AdminPanelPage() {
       totalProfessionals: users.filter(u => u.role === 'Professional' && u.status === 'Active').length,
       totalCreators: users.filter(u => u.role === 'Creator').length,
       totalRevenue: '₹1,50,000'
+  }
+
+  const handleBroadcast = () => {
+    setIsBroadcastOpen(false);
+    toast({
+        title: 'Message Broadcast Sent!',
+        description: 'Your announcement has been sent to all users.'
+    })
   }
 
   return (
@@ -172,10 +187,25 @@ export default function AdminPanelPage() {
                     <CardTitle>Quick Actions</CardTitle>
                 </CardHeader>
                 <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <Button>Broadcast Message</Button>
-                    <Button variant="outline">View Reports</Button>
-                    <Button variant="outline">System Health</Button>
-                    <Button variant="destructive">Trigger Maintenance Mode</Button>
+                    <Dialog open={isBroadcastOpen} onOpenChange={setIsBroadcastOpen}>
+                        <DialogTrigger asChild>
+                            <Button><Megaphone className="mr-2 h-4 w-4"/>Broadcast Message</Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Broadcast a Message</DialogTitle>
+                                <DialogDescription>This message will be sent as a notification to all users on the platform.</DialogDescription>
+                            </DialogHeader>
+                            <Textarea placeholder="Type your announcement here..." rows={5} />
+                            <DialogFooter>
+                                <DialogClose asChild><Button variant="ghost">Cancel</Button></DialogClose>
+                                <Button onClick={handleBroadcast}>Send Broadcast</Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+                    <Button variant="outline" onClick={() => toast({ title: 'Viewing Reports', description: 'Generating and displaying financial and user reports.'})}><AreaChart className="mr-2 h-4 w-4"/>View Reports</Button>
+                    <Button variant="outline" onClick={() => toast({ title: 'System Health', description: 'Displaying server status, database connections, and API latency.'})}><Server className="mr-2 h-4 w-4"/>System Health</Button>
+                    <Button variant="destructive" onClick={() => toast({ variant: 'destructive', title: 'Maintenance Mode Activated', description: 'The platform is now in maintenance mode. Only admins can access it.'})}><Hammer className="mr-2 h-4 w-4"/>Trigger Maintenance</Button>
                 </CardContent>
             </Card>
         </TabsContent>
