@@ -17,12 +17,15 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Search, CheckCircle, MessageSquare, Plus, IndianRupee } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { directory as initialDirectory, type Professional } from '@/lib/directory';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Textarea } from '@/components/ui/textarea';
+import { useCollection, useFirestore, useUser, useMemoFirebase } from '@/firebase';
+import { collection, addDoc } from 'firebase/firestore';
+import type { Professional } from '@/lib/directory';
+import { Skeleton } from '@/components/ui/skeleton';
 
 
 const professionalSchema = z.object({
@@ -36,11 +39,17 @@ const professionalSchema = z.object({
 type ProfessionalFormValues = z.infer<typeof professionalSchema>;
 
 
-const allSpecialties = [...new Set(initialDirectory.flatMap(p => p.specialties))];
-
 export default function SupportDirectoryPage() {
   const { toast } = useToast();
-  const [professionals, setProfessionals] = useState<Professional[]>(initialDirectory);
+  const firestore = useFirestore();
+  const { user, isUserLoading } = useUser();
+
+  const directoryQuery = useMemoFirebase(
+    () => (firestore ? collection(firestore, 'directory') : null),
+    [firestore]
+  );
+  const { data: professionals, isLoading: areProfessionalsLoading } = useCollection<Professional>(directoryQuery);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>([]);
   const [showVerifiedOnly, setShowVerifiedOnly] = useState(false);
@@ -71,17 +80,24 @@ export default function SupportDirectoryPage() {
         : [...prev, specialty]
     );
   };
+  
+  const allSpecialties = useMemo(() => {
+    if (!professionals) return [];
+    return [...new Set(professionals.flatMap(p => p.specialties))];
+  }, [professionals]);
 
   const filteredProfessionals = useMemo(() => {
+    if (!professionals) return [];
     return professionals
       .filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()))
       .filter(p => selectedSpecialties.length === 0 || p.specialties.some(s => selectedSpecialties.includes(s)))
       .filter(p => !showVerifiedOnly || p.verified);
   }, [professionals, searchTerm, selectedSpecialties, showVerifiedOnly]);
 
-  const onAddProfessional = (data: ProfessionalFormValues) => {
-    const newProfessional: Professional = {
-      id: `prof${Date.now()}`,
+  const onAddProfessional = async (data: ProfessionalFormValues) => {
+    if (!firestore) return;
+    
+    const newProfessional: Omit<Professional, 'id'> = {
       name: data.name,
       avatar: `https://picsum.photos/seed/prof${Date.now()}/100/100`,
       specialties: data.specialties.split(',').map(s => s.trim()).filter(Boolean),
@@ -89,14 +105,26 @@ export default function SupportDirectoryPage() {
       verified: data.verified,
       fees: data.fees,
     };
-    setProfessionals([newProfessional, ...professionals]);
-    toast({
-      title: 'Professional Added',
-      description: `${data.name} has been added to the directory.`,
-    });
-    reset();
-    setIsDialogOpen(false);
+
+    try {
+        await addDoc(collection(firestore, 'directory'), newProfessional);
+        toast({
+          title: 'Professional Added',
+          description: `${data.name} has been added to the directory.`,
+        });
+        reset();
+        setIsDialogOpen(false);
+    } catch(e) {
+        console.error("Error adding professional: ", e);
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Could not add professional. Please check permissions."
+        })
+    }
   };
+
+  const isLoading = isUserLoading || areProfessionalsLoading;
 
   return (
     <div className="space-y-6">
@@ -216,7 +244,27 @@ export default function SupportDirectoryPage() {
 
         {/* Directory Listing */}
         <main className="md:col-span-3 space-y-6">
-            {filteredProfessionals.map((prof) => {
+            {isLoading ? (
+                [...Array(3)].map((_, i) => (
+                    <Card key={i}>
+                        <CardContent className="p-6 flex flex-col md:flex-row gap-6">
+                            <div className="flex flex-col items-center md:items-start text-center md:text-left">
+                               <Skeleton className="h-24 w-24 rounded-full" />
+                            </div>
+                            <div className="flex-1 space-y-3">
+                               <Skeleton className="h-7 w-48" />
+                               <div className="flex flex-wrap gap-2">
+                                    <Skeleton className="h-5 w-20" />
+                                    <Skeleton className="h-5 w-24" />
+                               </div>
+                               <Skeleton className="h-4 w-full" />
+                               <Skeleton className="h-4 w-3/4" />
+                               <Skeleton className="h-10 w-40" />
+                            </div>
+                        </CardContent>
+                    </Card>
+                ))
+            ) : filteredProfessionals.map((prof) => {
                 const isContacted = contactedProfessionals.includes(prof.id);
                 return (
                     <Card key={prof.id}>
@@ -265,7 +313,7 @@ export default function SupportDirectoryPage() {
                     </Card>
                 )
             })}
-             {filteredProfessionals.length === 0 && (
+             {!isLoading && filteredProfessionals.length === 0 && (
                 <div className="py-20 text-center text-muted-foreground">
                     <h3 className="text-lg font-semibold">No professionals found</h3>
                     <p>Try adjusting your search filters.</p>

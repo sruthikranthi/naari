@@ -1,3 +1,4 @@
+
 /**
  * This ruleset enforces a security model for the Sakhi Circle application,
  * balancing user-owned data with collaborative, shared resources.
@@ -215,6 +216,22 @@ service cloud.firestore {
       allow delete: if isExistingOwner(resource.data.sellerId);
     }
     
+    // -------------------------------------------------------------------------
+    // Support Directory (/directory)
+    // -------------------------------------------------------------------------
+
+    /**
+     * @description The support directory is publicly readable by any authenticated user. Creating new entries can be restricted (e.g., to admins) or open.
+     * @path /directory/{professionalId}
+     * @allow (list) Any authenticated user browsing all professionals.
+     * @principle Allows public discovery of support professionals.
+     */
+    match /directory/{professionalId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn(); // Allows any signed-in user to add a professional. This could be restricted further if needed.
+      allow update, delete: if false; // Disallow client-side updates/deletes for now.
+    }
+
     // -------------------------------------------------------------------------
     // Courses (/courses)
     // -------------------------------------------------------------------------
