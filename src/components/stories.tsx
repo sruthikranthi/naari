@@ -1,6 +1,6 @@
 
 'use client';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import type { User, StoryItem } from '@/lib/mock-data';
 import { useCollection, useFirestore, useUser, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
@@ -11,6 +11,33 @@ import { StoryViewer } from './story-viewer';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { CameraCapture } from './camera-capture';
 import { Skeleton } from './ui/skeleton';
+
+// MOCK DATA INJECTION FOR DEMONSTRATION
+const addMockStories = (users: User[]): User[] => {
+  if (!users || users.length === 0) return [];
+  return users.map((user, index) => {
+    // Add stories to the first few users for demo purposes
+    if (index === 0) {
+      return {
+        ...user,
+        stories: [
+          { id: 'story1', type: 'image', url: 'https://picsum.photos/seed/story1/1080/1920', duration: 5 },
+          { id: 'story2', type: 'image', url: 'https://picsum.photos/seed/story2/1080/1920', duration: 5 },
+        ]
+      };
+    }
+    if (index === 1) {
+      return {
+        ...user,
+        stories: [
+          { id: 'story3', type: 'image', url: 'https://picsum.photos/seed/story3/1080/1920', duration: 5 },
+        ]
+      };
+    }
+    return user;
+  });
+};
+
 
 export function Stories() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -28,7 +55,9 @@ export function Stories() {
   );
   const { data: allUsers, isLoading: areUsersLoading } = useCollection<User>(usersQuery);
 
-  const storyUsers = allUsers?.filter(u => u.id !== loggedInUser?.uid && u.stories && u.stories.length > 0) || [];
+  const usersWithMockStories = useMemo(() => addMockStories(allUsers || []), [allUsers]);
+
+  const storyUsers = usersWithMockStories.filter(u => u.id !== loggedInUser?.uid && u.stories && u.stories.length > 0) || [];
   
   const handleStoryClick = (user: User) => {
     setCurrentUser(user);
