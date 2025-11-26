@@ -80,7 +80,7 @@ export default function CreateProfilePage() {
         <CardHeader>
           <CardTitle className="text-2xl">Complete Your Profile</CardTitle>
           <CardDescription>
-            Let's get you set up so you can start connecting with others.
+            Let&apos;s get you set up so you can start connecting with others.
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleCreateProfile}>

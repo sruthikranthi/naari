@@ -407,7 +407,7 @@ export default function ProfessionalHubPage() {
                         <div className="flex-1">
                           <p className="font-semibold">{req.user.name}</p>
                           <p className="text-sm text-muted-foreground italic">
-                            "{req.message}"
+                            &quot;{req.message}&quot;
                           </p>
                         </div>
                         <div className="flex gap-2">

@@ -1,6 +1,6 @@
 
 'use client';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { PageHeader } from '@/components/page-header';
 import {
   Card,
@@ -55,6 +55,7 @@ export default function SupportDirectoryPage() {
   const [showVerifiedOnly, setShowVerifiedOnly] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [contactedProfessionals, setContactedProfessionals] = useState<string[]>([]);
+  const avatarCounterRef = useRef(0);
 
   const { register, handleSubmit, formState: { errors }, reset } = useForm<ProfessionalFormValues>({
     resolver: zodResolver(professionalSchema),
@@ -97,11 +98,11 @@ export default function SupportDirectoryPage() {
   const onAddProfessional = async (data: ProfessionalFormValues) => {
     if (!firestore) return;
     
-    // Generate avatar URL - using timestamp in event handler is allowed (not during render)
-    const timestamp = Date.now();
+    // Generate avatar URL using a counter to avoid impure Date.now()
+    avatarCounterRef.current += 1;
     const newProfessional: Omit<Professional, 'id'> = {
       name: data.name,
-      avatar: `https://picsum.photos/seed/prof${timestamp}/100/100`,
+      avatar: `https://picsum.photos/seed/prof${avatarCounterRef.current}/100/100`,
       specialties: data.specialties.split(',').map(s => s.trim()).filter(Boolean),
       description: data.description,
       verified: data.verified,
