@@ -10,6 +10,7 @@ import {
   Trophy,
   User,
   Users,
+  Plus,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { type Contest, type Nominee } from '@/lib/contests-data';
@@ -25,6 +26,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 
 type ContestClientProps = {
   contest: Contest;
@@ -34,6 +38,7 @@ export function ContestClient({ contest }: ContestClientProps) {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [nominees, setNominees] = useState<Nominee[]>(contest.nominees);
+  const [isNominationOpen, setIsNominationOpen] = useState(false);
 
   const handleVote = (nomineeId: string) => {
     setNominees(
@@ -50,6 +55,14 @@ export function ContestClient({ contest }: ContestClientProps) {
       }.`,
     });
   };
+
+  const handleNominate = () => {
+    setIsNominationOpen(false);
+    toast({
+        title: 'Nomination Submitted!',
+        description: 'Your entry is under review. Good luck!'
+    });
+  }
 
   const filteredNominees = nominees
     .filter((n) => n.name.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -107,6 +120,40 @@ export function ContestClient({ contest }: ContestClientProps) {
                   </p>
                 </div>
               </div>
+               <div className="pt-4">
+                 <Dialog open={isNominationOpen} onOpenChange={setIsNominationOpen}>
+                    <DialogTrigger asChild>
+                       <Button className="w-full">
+                            <Plus className="mr-2 h-4 w-4" /> Nominate Now
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Enter the "{contest.title}" Contest</DialogTitle>
+                            <DialogDescription>Share your story and achievements to become a nominee. Your submission will be reviewed by the panel.</DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4">
+                            <div>
+                                <Label htmlFor="story">Your Story / Achievement</Label>
+                                <Textarea id="story" placeholder="Tell us why you (or your nominee) should win..." rows={5} />
+                            </div>
+                             <div>
+                                <Label htmlFor="image-upload">Upload a supporting image</Label>
+                                <Input id="image-upload" type="file" accept="image/*" />
+                            </div>
+                            {contest.nominationFee > 0 && (
+                                <div className="rounded-lg border bg-secondary/50 p-3 text-center">
+                                    <p>An entry fee of <strong>₹{contest.nominationFee}</strong> will be applicable upon submission.</p>
+                                </div>
+                            )}
+                        </div>
+                        <DialogFooter>
+                            <Button variant="ghost" onClick={() => setIsNominationOpen(false)}>Cancel</Button>
+                            <Button onClick={handleNominate}>Submit Nomination</Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+               </div>
             </CardContent>
           </Card>
           <Card>
@@ -201,7 +248,7 @@ export function ContestClient({ contest }: ContestClientProps) {
           {filteredNominees.length === 0 && (
             <div className="py-20 text-center text-muted-foreground">
               <h3 className="text-lg font-semibold">No nominees found</h3>
-              <p>Try clearing your search.</p>
+              <p>Try clearing your search. Be the first to nominate!</p>
             </div>
           )}
         </div>
