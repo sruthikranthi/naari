@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Crown, Ticket, Users, Clock, PartyPopper, Award } from 'lucide-react';
+import { Crown, Ticket, Users, Clock, PartyPopper, Award, HelpCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -250,6 +250,23 @@ export default function TambolaPage() {
               <Button variant="destructive" onClick={resetGame} disabled={gameStatus === 'idle'}>End Game</Button>
             </CardContent>
           </Card>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <HelpCircle className="text-primary" /> How to Play
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm text-muted-foreground space-y-2">
+              <ul className="list-decimal pl-4 space-y-1">
+                <li>Click <strong>Start New</strong> to begin a new game.</li>
+                <li>As numbers are announced, check your ticket below.</li>
+                <li>If a called number is on your ticket, click on it to "dab" it. It will be marked.</li>
+                <li>When you complete a prize pattern (e.g., Top Line), click the corresponding <strong>Claim</strong> button.</li>
+                <li>The system will verify your claim. Good luck!</li>
+              </ul>
+            </CardContent>
+          </Card>
 
           <Card>
             <CardHeader>
@@ -319,3 +336,5 @@ export default function TambolaPage() {
     </div>
   );
 }
+
+    
