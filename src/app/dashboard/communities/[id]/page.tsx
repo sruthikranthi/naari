@@ -2,7 +2,7 @@
 'use client';
 import { notFound, useParams } from 'next/navigation';
 import { useDoc, useFirestore, useMemoFirebase, useCollection } from '@/firebase';
-import { collection, doc, query, where } from 'firebase/firestore';
+import { collection, doc, query, where, orderBy } from 'firebase/firestore';
 
 import { CommunityClient } from './community-client';
 import type { Community, Post, User as UserType } from '@/lib/mock-data';
