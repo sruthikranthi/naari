@@ -45,10 +45,19 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { selfCareActivities } from '@/lib/mock-data';
-import type { SelfCareActivity } from '@/lib/mock-data';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Calendar } from '@/components/ui/calendar';
+import { addDays, format } from 'date-fns';
+import type { DateRange } from 'react-day-picker';
 
 const moods = [
   { icon: Sparkles, label: 'Great' },
@@ -72,6 +81,7 @@ const guidedMeditations = [
     duration: '10 min',
     script:
       'Welcome to this guided meditation for stress relief. Find a comfortable position, either sitting or lying down. Close your eyes gently. Bring your awareness to your breath. Notice the sensation of the air entering your body, and the feeling of release as you exhale. Let go of any tension with each breath out. You are calm, you are relaxed.',
+    language: 'en-US',
   },
   {
     id: 'med2',
@@ -79,6 +89,7 @@ const guidedMeditations = [
     duration: '5 min',
     script:
       'This is a short meditation to improve focus. Sit upright and close your eyes. Imagine a single point of light in front of you. Hold your attention on this light. If your mind wanders, gently guide it back. This practice sharpens your concentration. Feel your mind becoming clear and focused.',
+    language: 'en-US',
   },
   {
     id: 'med3',
@@ -86,14 +97,9 @@ const guidedMeditations = [
     duration: '15 min',
     script:
       'Begin this gratitude practice by closing your eyes. Bring to mind three things you are grateful for today. They can be small or large. A warm cup of tea, a kind word from a friend, the roof over your head. Feel the warmth of gratitude fill your heart. Carry this feeling with you throughout your day.',
+    language: 'en-US',
   },
 ];
-
-type JournalEntry = {
-    id: number;
-    text: string;
-    date: string;
-}
 
 export default function WellnessPage() {
   const [selectedMood, setSelectedMood] = useState<string | null>(null);
@@ -251,24 +257,41 @@ export default function WellnessPage() {
           </CardTitle>
           <CardDescription>
             Tell us what you need, and we'll generate a unique meditation just
-            for you.
+            for you, in your preferred language.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form action={getCustomMeditationAction} className="space-y-4">
-            <div>
-              <Label htmlFor="meditation-prompt">I want a meditation to...</Label>
-              <Input
-                id="meditation-prompt"
-                name="prompt"
-                placeholder="e.g., help me relax after a long day"
-              />
-              {customMeditationState.error && (
-                <p className="mt-1 text-xs text-destructive">
-                  {customMeditationState.error}
-                </p>
-              )}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <div className="sm:col-span-2">
+                <Label htmlFor="meditation-prompt">I want a meditation to...</Label>
+                <Input
+                  id="meditation-prompt"
+                  name="prompt"
+                  placeholder="e.g., help me relax after a long day"
+                />
+              </div>
+              <div>
+                <Label htmlFor="language">Language</Label>
+                <Select name="language" defaultValue="en-US">
+                    <SelectTrigger id="language">
+                        <SelectValue placeholder="Select Language" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="en-US">English</SelectItem>
+                        <SelectItem value="hi-IN">Hindi</SelectItem>
+                        <SelectItem value="ta-IN">Tamil</SelectItem>
+                        <SelectItem value="te-IN">Telugu</SelectItem>
+                        <SelectItem value="kn-IN">Kannada</SelectItem>
+                    </SelectContent>
+                </Select>
+              </div>
             </div>
+             {customMeditationState.error && (
+              <p className="mt-1 text-xs text-destructive">
+                {customMeditationState.error}
+              </p>
+            )}
             <Button type="submit" disabled={isCustomPending}>
               {isCustomPending ? (
                 <Loader className="mr-2 h-4 w-4 animate-spin" />
@@ -282,7 +305,7 @@ export default function WellnessPage() {
              <div className="mt-6 rounded-lg border bg-secondary/50 p-4">
                 <p className="text-sm font-medium text-muted-foreground">Your custom session for: "{customMeditationState.prompt}"</p>
                 <div className="mt-2 flex items-center gap-4">
-                     <Button onClick={handlePlayPauseCustom} size="icon">
+                     <Button onClick={handlePlayPauseCustom} size="icon" disabled={!customMeditationState.result.media}>
                         {isPlayingCustom ? <Pause /> : <Play />}
                      </Button>
                      <p className="font-semibold">{isPlayingCustom ? 'Playing...' : 'Ready to play'}</p>
@@ -368,6 +391,11 @@ export default function WellnessPage() {
                       name="text"
                       value={meditation.script}
                     />
+                     <input
+                      type="hidden"
+                      name="language"
+                      value={meditation.language}
+                    />
                     <Button
                       type="submit"
                       size="icon"
@@ -388,10 +416,10 @@ export default function WellnessPage() {
           <Card>
             <CardContent className="p-4">
               <div className="grid grid-cols-2 gap-4">
-                <QuickToolButton icon={Droplets} label="Period Tracker" />
+                <PeriodTracker />
                 <GratitudeJournal />
-                <QuickToolButton icon={BarChart} label="Sleep Diary" />
-                <QuickToolButton icon={Brain} label="Therapy Notes" />
+                <SleepDiary />
+                <TherapyNotes />
               </div>
             </CardContent>
           </Card>
@@ -426,23 +454,13 @@ export default function WellnessPage() {
   );
 }
 
-function QuickToolButton({ icon: Icon, label }: { icon: React.ElementType, label: string }) {
-  const { toast } = useToast();
-  return (
-    <Button
-      variant="outline"
-      className="flex h-24 flex-col items-center justify-center gap-2"
-      onClick={() =>
-        toast({
-          title: 'Coming Soon!',
-          description: `${label} will be available soon.`,
-        })
-      }
-    >
-      <Icon className="h-6 w-6 text-primary" />
-      <span className="text-center text-xs">{label}</span>
-    </Button>
-  );
+
+// #region Quick Tools Components
+
+type JournalEntry = {
+    id: number;
+    text: string;
+    date: string;
 }
 
 function GratitudeJournal() {
@@ -511,3 +529,127 @@ function GratitudeJournal() {
         </Dialog>
     )
 }
+
+function PeriodTracker() {
+  const [date, setDate] = useState<DateRange | undefined>({
+    from: new Date(),
+    to: addDays(new Date(), 4),
+  });
+  
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button variant="outline" className="flex h-24 flex-col items-center justify-center gap-2">
+          <Droplets className="h-6 w-6 text-primary" />
+          <span className="text-center text-xs">Period Tracker</span>
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Period Tracker</DialogTitle>
+          <DialogDescription>Select the start and end dates of your cycle.</DialogDescription>
+        </DialogHeader>
+        <Calendar
+          mode="range"
+          selected={date}
+          onSelect={setDate}
+          className="rounded-md border"
+        />
+        <DialogFooter>
+            <DialogClose asChild><Button>Save Dates</Button></DialogClose>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+type SleepEntry = { id: number; date: string; rating: number; notes: string };
+
+function SleepDiary() {
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [entries, setEntries] = useState<SleepEntry[]>([]);
+    const [rating, setRating] = useState(3);
+    const [notes, setNotes] = useState('');
+    const { toast } = useToast();
+
+    const handleSave = () => {
+        const newEntry: SleepEntry = {
+            id: Date.now(),
+            date: new Date().toLocaleDateString(),
+            rating,
+            notes
+        };
+        setEntries([newEntry, ...entries]);
+        setRating(3);
+        setNotes('');
+        toast({ title: 'Sleep Logged!', description: "Sweet dreams!" });
+    };
+
+    return (
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+                <Button variant="outline" className="flex h-24 flex-col items-center justify-center gap-2">
+                    <BarChart className="h-6 w-6 text-primary" />
+                    <span className="text-center text-xs">Sleep Diary</span>
+                </Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Sleep Diary</DialogTitle>
+                    <DialogDescription>How did you sleep last night?</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                    <div>
+                        <Label>Sleep Quality</Label>
+                        <div className="flex justify-between mt-2">
+                            {[1, 2, 3, 4, 5].map(r => (
+                                <Button key={r} variant={rating === r ? 'default' : 'outline'} size="icon" onClick={() => setRating(r)}>{r}</Button>
+                            ))}
+                        </div>
+                    </div>
+                    <div>
+                        <Label>Notes (optional)</Label>
+                        <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="e.g., Woke up a few times..." />
+                    </div>
+                </div>
+                <DialogFooter>
+                     <Button onClick={handleSave}>Log Sleep</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+
+function TherapyNotes() {
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [notes, setNotes] = useState('');
+
+    return (
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+                <Button variant="outline" className="flex h-24 flex-col items-center justify-center gap-2">
+                    <Brain className="h-6 w-6 text-primary" />
+                    <span className="text-center text-xs">Therapy Notes</span>
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-2xl">
+                <DialogHeader>
+                    <DialogTitle>Therapy Notes</DialogTitle>
+                    <DialogDescription>A secure place for your thoughts. These notes are private to you.</DialogDescription>
+                </DialogHeader>
+                <Textarea 
+                    rows={10} 
+                    value={notes} 
+                    onChange={e => setNotes(e.target.value)} 
+                    placeholder="Write down your reflections, thoughts, or things to discuss..."
+                />
+                <DialogFooter>
+                     <DialogClose asChild><Button>Done</Button></DialogClose>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+// #endregion

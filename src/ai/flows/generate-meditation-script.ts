@@ -13,6 +13,7 @@ import { z } from 'genkit';
 
 const GenerateMeditationScriptInputSchema = z.object({
   prompt: z.string().describe('The user\'s request for the meditation, e.g., "help me relax" or "focus for 5 minutes".'),
+  language: z.string().optional().default('English'),
 });
 export type GenerateMeditationScriptInput = z.infer<typeof GenerateMeditationScriptInputSchema>;
 
@@ -33,10 +34,11 @@ const prompt = ai.definePrompt({
 
 The script should be clear, concise, and easy to follow. It should be written in a soothing and gentle tone.
 The script should be between 100 and 200 words.
+The script MUST be in the following language: {{{language}}}.
 
 User's Request: {{{prompt}}}
 
-Generate a meditation script that directly addresses the user's request.
+Generate a meditation script that directly addresses the user's request in the specified language.
 The output should be only the script text, without any introductory or concluding remarks.`,
 });
 

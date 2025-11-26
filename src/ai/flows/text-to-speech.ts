@@ -13,6 +13,11 @@ import wav from 'wav';
 import type { TextToSpeechOutput } from '@/app/actions';
 
 
+const TextToSpeechInputSchema = z.object({
+    text: z.string(),
+    language: z.string().optional().default('en-US'),
+});
+
 const TextToSpeechOutputSchema = z.object({
   media: z.string().describe('The base64 encoded audio data as a data URI.'),
 });
@@ -47,21 +52,21 @@ async function toWav(
 const textToSpeechFlow = ai.defineFlow(
   {
     name: 'textToSpeechFlow',
-    inputSchema: z.string(),
+    inputSchema: TextToSpeechInputSchema,
     outputSchema: TextToSpeechOutputSchema,
   },
-  async (query) => {
+  async ({ text, language }) => {
     const { media } = await ai.generate({
       model: 'googleai/gemini-2.5-flash-preview-tts',
       config: {
         responseModalities: ['AUDIO'],
         speechConfig: {
           voiceConfig: {
-            prebuiltVoiceConfig: { voiceName: 'Algenib' },
+            languageCode: language,
           },
         },
       },
-      prompt: query,
+      prompt: text,
     });
     if (!media) {
       throw new Error('no media returned');
@@ -77,6 +82,6 @@ const textToSpeechFlow = ai.defineFlow(
 );
 
 
-export async function textToSpeech(input: string): Promise<TextToSpeechOutput> {
+export async function textToSpeech(input: z.infer<typeof TextToSpeechInputSchema>): Promise<TextToSpeechOutput> {
     return textToSpeechFlow(input);
 }

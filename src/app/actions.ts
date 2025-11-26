@@ -45,6 +45,7 @@ export async function checkMessageSafety(
 
 const ttsSchema = z.object({
   text: z.string(),
+  language: z.string().optional(),
 });
 
 export type TextToSpeechOutput = {
@@ -62,6 +63,7 @@ export async function getAudio(
 ): Promise<TtsState> {
   const validatedFields = ttsSchema.safeParse({
     text: formData.get('text'),
+    language: formData.get('language'),
   });
 
   if (!validatedFields.success) {
@@ -71,7 +73,7 @@ export async function getAudio(
   }
 
   try {
-    const result = await textToSpeech(validatedFields.data.text);
+    const result = await textToSpeech(validatedFields.data);
     return { result };
   } catch (e) {
     console.error(e);
@@ -81,6 +83,7 @@ export async function getAudio(
 
 const customMeditationSchema = z.object({
   prompt: z.string().min(3, 'Prompt must be at least 3 characters.'),
+  language: z.string().optional(),
 });
 
 type CustomMeditationState = {
@@ -89,12 +92,21 @@ type CustomMeditationState = {
   prompt?: string;
 };
 
+const languageMap: Record<string, string> = {
+    'en-US': 'English',
+    'hi-IN': 'Hindi',
+    'ta-IN': 'Tamil',
+    'te-IN': 'Telugu',
+    'kn-IN': 'Kannada',
+}
+
 export async function getCustomMeditationAudio(
   prevState: CustomMeditationState,
   formData: FormData
 ): Promise<CustomMeditationState> {
   const validatedFields = customMeditationSchema.safeParse({
     prompt: formData.get('prompt'),
+    language: formData.get('language'),
   });
 
   if (!validatedFields.success) {
@@ -102,15 +114,22 @@ export async function getCustomMeditationAudio(
       error: validatedFields.error.flatten().fieldErrors.prompt?.join(', '),
     };
   }
+  
+  const languageCode = validatedFields.data.language || 'en-US';
+  const languageName = languageMap[languageCode] || 'English';
 
   try {
     // 1. Generate the script from the prompt
     const scriptResult = await generateMeditationScript({
       prompt: validatedFields.data.prompt,
+      language: languageName,
     });
 
     // 2. Convert the generated script to speech
-    const audioResult = await textToSpeech(scriptResult.script);
+    const audioResult = await textToSpeech({
+        text: scriptResult.script,
+        language: languageCode,
+    });
     
     return { result: audioResult, prompt: validatedFields.data.prompt };
   } catch (e) {
