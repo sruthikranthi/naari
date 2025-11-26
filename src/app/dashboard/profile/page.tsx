@@ -141,7 +141,7 @@ export default function ProfilePage() {
     }
 
     try {
-        await updateDoc(userDocRef, updatedData);
+        await updateDoc(userDocRef, updatedData as any);
         toast({
           title: 'Profile Updated',
           description: 'Your profile information has been successfully saved.',
