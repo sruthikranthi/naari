@@ -92,6 +92,7 @@ export function KittyGroupClient({ group, groupMembers, upcomingEvent, currentUs
   const [isLive, setIsLive] = useState(false);
   const [liveMessages, setLiveMessages] = useState<LiveChatMessage[]>(initialMessages);
   const [newMessage, setNewMessage] = useState('');
+  const [activeReaction, setActiveReaction] = useState<string | null>(null);
   const isHost = currentUser.name === group.nextTurn;
 
   const handleAction = (title: string, description: string) => {
@@ -139,9 +140,10 @@ export function KittyGroupClient({ group, groupMembers, upcomingEvent, currentUs
   }
   
   const sendReaction = (reaction: string) => {
-      toast({
-          title: `You sent a ${reaction} reaction!`,
-      });
+      setActiveReaction(reaction);
+      setTimeout(() => {
+        setActiveReaction(null);
+      }, 500); // Corresponds to animation duration
   }
 
 
@@ -222,9 +224,30 @@ export function KittyGroupClient({ group, groupMembers, upcomingEvent, currentUs
                            <div className="absolute top-2 left-2 flex items-center gap-2 rounded-full bg-destructive px-3 py-1 text-white text-sm"><div className="h-2 w-2 rounded-full bg-white animate-pulse"></div>LIVE</div>
                       </div>
                       <CardContent className="p-4 flex justify-center gap-2">
-                        <Button variant="ghost" size="icon" onClick={() => sendReaction('heart')}><Heart className="text-red-500 fill-red-500" /></Button>
-                        <Button variant="ghost" size="icon" onClick={() => sendReaction('like')}><ThumbsUp className="text-blue-500 fill-blue-500" /></Button>
-                        <Button variant="ghost" size="icon" onClick={() => sendReaction('laugh')}><Laugh className="text-yellow-500 fill-yellow-500" /></Button>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => sendReaction('heart')}
+                            className={cn('transition-transform', activeReaction === 'heart' && 'animate-in zoom-in-150')}
+                        >
+                            <Heart className="text-red-500 fill-red-500" />
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => sendReaction('like')}
+                             className={cn('transition-transform', activeReaction === 'like' && 'animate-in zoom-in-150')}
+                        >
+                            <ThumbsUp className="text-blue-500 fill-blue-500" />
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => sendReaction('laugh')}
+                             className={cn('transition-transform', activeReaction === 'laugh' && 'animate-in zoom-in-150')}
+                        >
+                            <Laugh className="text-yellow-500 fill-yellow-500" />
+                        </Button>
                          {isHost && <Button variant="destructive" size="sm" onClick={() => setIsLive(false)}>End Party</Button>}
                       </CardContent>
                   </div>
