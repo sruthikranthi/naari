@@ -17,8 +17,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Logo } from '@/components/logo';
-import { Loader, Phone } from 'lucide-react';
+import { Loader, Phone, AlertCircle, RefreshCw, HelpCircle } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Progress } from '@/components/ui/progress';
 import type { User } from '@/lib/mock-data';
 
 // Common country codes
@@ -54,6 +57,9 @@ export default function MobileNumberPage() {
   const [mobileNumber, setMobileNumber] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorDetails, setErrorDetails] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const [showHelp, setShowHelp] = useState(false);
 
   // Fetch user profile to check if mobile number already exists
   const userDocRef = useMemoFirebase(() => (firestore && user) ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
@@ -161,11 +167,34 @@ export default function MobileNumberPage() {
       router.push('/dashboard');
     } catch (error: any) {
       console.error('Error saving mobile number:', error);
-      const errorMessage = error.message || 'Failed to save mobile number. Please try again.';
+      
+      // Provide specific error messages based on error type
+      let errorMessage = 'Failed to save mobile number.';
+      let errorHint = '';
+      
+      if (error.code === 'permission-denied') {
+        errorMessage = 'Permission denied. Please make sure you are logged in.';
+        errorHint = 'Try logging out and logging back in, or contact support if the issue persists.';
+      } else if (error.code === 'unavailable') {
+        errorMessage = 'Service temporarily unavailable.';
+        errorHint = 'Please check your internet connection and try again.';
+      } else if (error.code === 'deadline-exceeded') {
+        errorMessage = 'Request timed out.';
+        errorHint = 'Your connection might be slow. Please try again.';
+      } else if (error.message?.includes('network')) {
+        errorMessage = 'Network error occurred.';
+        errorHint = 'Please check your internet connection and try again.';
+      } else {
+        errorHint = 'Please verify your mobile number is correct and try again.';
+      }
+      
       setError(errorMessage);
+      setErrorDetails(errorHint);
+      setRetryCount(prev => prev + 1);
+      
       toast({
         variant: 'destructive',
-        title: 'Error',
+        title: 'Error Saving Mobile Number',
         description: errorMessage,
       });
     } finally {
@@ -176,13 +205,28 @@ export default function MobileNumberPage() {
   // Show loading state while checking user
   if (isUserLoading || isProfileLoading) {
     return (
-      <div className="flex min-h-screen w-full flex-col items-center justify-center bg-secondary/50 p-4">
+      <div className="flex min-h-screen w-full flex-col items-center justify-center bg-gradient-to-br from-pink-50 via-purple-50 to-rose-50 dark:from-pink-950/20 dark:via-purple-950/20 dark:to-rose-950/20 p-4">
         <div className="absolute top-8 left-8">
           <Logo />
         </div>
-        <Card className="w-full max-w-md">
-          <CardContent className="flex items-center justify-center py-12">
-            <Loader className="h-8 w-8 animate-spin text-primary" />
+        <Card className="w-full max-w-md shadow-lg">
+          <CardHeader className="text-center">
+            <Skeleton className="mx-auto mb-4 h-16 w-16 rounded-full" />
+            <Skeleton className="mx-auto h-8 w-48 mb-2" />
+            <Skeleton className="mx-auto h-4 w-64" />
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+            <div className="pt-4">
+              <Progress value={undefined} className="h-2" />
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -251,11 +295,71 @@ export default function MobileNumberPage() {
                 )}
               </div>
               {error && (
-                <p className="text-sm text-destructive">{error}</p>
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>{error}</AlertTitle>
+                  {errorDetails && (
+                    <AlertDescription className="mt-2">
+                      {errorDetails}
+                      {retryCount > 0 && (
+                        <div className="mt-3 flex items-center gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={async () => {
+                              setError(null);
+                              setErrorDetails(null);
+                              const form = document.querySelector('form');
+                              if (form) {
+                                const event = new Event('submit', { bubbles: true, cancelable: true });
+                                form.dispatchEvent(event);
+                              }
+                            }}
+                            disabled={isLoading}
+                          >
+                            <RefreshCw className="h-3 w-3 mr-2" />
+                            Retry ({retryCount})
+                          </Button>
+                        </div>
+                      )}
+                    </AlertDescription>
+                  )}
+                </Alert>
               )}
+              
+              {/* Help hint */}
+              <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                <HelpCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => setShowHelp(!showHelp)}
+                    className="text-primary hover:underline"
+                  >
+                    Need help with mobile number format?
+                  </button>
+                  {showHelp && (
+                    <div className="mt-2 p-2 bg-muted rounded-md space-y-1">
+                      <p>• For India (+91): Enter 10 digits (e.g., 9876543210)</p>
+                      <p>• For other countries: Enter 7-15 digits</p>
+                      <p>• Don&apos;t include spaces, dashes, or country code</p>
+                      <p>• Make sure you have a stable internet connection</p>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </CardContent>
-          <CardFooter>
+          <CardFooter className="flex-col gap-3">
+            {isLoading && (
+              <div className="w-full">
+                <Progress value={undefined} className="h-1" />
+                <p className="text-xs text-muted-foreground text-center mt-2">
+                  Saving your mobile number...
+                </p>
+              </div>
+            )}
             <Button
               className="w-full"
               type="submit"

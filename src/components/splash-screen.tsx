@@ -4,19 +4,36 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/firebase';
 import { Logo } from '@/components/logo';
-import { Heart, Shield, Users, Sparkles } from 'lucide-react';
+import { Heart, Shield, Users, Sparkles, X } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { Button } from '@/components/ui/button';
 
 interface SplashScreenProps {
   onComplete: () => void;
 }
 
+const SPLASH_SKIP_KEY = 'sakhi_splash_skipped';
+
 export function SplashScreen({ onComplete }: SplashScreenProps) {
   const [isAnimating, setIsAnimating] = useState(true);
+  const [shouldShow, setShouldShow] = useState(true);
   const { user, isUserLoading } = useUser();
   const router = useRouter();
 
+  // Check if user has skipped splash before
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const hasSkipped = localStorage.getItem(SPLASH_SKIP_KEY) === 'true';
+      if (hasSkipped) {
+        setShouldShow(false);
+        onComplete();
+      }
+    }
+  }, [onComplete]);
+
+  useEffect(() => {
+    if (!shouldShow) return;
+    
     // Show splash for at least 2 seconds
     const timer = setTimeout(() => {
       setIsAnimating(false);
@@ -26,7 +43,17 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
     }, 2500);
 
     return () => clearTimeout(timer);
-  }, [onComplete]);
+  }, [onComplete, shouldShow]);
+
+  const handleSkip = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(SPLASH_SKIP_KEY, 'true');
+    }
+    setIsAnimating(false);
+    setTimeout(() => {
+      onComplete();
+    }, 300);
+  };
 
   // If user is already logged in, skip splash
   useEffect(() => {
@@ -34,6 +61,10 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
       router.push('/dashboard');
     }
   }, [user, isUserLoading, router]);
+
+  if (!shouldShow) {
+    return null;
+  }
 
   return (
     <motion.div
@@ -195,6 +226,24 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
           />
         </motion.div>
       </div>
+
+      {/* Skip button */}
+      <motion.button
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 1.5, duration: 0.6 }}
+        onClick={handleSkip}
+        className="absolute top-4 right-4 z-20"
+      >
+        <Button
+          variant="ghost"
+          size="sm"
+          className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm hover:bg-white dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
+        >
+          <X className="h-4 w-4 mr-2" />
+          Skip
+        </Button>
+      </motion.button>
 
       {/* Notification badge */}
       <motion.div

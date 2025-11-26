@@ -60,6 +60,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CameraCapture } from '@/components/camera-capture';
+import { EditMobileNumberDialog } from '@/components/edit-mobile-number-dialog';
 
 const profileSchema = z.object({
     name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
@@ -488,7 +489,42 @@ export default function ProfilePage() {
                  {user.profession && <div className="flex items-center gap-3"><Briefcase className="h-5 w-5 text-primary" /> <div><p className="font-semibold">Profession</p><p className="text-muted-foreground">{user.profession}</p></div></div>}
                  {user.education && <div className="flex items-center gap-3"><Book className="h-5 w-5 text-primary" /> <div><p className="font-semibold">Education</p><p className="text-muted-foreground">{user.education}</p></div></div>}
                  {user.maritalStatus && <div className="flex items-center gap-3"><Heart className="h-5 w-5 text-primary" /> <div><p className="font-semibold">Marital Status</p><p className="text-muted-foreground">{user.maritalStatus}</p></div></div>}
-                {user.mobileNumber && <div className="flex items-center gap-3"><Phone className="h-5 w-5 text-primary" /> <div><p className="font-semibold">Mobile Number</p><p className="text-muted-foreground">{user.mobileNumber}</p></div></div>}
+                {user.mobileNumber && (
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <Phone className="h-5 w-5 text-primary" />
+                      <div>
+                        <p className="font-semibold">Mobile Number</p>
+                        <p className="text-muted-foreground">{user.mobileNumber}</p>
+                      </div>
+                    </div>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button variant="ghost" size="sm">
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Edit Mobile Number</DialogTitle>
+                          <DialogDescription>
+                            Update your mobile number. This will be used for account security and important notifications.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <EditMobileNumberDialog
+                          currentMobileNumber={user.mobileNumber}
+                          userDocRef={userDocRef}
+                          onSuccess={() => {
+                            toast({
+                              title: 'Mobile Number Updated',
+                              description: 'Your mobile number has been successfully updated.',
+                            });
+                          }}
+                        />
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                )}
                  {user.city && <div className="flex items-center gap-3"><Building className="h-5 w-5 text-primary" /> <div><p className="font-semibold">City</p><p className="text-muted-foreground">{user.city}</p></div></div>}
                </div>
 

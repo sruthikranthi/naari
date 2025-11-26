@@ -97,20 +97,33 @@ export default function LoginPage() {
       }
     } catch (error: any) {
       let errorMessage = 'Please check your credentials and try again.';
+      let errorHint = '';
+      
       if (error.code === 'auth/user-not-found') {
         errorMessage = 'No account found with this email address.';
+        errorHint = 'Please check your email or sign up for a new account.';
       } else if (error.code === 'auth/wrong-password') {
         errorMessage = 'Incorrect password. Please try again.';
+        errorHint = 'Make sure Caps Lock is off and check for typos. You can reset your password if needed.';
       } else if (error.code === 'auth/too-many-requests') {
         errorMessage = 'Too many failed attempts. Please try again later.';
+        errorHint = 'For security, your account has been temporarily locked. Please wait a few minutes or reset your password.';
       } else if (error.code === 'auth/invalid-email') {
         errorMessage = 'Invalid email address.';
+        errorHint = 'Please enter a valid email address (e.g., name@example.com).';
+      } else if (error.code === 'auth/network-request-failed') {
+        errorMessage = 'Network error. Please check your connection.';
+        errorHint = 'Make sure you have a stable internet connection and try again.';
+      } else if (error.code === 'auth/operation-not-allowed') {
+        errorMessage = 'This sign-in method is not enabled.';
+        errorHint = 'Please contact support or try a different sign-in method.';
       }
+      
       setError(errorMessage);
       toast({
         variant: 'destructive',
         title: 'Login Failed',
-        description: errorMessage,
+        description: errorHint || errorMessage,
       });
     } finally {
       setIsLoading(false);
