@@ -51,7 +51,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { useCollection, useFirestore, useUser, useMemoFirebase } from '@/firebase';
-import { collection, query, where, addDoc } from 'firebase/firestore';
+import { collection, query, where, addDoc, serverTimestamp, limit, doc, setDoc } from 'firebase/firestore';
 import type { Professional } from '@/lib/directory';
 import type { Course, User } from '@/lib/mock-data';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -73,12 +73,43 @@ type Client = {
 
 function BecomeProfessionalCard() {
     const { toast } = useToast();
+    const firestore = useFirestore();
+    const { user } = useUser();
+    const [specialty, setSpecialty] = useState('');
+    const [bio, setBio] = useState('');
     
-    const handleApply = () => {
+    const handleApply = async () => {
+      if (!user) {
+        toast({ variant: 'destructive', title: 'You must be logged in to apply.' });
+        return;
+      }
+      if (!specialty.trim() || !bio.trim()) {
+        toast({ variant: 'destructive', title: 'All fields are required.' });
+        return;
+      }
+
+      const application = {
+        userId: user.uid,
+        userName: user.displayName,
+        userAvatar: user.photoURL,
+        specialty,
+        bio,
+        status: 'pending',
+        createdAt: serverTimestamp(),
+      };
+
+      try {
+        await addDoc(collection(firestore, 'professional_applications'), application);
         toast({
             title: "Application Submitted!",
             description: "Your application to become a professional is under review.",
         });
+        setSpecialty('');
+        setBio('');
+      } catch (e) {
+        console.error("Error submitting application: ", e);
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not submit your application.' });
+      }
     }
 
     return (
@@ -107,11 +138,11 @@ function BecomeProfessionalCard() {
                         <div className="space-y-4">
                             <div>
                                 <Label htmlFor="specialty">Your Specialty</Label>
-                                <Input id="specialty" placeholder="e.g., Career Coach, Yoga Instructor" />
+                                <Input id="specialty" placeholder="e.g., Career Coach, Yoga Instructor" value={specialty} onChange={(e) => setSpecialty(e.target.value)} />
                             </div>
                              <div>
                                 <Label htmlFor="bio">Short Bio</Label>
-                                <Textarea id="bio" placeholder="Describe your experience and what you offer." />
+                                <Textarea id="bio" placeholder="Describe your experience and what you offer." value={bio} onChange={(e) => setBio(e.target.value)} />
                             </div>
                         </div>
                         <DialogFooter>

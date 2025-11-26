@@ -27,6 +27,8 @@ import {
   Users2,
   CalendarClock,
   Loader,
+  BadgeCheck,
+  Mail,
 } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
 import {
@@ -70,7 +72,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Textarea } from '@/components/ui/textarea';
 import type { Contest, JuryMember } from '@/lib/contests-data';
 import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { collection, doc, setDoc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import type { ProfessionalApplication } from '@/lib/applications';
 
 type UserWithRole = User & { role: 'User' | 'Professional' | 'Creator'; status: 'Active' | 'Inactive' | 'Pending' };
 
@@ -98,6 +101,9 @@ export default function AdminPanelPage() {
 
   const contestsQuery = useMemoFirebase(() => (firestore && user ? collection(firestore, 'contests') : null), [firestore, user]);
   const { data: contestsData, isLoading: areContestsLoading } = useCollection<Contest>(contestsQuery);
+  
+  const applicationsQuery = useMemoFirebase(() => (firestore ? collection(firestore, 'professional_applications') : null), [firestore]);
+  const { data: applications, isLoading: areAppsLoading } = useCollection<ProfessionalApplication>(applicationsQuery);
 
 
   // Component State
@@ -145,7 +151,7 @@ export default function AdminPanelPage() {
   }, [contestsData]);
 
   // Memos for derived data
-  const isLoading = isUserLoading || areContestsLoading || areUsersLoading || areProfLoading || areCommLoading || areKittyLoading;
+  const isLoading = isUserLoading || areContestsLoading || areUsersLoading || areProfLoading || areCommLoading || areKittyLoading || areAppsLoading;
 
   const allContestsForTable = useMemo(() => {
     if(!contestsData) return [];
@@ -231,19 +237,50 @@ export default function AdminPanelPage() {
     })
   }
 
+  const handleApplicationStatus = async (app: ProfessionalApplication, newStatus: 'approved' | 'rejected') => {
+    if (!firestore) return;
+
+    try {
+      if (newStatus === 'approved') {
+        const professionalDocRef = doc(firestore, 'directory', app.userId);
+        await setDoc(professionalDocRef, {
+            id: app.userId,
+            name: app.userName,
+            avatar: app.userAvatar,
+            specialties: app.specialty.split(',').map(s => s.trim()),
+            description: app.bio,
+            verified: true,
+        });
+      }
+      // Update the application status
+      const appDocRef = doc(firestore, 'professional_applications', app.id);
+      await updateDoc(appDocRef, { status: newStatus });
+      toast({
+        title: `Application ${newStatus}`,
+        description: `${app.userName}'s application has been ${newStatus}.`
+      });
+    } catch (e) {
+      console.error(e);
+      toast({ variant: 'destructive', title: 'Error', description: 'Could not update application status.' });
+    }
+  }
+
   const getStatusVariant = (status: UserWithRole['status'] | string) => {
     switch (status) {
       case 'Active':
       case 'Live':
+      case 'approved':
          return 'default';
       case 'Inactive': 
       case 'Pending Approval':
+      case 'pending':
         return 'secondary';
       case 'Pending': 
       case 'Community-run':
         return 'outline';
       case 'Overdue': return 'destructive';
       case 'Ended': return 'destructive'
+      case 'rejected': return 'destructive'
     }
   }
   
@@ -271,9 +308,10 @@ export default function AdminPanelPage() {
       />
 
       <Tabs defaultValue="dashboard">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
           <TabsTrigger value="users">Users</TabsTrigger>
+          <TabsTrigger value="applications">Applications</TabsTrigger>
           <TabsTrigger value="commissions">Commissions</TabsTrigger>
           <TabsTrigger value="content">Content</TabsTrigger>
           <TabsTrigger value="contests">Contests</TabsTrigger>
@@ -416,6 +454,68 @@ export default function AdminPanelPage() {
             </CardContent>
           </Card>
         </TabsContent>
+        
+        <TabsContent value="applications" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Professional Applications</CardTitle>
+              <CardDescription>Review and approve requests from users to become professionals.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {areAppsLoading ? (
+                <div className="flex h-48 w-full items-center justify-center">
+                  <Loader className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Applicant</TableHead>
+                      <TableHead>Specialty</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {applications?.map((app) => (
+                      <TableRow key={app.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <Avatar>
+                              <AvatarImage src={app.userAvatar} />
+                              <AvatarFallback>{app.userName.split(' ').map(n=>n[0]).join('')}</AvatarFallback>
+                            </Avatar>
+                            <p className="font-medium">{app.userName}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell>{app.specialty}</TableCell>
+                        <TableCell>
+                          <Badge variant={getStatusVariant(app.status)}>{app.status}</Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {app.status === 'pending' && (
+                            <div className="flex gap-2 justify-end">
+                              <Button variant="outline" size="sm" onClick={() => handleApplicationStatus(app, 'rejected')}>
+                                <XCircle className="mr-2 h-4 w-4" /> Reject
+                              </Button>
+                              <Button size="sm" onClick={() => handleApplicationStatus(app, 'approved')}>
+                                <CheckCircle className="mr-2 h-4 w-4" /> Approve
+                              </Button>
+                            </div>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+              {!areAppsLoading && applications?.length === 0 && (
+                <div className="py-12 text-center text-muted-foreground">No pending applications.</div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
 
         <TabsContent value="commissions" className="mt-6">
             <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
