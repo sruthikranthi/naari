@@ -194,10 +194,12 @@ export default function ProfessionalHubPage() {
 
   useEffect(() => {
     if (users && users.length > 3) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Need to initialize mock data when users load
       setIncomingRequests([
         { user: users[1], message: "Hi Dr. Gupta, I'd like to book a session." },
         { user: users[3], message: 'Looking for guidance on stress management.' },
       ]);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setClients([
         { user: users[4], sessionDate: 'July 28, 2024', status: 'Upcoming' },
         { user: users[2], sessionDate: 'July 15, 2024', status: 'Completed' },

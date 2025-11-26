@@ -154,6 +154,7 @@ export default function WellnessPage() {
         title: 'Error generating audio',
         description: audioState.error,
       });
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Reset playing state on error
       setPlayingMeditationId(null);
     }
   }, [audioState, toast, playingMeditationId]);

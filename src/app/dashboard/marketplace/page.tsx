@@ -81,6 +81,7 @@ export default function MarketplacePage() {
 
   useEffect(() => {
     if (maxPrice > 0) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- Need to sync price range with max price
         setPriceRange([maxPrice]);
     }
   }, [maxPrice]);

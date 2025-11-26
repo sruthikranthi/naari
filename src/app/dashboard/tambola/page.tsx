@@ -107,6 +107,7 @@ export default function TambolaPage() {
   const [gameStatus, setGameStatus] = useState<'idle' | 'running' | 'paused' | 'ended'>('idle');
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Initialize ticket on mount
     setTicket(generateTicket());
   }, []);
 

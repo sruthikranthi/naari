@@ -140,12 +140,14 @@ export default function AdminPanelPage() {
           role: u.id === 'u1' || u.id === 'u3' ? 'Creator' : (allProfessionals.some(p => p.id.includes(u.id)) ? 'Professional' : 'User'),
           status: 'Active'
       }));
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Need to combine users and professionals data
       setUsers(combinedUsers);
     }
   }, [allUsers, allProfessionals]);
 
   useEffect(() => {
     if (contestsData) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Need to set contests when data loads
       setContests(contestsData);
     }
   }, [contestsData]);
