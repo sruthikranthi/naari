@@ -1,12 +1,11 @@
+
 'use client';
+import { useState } from 'react';
 import {
   Users,
   BookOpen,
-  LineChart,
-  BarChart,
   DollarSign,
   Eye,
-  Mail,
   UserPlus,
   Star,
 } from 'lucide-react';
@@ -25,11 +24,25 @@ import {
   TabsTrigger,
 } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { courses, directory, users } from '@/lib/mock-data';
+import { courses, directory, users, type User } from '@/lib/mock-data';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
+import { useToast } from '@/hooks/use-toast';
+
+type IncomingRequest = {
+  user: User;
+  message: string;
+};
+
+const initialRequests: IncomingRequest[] = [
+  { user: users[1], message: "Hi Dr. Gupta, I'd like to book a session." },
+  { user: users[3], message: 'Looking for guidance on stress management.' },
+];
 
 export default function ProfessionalHubPage() {
+  const { toast } = useToast();
+
+  const [incomingRequests, setIncomingRequests] = useState<IncomingRequest[]>(initialRequests);
+
   // Assuming the logged-in user is a professional.
   // We'll use the first professional and first course creator from mock data.
   const professional = directory[0];
@@ -38,10 +51,20 @@ export default function ProfessionalHubPage() {
     (c) => c.instructor === courseCreator.name
   );
 
-  const incomingRequests = [
-    { user: users[1], message: "Hi Dr. Gupta, I'd like to book a session." },
-    { user: users[3], message: 'Looking for guidance on stress management.' },
-  ];
+  const handleRequest = (userName: string, accepted: boolean) => {
+    setIncomingRequests(prev => prev.filter(req => req.user.name !== userName));
+    toast({
+        title: `Request ${accepted ? 'Accepted' : 'Declined'}`,
+        description: `You have ${accepted ? 'connected with' : 'declined'} ${userName}.`,
+    });
+  }
+
+  const handleViewAnalytics = (courseTitle: string) => {
+    toast({
+        title: "Analytics Coming Soon",
+        description: `Detailed analytics for "${courseTitle}" will be available here.`,
+    });
+  }
 
   return (
     <div className="space-y-6">
@@ -119,34 +142,38 @@ export default function ProfessionalHubPage() {
               <CardTitle>Incoming Requests</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {incomingRequests.map((req, index) => (
-                <div
-                  key={index}
-                  className="flex items-center gap-4 rounded-lg border p-4"
-                >
-                  <Avatar>
-                    <AvatarImage
-                      src={`https://picsum.photos/seed/${req.user.id}/100/100`}
-                    />
-                    <AvatarFallback>
-                      {req.user.name
-                        .split(' ')
-                        .map((n) => n[0])
-                        .join('')}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <p className="font-semibold">{req.user.name}</p>
-                    <p className="text-sm text-muted-foreground italic">
-                      "{req.message}"
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button variant="outline">Decline</Button>
-                    <Button>Accept</Button>
-                  </div>
-                </div>
-              ))}
+              {incomingRequests.length > 0 ? (
+                incomingRequests.map((req, index) => (
+                    <div
+                    key={index}
+                    className="flex items-center gap-4 rounded-lg border p-4"
+                    >
+                    <Avatar>
+                        <AvatarImage
+                        src={`https://picsum.photos/seed/${req.user.id}/100/100`}
+                        />
+                        <AvatarFallback>
+                        {req.user.name
+                            .split(' ')
+                            .map((n) => n[0])
+                            .join('')}
+                        </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                        <p className="font-semibold">{req.user.name}</p>
+                        <p className="text-sm text-muted-foreground italic">
+                        "{req.message}"
+                        </p>
+                    </div>
+                    <div className="flex gap-2">
+                        <Button variant="outline" onClick={() => handleRequest(req.user.name, false)}>Decline</Button>
+                        <Button onClick={() => handleRequest(req.user.name, true)}>Accept</Button>
+                    </div>
+                    </div>
+                ))
+              ) : (
+                <p className="py-8 text-center text-sm text-muted-foreground">No new requests.</p>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -210,24 +237,27 @@ export default function ProfessionalHubPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               {creatorCourses.map((course) => (
-                <div key={course.id} className="rounded-lg border p-4">
-                  <h3 className="font-semibold">{course.title}</h3>
-                  <div className="mt-2 grid grid-cols-3 gap-4 text-sm text-muted-foreground">
-                    <div>
-                      <p className="font-medium">250</p>
-                      <p>Enrollments</p>
-                    </div>
-                    <div>
-                      <p className="font-medium">85%</p>
-                      <p>Completion Rate</p>
-                    </div>
-                    <div>
-                      <p className="font-medium">
-                        ₹{((course.price || 0) * 250).toLocaleString()}
-                      </p>
-                      <p>Revenue</p>
+                <div key={course.id} className="flex items-center gap-4 rounded-lg border p-4">
+                  <div className="flex-1">
+                    <h3 className="font-semibold">{course.title}</h3>
+                    <div className="mt-2 grid grid-cols-3 gap-4 text-sm text-muted-foreground">
+                        <div>
+                        <p className="font-medium">250</p>
+                        <p>Enrollments</p>
+                        </div>
+                        <div>
+                        <p className="font-medium">85%</p>
+                        <p>Completion Rate</p>
+                        </div>
+                        <div>
+                        <p className="font-medium">
+                            ₹{((course.price || 0) * 250).toLocaleString()}
+                        </p>
+                        <p>Revenue</p>
+                        </div>
                     </div>
                   </div>
+                   <Button variant="outline" onClick={() => handleViewAnalytics(course.title)}>View Analytics</Button>
                 </div>
               ))}
             </CardContent>
