@@ -1,6 +1,7 @@
 
 'use client';
-import React, { type ReactNode, useState, createContext, useContext } from 'react';
+import React, { type ReactNode, useState, createContext, useContext, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Search,
 } from 'lucide-react';
@@ -25,7 +26,10 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { SearchModal } from '@/components/search-modal';
 import { PageTransition } from '@/components/page-transition';
 import { MobileBottomNav } from '@/components/mobile-bottom-nav';
+import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
 import type { Post } from '@/lib/mock-data';
+import type { User } from '@/lib/mock-data';
 
 // Create Dashboard Context
 type DashboardContextType = {
@@ -73,6 +77,44 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
 function Layout({ children }: { children: ReactNode }) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const { user, isUserLoading } = useUser();
+  const firestore = useFirestore();
+  const router = useRouter();
+
+  // Check if user has mobile number
+  const userDocRef = useMemoFirebase(() => (firestore && user) ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
+  const { data: userProfile, isLoading: isProfileLoading } = useDoc<User>(userDocRef);
+
+  useEffect(() => {
+    // If user is not logged in, redirect to login
+    if (!isUserLoading && !user) {
+      router.push('/login');
+      return;
+    }
+
+    // If user is logged in but doesn't have mobile number, redirect to mobile number page
+    if (!isProfileLoading && user && userProfile && !userProfile.mobileNumber) {
+      router.push('/mobile-number');
+      return;
+    }
+  }, [user, isUserLoading, userProfile, isProfileLoading, router]);
+
+  // Show loading state while checking
+  if (isUserLoading || isProfileLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <div className="mb-4 inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent" />
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render dashboard if user is not logged in or doesn't have mobile number
+  if (!user || (userProfile && !userProfile.mobileNumber)) {
+    return null;
+  }
 
   return (
     <SidebarProvider>

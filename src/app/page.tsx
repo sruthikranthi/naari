@@ -1,207 +1,23 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { HeartHandshake, ShieldCheck, UserPlus, Video, Loader, CheckCircle } from 'lucide-react';
+import { SplashScreen } from '@/components/splash-screen';
 
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
-import { Logo } from '@/components/logo';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { CameraCapture } from '@/components/camera-capture';
-import { useToast } from '@/hooks/use-toast';
-import { useUser, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
-import type { User } from '@/lib/mock-data';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
-
-export default function VerificationPage() {
-  const [isVerificationOpen, setIsVerificationOpen] = useState(false);
-  const [verificationStep, setVerificationStep] = useState<'capture' | 'verifying' | 'success'>('capture');
-  const [hasAgreedToPolicies, setHasAgreedToPolicies] = useState(false);
+export default function HomePage() {
+  const [showSplash, setShowSplash] = useState(true);
   const router = useRouter();
-  const { toast } = useToast();
-  const { user: authUser, isUserLoading: isAuthLoading } = useUser();
-  const firestore = useFirestore();
 
-  // Check if the user has a profile document
-  const userDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
-  const { data: userProfile, isLoading: isProfileLoading } = useDoc<User>(userDocRef);
-
-  const isLoading = isAuthLoading || isProfileLoading;
-
-  useEffect(() => {
-    // Only redirect if loading is complete AND the user is logged in AND a profile document exists.
-    if (!isLoading && authUser && userProfile) {
-      router.push('/dashboard');
-    }
-    // If authUser exists but userProfile is null/undefined after loading,
-    // it means they need to create a profile, so we stay on this page.
-  }, [authUser, userProfile, isLoading, router]);
-
-  const handleMediaCaptured = (dataUrl: string, type: 'image' | 'video') => {
-    // In a real app, this media would be sent to a backend for analysis.
-    console.log('Media captured for verification:', type, dataUrl.substring(0, 50));
-    setVerificationStep('verifying');
+  const handleSplashComplete = () => {
+    setShowSplash(false);
+    // Redirect to login page after splash
+    router.push('/login');
   };
 
-  useEffect(() => {
-    if (verificationStep === 'verifying') {
-      // Simulate backend AI processing
-      const timer = setTimeout(() => {
-        setVerificationStep('success');
-      }, 2500);
-      return () => clearTimeout(timer);
-    }
-    if (verificationStep === 'success') {
-      // After success, redirect to profile creation
-      const timer = setTimeout(() => {
-        router.push('/dashboard/profile/create');
-      }, 1500);
-      return () => clearTimeout(timer);
-    }
-  }, [verificationStep, router]);
+  if (showSplash) {
+    return <SplashScreen onComplete={handleSplashComplete} />;
+  }
 
-  const resetVerification = () => {
-    setIsVerificationOpen(false);
-    // Add a small delay to allow the dialog to close before resetting state
-    setTimeout(() => {
-      setVerificationStep('capture');
-    }, 300);
-  };
-
-
-  return (
-    <div className="flex min-h-screen w-full flex-col items-center justify-center bg-secondary/50 p-4">
-      <div className="absolute top-8 left-8">
-        <Logo />
-      </div>
-      <Card className="w-full max-w-md animate-fade-in-up">
-        <CardHeader className="items-center text-center">
-          <ShieldCheck className="mb-2 h-12 w-12 text-primary" />
-          <CardTitle className="font-headline text-3xl">
-            Welcome to Your Safe Space
-          </CardTitle>
-          <CardDescription>
-            To keep our community safe and authentic, we require a quick
-            one-time verification.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-4">
-            <div className="flex items-start space-x-4">
-              <div className="mt-1 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <span className="font-bold">1</span>
-              </div>
-              <div>
-                <h3 className="font-semibold">Create Your Account</h3>
-                <p className="text-sm text-muted-foreground">
-                  Start by setting up your profile with basic details.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start space-x-4">
-              <div className="mt-1 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <span className="font-bold">2</span>
-              </div>
-              <div>
-                <h3 className="font-semibold">Quick Video Verification</h3>
-                <p className="text-sm text-muted-foreground">
-                  A short, private video selfie confirms your identity and
-                  ensures our circle is for women only.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start space-x-4">
-              <div className="mt-1 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <span className="font-bold">3</span>
-              </div>
-              <div>
-                <h3 className="font-semibold">Join the Circle</h3>
-                <p className="text-sm text-muted-foreground">
-                  Once verified, unlock access to a supportive community of thousands of women.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <Separator />
-
-          <div className="space-y-4">
-             <div className="flex items-start space-x-3">
-                <Checkbox id="terms" checked={hasAgreedToPolicies} onCheckedChange={(checked) => setHasAgreedToPolicies(checked as boolean)} className="mt-1" />
-                <Label htmlFor="terms" className="text-sm text-muted-foreground font-normal">
-                  I agree to the Sakhi Circle 
-                  <Link href="/policies/terms" className="text-primary hover:underline" target="_blank"> Terms & Conditions</Link>, 
-                  <Link href="/policies/privacy" className="text-primary hover:underline" target="_blank"> Privacy Policy</Link>, 
-                  <Link href="/policies/refund" className="text-primary hover:underline" target="_blank"> Refund Policy</Link>, and 
-                  <Link href="/policies/cancellation" className="text-primary hover:underline" target="_blank"> Cancellation Policy</Link>.
-                </Label>
-              </div>
-
-            <Button
-              className="w-full"
-              size="lg"
-              onClick={() => setIsVerificationOpen(true)}
-              disabled={!hasAgreedToPolicies}
-            >
-              <Video className="mr-2 h-5 w-5" />
-              Start Video Verification
-            </Button>
-            <p className="text-center text-xs text-muted-foreground">
-              Your privacy is our priority. Verification is automated and data is not stored.
-            </p>
-          </div>
-        </CardContent>
-        <CardFooter className="flex-col items-center justify-center gap-2 pt-4">
-          <Separator className="mb-4" />
-          <p className="text-center text-sm text-muted-foreground">
-            Already have an account?{' '}
-            <Link
-              href="/login"
-              className="font-semibold text-primary underline-offset-4 hover:underline"
-            >
-              Sign In
-            </Link>
-          </p>
-        </CardFooter>
-      </Card>
-
-      <Dialog open={isVerificationOpen} onOpenChange={resetVerification}>
-        <DialogContent className="sm:max-w-xl">
-          <DialogHeader>
-            <DialogTitle>Video Verification</DialogTitle>
-            <DialogDescription>
-              Please position your face in the center of the frame.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="aspect-video w-full">
-            {verificationStep === 'capture' && (
-              <div className="flex h-full w-full flex-col items-center justify-center gap-4">
-                <CameraCapture onMediaCaptured={handleMediaCaptured} />
-              </div>
-            )}
-            {verificationStep === 'verifying' && (
-              <div className="flex h-full w-full flex-col items-center justify-center gap-4 rounded-lg bg-secondary">
-                <Loader className="h-12 w-12 animate-spin text-primary" />
-                <p className="font-semibold">Analyzing... Please wait.</p>
-                <p className="text-sm text-muted-foreground">Checking for liveness and authenticity.</p>
-              </div>
-            )}
-            {verificationStep === 'success' && (
-              <div className="flex h-full w-full flex-col items-center justify-center gap-4 rounded-lg bg-green-50">
-                <CheckCircle className="h-12 w-12 text-green-600" />
-                <p className="font-semibold text-green-700">Verification Successful!</p>
-                <p className="text-sm text-green-600">Redirecting you to create your profile...</p>
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
+  return null;
 }
