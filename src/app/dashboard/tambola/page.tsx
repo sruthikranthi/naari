@@ -11,79 +11,121 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Crown, Ticket, Users, Clock, PartyPopper } from 'lucide-react';
+import { Crown, Ticket, Users, Clock, PartyPopper, Award } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Badge } from '@/components/ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 
-// Function to generate a valid Tambola ticket
+// A more robust function to generate a valid Tambola ticket
 const generateTicket = (): (number | null)[][] => {
-  const ticket: (number | null)[][] = Array.from({ length: 3 }, () => Array(9).fill(null));
-  const columns: number[][] = Array.from({ length: 9 }, () => []);
+  const ticket: (number | null)[][] = Array(3).fill(0).map(() => Array(9).fill(null));
 
-  // Populate columns with numbers
-  for (let i = 0; i < 9; i++) {
-    const start = i * 10 + 1;
-    const end = i === 8 ? 90 : i * 10 + 10;
-    const nums = [];
-    for (let j = start; j <= end; j++) {
-      nums.push(j);
-    }
-    columns[i] = nums;
-  }
-
-  // Place 15 numbers on the ticket
+  // 1. Distribute 15 numbers across 3 rows (5 numbers per row)
+  const numbersPerRow = [5, 5, 5];
+  const colCounts = Array(9).fill(0);
+  
   for (let row = 0; row < 3; row++) {
-    for (let i = 0; i < 5; i++) {
-      let col;
+    for (let i = 0; i < numbersPerRow[row]; i++) {
+      let col: number;
       do {
         col = Math.floor(Math.random() * 9);
-      } while (ticket[row][col] !== null);
-
-      const availableNumbers = columns[col];
-      const numIndex = Math.floor(Math.random() * availableNumbers.length);
-      const num = availableNumbers.splice(numIndex, 1)[0];
-      ticket[row][col] = num;
+      } while (ticket[row][col] !== null || colCounts[col] >= 3 || (row === 1 && ticket[0][col] === null && colCounts[col] === 2) || (row === 2 && (ticket[0][col] === null || ticket[1][col] === null) && colCounts[col] >= 2) );
+      ticket[row][col] = 0; // Placeholder
+      colCounts[col]++;
     }
   }
 
-  // Sort numbers within each column
+  // Ensure each column has at least one number
   for (let col = 0; col < 9; col++) {
-    const columnNumbers: number[] = [];
-    for (let row = 0; row < 3; row++) {
-        if(ticket[row][col] !== null) {
-            columnNumbers.push(ticket[row][col] as number);
-        }
-    }
-    columnNumbers.sort((a, b) => a - b);
-    let currentNumIndex = 0;
-    for (let row = 0; row < 3; row++) {
-        if(ticket[row][col] !== null) {
-            ticket[row][col] = columnNumbers[currentNumIndex++];
-        }
+    if (colCounts[col] === 0) {
+      let rowToStealFrom: number, colToStealFrom: number;
+      do {
+        rowToStealFrom = Math.floor(Math.random() * 3);
+        colToStealFrom = Math.floor(Math.random() * 9);
+      } while (colToStealFrom === col || colCounts[colToStealFrom] <= 1);
+      
+      ticket[rowToStealFrom][col] = 0;
+      ticket[rowToStealFrom][colToStealFrom] = null;
+      colCounts[col]++;
+      colCounts[colToStealFrom]--;
     }
   }
 
+  // 2. Populate columns with unique, sorted numbers
+  for (let col = 0; col < 9; col++) {
+    const min = col * 10 + (col === 0 ? 1 : 0);
+    const max = col * 10 + 9;
+    const range = Array.from({ length: max - min + 1 }, (_, i) => min + i);
+    range.push(col * 10 + 10); // for cols 0-7, this is 10,20...80. for col 8, it's 90.
+    if(col === 0) range.shift();
+    if (col === 8) range[0] = 80;
+
+
+    let colNums: number[] = [];
+    for (let row = 0; row < 3; row++) {
+      if (ticket[row][col] !== null) {
+        let num;
+        do {
+          num = range[Math.floor(Math.random() * range.length)];
+        } while (colNums.includes(num));
+        colNums.push(num);
+      }
+    }
+    colNums.sort((a, b) => a - b);
+    
+    let numIndex = 0;
+    for (let row = 0; row < 3; row++) {
+      if (ticket[row][col] !== null) {
+        ticket[row][col] = colNums[numIndex++];
+      }
+    }
+  }
   return ticket;
 };
 
+const prizes = [
+    { id: 'corners', name: 'Four Corners', description: 'All 4 corner numbers' },
+    { id: 'top_line', name: 'Top Line', description: 'All numbers in the top row' },
+    { id: 'middle_line', name: 'Middle Line', description: 'All numbers in the middle row' },
+    { id: 'bottom_line', name: 'Bottom Line', description: 'All numbers in the bottom row' },
+    { id: 'full_house', name: 'Full House', description: 'All 15 numbers on the ticket' },
+];
 
 export default function TambolaPage() {
   const { toast } = useToast();
   const [calledNumbers, setCalledNumbers] = useState<number[]>([]);
   const [currentNumber, setCurrentNumber] = useState<number | null>(null);
-  const [ticket, setTicket] = useState<(number|null)[][]>([]);
+  const [ticket, setTicket] = useState<(number | null)[][]>([]);
+  const [dabbedNumbers, setDabbedNumbers] = useState<number[]>([]);
+  const [claimedPrizes, setClaimedPrizes] = useState<string[]>([]);
   const [gameStatus, setGameStatus] = useState<'idle' | 'running' | 'paused' | 'ended'>('idle');
 
   useEffect(() => {
     setTicket(generateTicket());
   }, []);
 
+  const resetGame = () => {
+    setGameStatus('idle');
+    setCalledNumbers([]);
+    setCurrentNumber(null);
+    setDabbedNumbers([]);
+    setClaimedPrizes([]);
+    setTicket(generateTicket());
+  }
+
   const handleNextNumber = useCallback(() => {
     if (calledNumbers.length >= 90) {
-        toast({ title: "Game Over!", description: "All numbers have been called."});
-        setGameStatus('ended');
-        return;
+      toast({ title: 'Game Over!', description: 'All numbers have been called.' });
+      setGameStatus('ended');
+      return;
     }
-    
+
     let nextNumber;
     do {
       nextNumber = Math.floor(Math.random() * 90) + 1;
@@ -94,22 +136,63 @@ export default function TambolaPage() {
   }, [calledNumbers, toast]);
 
   const handleStartGame = () => {
+    resetGame();
     setGameStatus('running');
-    setCalledNumbers([]);
-    setCurrentNumber(null);
-    setTicket(generateTicket());
-    handleNextNumber();
+    // We call handleNextNumber inside a timeout to give state a moment to update
+    setTimeout(handleNextNumber, 100);
   };
 
-  const handleEndGame = () => {
-    setGameStatus('idle');
-    setCalledNumbers([]);
-    setCurrentNumber(null);
-  }
-
-  const isNumberCalled = (number: number | null) => {
-    return number !== null && calledNumbers.includes(number);
+  const handleDabNumber = (number: number) => {
+    if (!isNumberCalled(number)) {
+      toast({ variant: 'destructive', title: 'Not Called Yet!', description: `Number ${number} hasn't been called.`});
+      return;
+    }
+    if (dabbedNumbers.includes(number)) {
+      setDabbedNumbers(dabbedNumbers.filter(n => n !== number));
+    } else {
+      setDabbedNumbers([...dabbedNumbers, number]);
+    }
   };
+
+  const checkPrize = (prizeId: string) => {
+    const ticketNumbers = ticket.flat().filter(n => n !== null) as number[];
+
+    const getRowNumbers = (row: number) => ticket[row].filter(n => n !== null) as number[];
+
+    let prizeNumbers: number[] = [];
+    switch (prizeId) {
+        case 'top_line': prizeNumbers = getRowNumbers(0); break;
+        case 'middle_line': prizeNumbers = getRowNumbers(1); break;
+        case 'bottom_line': prizeNumbers = getRowNumbers(2); break;
+        case 'full_house': prizeNumbers = ticketNumbers; break;
+        case 'corners': 
+            const corners: number[] = [];
+            const firstRow = getRowNumbers(0);
+            const lastRow = getRowNumbers(2);
+            if(firstRow.length > 0) corners.push(firstRow[0]);
+            if(firstRow.length > 1) corners.push(firstRow[firstRow.length - 1]);
+            if(lastRow.length > 0) corners.push(lastRow[0]);
+            if(lastRow.length > 1) corners.push(lastRow[lastRow.length - 1]);
+            prizeNumbers = Array.from(new Set(corners)); // handle case where corners are same number
+            break;
+    }
+
+    const allDabbed = prizeNumbers.every(n => dabbedNumbers.includes(n));
+    const allCalled = prizeNumbers.every(n => calledNumbers.includes(n));
+
+    if (allDabbed && allCalled) {
+        if (!claimedPrizes.includes(prizeId)) {
+            setClaimedPrizes([...claimedPrizes, prizeId]);
+            toast({ title: '🎉 Claim Verified!', description: `You have successfully claimed "${prizes.find(p => p.id === prizeId)?.name}"!` });
+        } else {
+            toast({ variant: 'destructive', title: 'Already Claimed', description: 'You have already claimed this prize.' });
+        }
+    } else {
+        toast({ variant: 'destructive', title: 'Bogey!', description: 'Your claim is not valid. Check your ticket again.' });
+    }
+  };
+  
+  const isNumberCalled = (number: number | null) => number !== null && calledNumbers.includes(number);
 
   return (
     <div className="space-y-6">
@@ -121,7 +204,6 @@ export default function TambolaPage() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Main Game Area */}
         <div className="space-y-6 lg:col-span-2">
-          {/* Number Caller */}
           <Card className="flex flex-col items-center justify-center p-6 text-center bg-primary text-primary-foreground">
             <CardDescription className="text-lg">Current Number</CardDescription>
             <div className="font-bold text-8xl tracking-tighter">
@@ -129,7 +211,6 @@ export default function TambolaPage() {
             </div>
           </Card>
 
-          {/* Game Board */}
           <Card>
             <CardHeader>
               <CardTitle>Tambola Board</CardTitle>
@@ -156,7 +237,6 @@ export default function TambolaPage() {
 
         {/* Sidebar */}
         <div className="space-y-6">
-          {/* Game Controls */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -164,14 +244,13 @@ export default function TambolaPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-2 gap-4">
-              <Button onClick={handleStartGame} disabled={gameStatus === 'running'}>Start Game</Button>
+              <Button onClick={handleStartGame} disabled={gameStatus === 'running'}>Start New</Button>
               <Button onClick={handleNextNumber} disabled={gameStatus !== 'running'}>Next Number</Button>
               <Button variant="outline" disabled={gameStatus !== 'running'}>Pause Game</Button>
-              <Button variant="destructive" onClick={handleEndGame} disabled={gameStatus === 'idle'}>End Game</Button>
+              <Button variant="destructive" onClick={resetGame} disabled={gameStatus === 'idle'}>End Game</Button>
             </CardContent>
           </Card>
 
-          {/* Your Ticket */}
           <Card>
             <CardHeader>
               <CardTitle>Your Ticket</CardTitle>
@@ -179,28 +258,65 @@ export default function TambolaPage() {
             <CardContent>
               <div className="grid grid-cols-9 gap-1 rounded-lg bg-secondary p-2">
                 {ticket.flat().map((number, index) => (
-                  <div
+                  <button
                     key={index}
+                    disabled={!number || gameStatus !== 'running'}
+                    onClick={() => number && handleDabNumber(number)}
                     className={cn(
-                      'flex aspect-square items-center justify-center rounded-md text-sm font-bold transition-all',
+                      'flex aspect-square items-center justify-center rounded-md text-sm font-bold transition-all disabled:cursor-not-allowed',
                       number
-                        ? isNumberCalled(number)
-                          ? 'bg-accent text-accent-foreground line-through decoration-2'
-                          : 'bg-background'
-                        : 'bg-secondary'
+                        ? 'bg-background'
+                        : 'bg-secondary',
+                      dabbedNumbers.includes(number!) && isNumberCalled(number)
+                        ? 'bg-accent text-accent-foreground line-through decoration-2 opacity-75'
+                        : '',
+                       isNumberCalled(number) && !dabbedNumbers.includes(number!)
+                        ? 'animate-pulse border-2 border-primary' : ''
                     )}
                   >
                     {number}
-                  </div>
+                  </button>
                 ))}
               </div>
-              <Button className="mt-4 w-full" disabled={gameStatus !== 'running'}>
-                <PartyPopper className="mr-2 h-4 w-4" /> Claim Prize
-              </Button>
             </CardContent>
           </Card>
+           
+          <Card>
+              <CardHeader>
+                  <CardTitle>Prizes to Claim</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                  {prizes.map(prize => (
+                      <div key={prize.id} className="flex items-center justify-between rounded-lg border p-3">
+                        <div>
+                            <p className="font-semibold">{prize.name}</p>
+                            <p className="text-xs text-muted-foreground">{prize.description}</p>
+                        </div>
+                        <Dialog>
+                            <DialogTrigger asChild>
+                                <Button size="sm" variant={claimedPrizes.includes(prize.id) ? 'secondary' : 'default'} disabled={gameStatus !== 'running' || claimedPrizes.includes(prize.id)}>
+                                    <Award className="mr-2 h-4 w-4" />
+                                    {claimedPrizes.includes(prize.id) ? 'Claimed' : 'Claim'}
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                                <DialogHeader>
+                                    <DialogTitle>Confirm Claim for "{prize.name}"?</DialogTitle>
+                                </DialogHeader>
+                                <div className="py-4">
+                                  <p>The system will verify if you have completed this prize. False claims may lead to disqualification.</p>
+                                </div>
+                                <Button onClick={() => checkPrize(prize.id)}>Yes, Check My Ticket!</Button>
+                            </DialogContent>
+                        </Dialog>
+                      </div>
+                  ))}
+              </CardContent>
+          </Card>
+
         </div>
       </div>
     </div>
   );
 }
+
