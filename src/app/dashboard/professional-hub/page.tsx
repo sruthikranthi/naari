@@ -8,6 +8,9 @@ import {
   Eye,
   UserPlus,
   Star,
+  Check,
+  X,
+  Calendar,
 } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
 import {
@@ -24,13 +27,29 @@ import {
   TabsTrigger,
 } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { courses, directory, users, type User } from '@/lib/mock-data';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 type IncomingRequest = {
   user: User;
   message: string;
+};
+
+type Client = {
+  user: User;
+  sessionDate: string;
+  status: 'Upcoming' | 'Completed' | 'Cancelled';
 };
 
 const initialRequests: IncomingRequest[] = [
@@ -38,33 +57,70 @@ const initialRequests: IncomingRequest[] = [
   { user: users[3], message: 'Looking for guidance on stress management.' },
 ];
 
+const initialClients: Client[] = [
+  {
+    user: users[4],
+    sessionDate: 'July 28, 2024',
+    status: 'Upcoming',
+  },
+  {
+    user: users[2],
+    sessionDate: 'July 15, 2024',
+    status: 'Completed',
+  },
+];
+
 export default function ProfessionalHubPage() {
   const { toast } = useToast();
-
   const [incomingRequests, setIncomingRequests] = useState<IncomingRequest[]>(initialRequests);
+  const [clients, setClients] = useState<Client[]>(initialClients);
 
   // Assuming the logged-in user is a professional.
-  // We'll use the first professional and first course creator from mock data.
   const professional = directory[0];
   const courseCreator = users[2];
   const creatorCourses = courses.filter(
     (c) => c.instructor === courseCreator.name
   );
 
-  const handleRequest = (userName: string, accepted: boolean) => {
-    setIncomingRequests(prev => prev.filter(req => req.user.name !== userName));
+  const handleRequest = (request: IncomingRequest, accepted: boolean) => {
+    setIncomingRequests((prev) =>
+      prev.filter((req) => req.user.id !== request.user.id)
+    );
+
     toast({
-        title: `Request ${accepted ? 'Accepted' : 'Declined'}`,
-        description: `You have ${accepted ? 'connected with' : 'declined'} ${userName}.`,
+      title: `Request ${accepted ? 'Accepted' : 'Declined'}`,
+      description: `You have ${
+        accepted ? 'connected with' : 'declined'
+      } ${request.user.name}.`,
     });
-  }
+
+    if (accepted) {
+      const newClient: Client = {
+        user: request.user,
+        sessionDate: 'August 5, 2024', // Example date
+        status: 'Upcoming',
+      };
+      setClients((prev) => [newClient, ...prev]);
+    }
+  };
 
   const handleViewAnalytics = (courseTitle: string) => {
     toast({
-        title: "Analytics Coming Soon",
-        description: `Detailed analytics for "${courseTitle}" will be available here.`,
+      title: 'Analytics Coming Soon',
+      description: `Detailed analytics for "${courseTitle}" will be available here.`,
     });
-  }
+  };
+
+  const getStatusVariant = (status: Client['status']) => {
+    switch (status) {
+      case 'Completed':
+        return 'default';
+      case 'Upcoming':
+        return 'secondary';
+      case 'Cancelled':
+        return 'destructive';
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -137,45 +193,115 @@ export default function ProfessionalHubPage() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Incoming Requests</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {incomingRequests.length > 0 ? (
-                incomingRequests.map((req, index) => (
-                    <div
-                    key={index}
-                    className="flex items-center gap-4 rounded-lg border p-4"
-                    >
-                    <Avatar>
-                        <AvatarImage
-                        src={`https://picsum.photos/seed/${req.user.id}/100/100`}
-                        />
-                        <AvatarFallback>
-                        {req.user.name
-                            .split(' ')
-                            .map((n) => n[0])
-                            .join('')}
-                        </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                        <p className="font-semibold">{req.user.name}</p>
-                        <p className="text-sm text-muted-foreground italic">
-                        "{req.message}"
-                        </p>
-                    </div>
-                    <div className="flex gap-2">
-                        <Button variant="outline" onClick={() => handleRequest(req.user.name, false)}>Decline</Button>
-                        <Button onClick={() => handleRequest(req.user.name, true)}>Accept</Button>
-                    </div>
-                    </div>
-                ))
-              ) : (
-                <p className="py-8 text-center text-sm text-muted-foreground">No new requests.</p>
-              )}
-            </CardContent>
-          </Card>
+          <Tabs defaultValue="requests" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="requests">Incoming Requests ({incomingRequests.length})</TabsTrigger>
+              <TabsTrigger value="clients">My Clients ({clients.length})</TabsTrigger>
+            </TabsList>
+            <TabsContent value="requests" className="mt-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Incoming Requests</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {incomingRequests.length > 0 ? (
+                    incomingRequests.map((req) => (
+                      <div
+                        key={req.user.id}
+                        className="flex items-center gap-4 rounded-lg border p-4"
+                      >
+                        <Avatar>
+                          <AvatarImage
+                            src={`https://picsum.photos/seed/${req.user.id}/100/100`}
+                          />
+                          <AvatarFallback>
+                            {req.user.name
+                              .split(' ')
+                              .map((n) => n[0])
+                              .join('')}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <p className="font-semibold">{req.user.name}</p>
+                          <p className="text-sm text-muted-foreground italic">
+                            "{req.message}"
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            onClick={() => handleRequest(req, false)}
+                          >
+                            <X className="mr-2 h-4 w-4" /> Decline
+                          </Button>
+                          <Button onClick={() => handleRequest(req, true)}>
+                            <Check className="mr-2 h-4 w-4" /> Accept
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="py-8 text-center text-sm text-muted-foreground">
+                      No new requests.
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+            <TabsContent value="clients" className="mt-4">
+                 <Card>
+                    <CardHeader>
+                        <CardTitle>My Clients</CardTitle>
+                        <CardDescription>A list of your accepted connections and their session status.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Client</TableHead>
+                                    <TableHead>Session Date</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead className="text-right">Actions</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {clients.map((client) => (
+                                    <TableRow key={client.user.id}>
+                                        <TableCell>
+                                            <div className="flex items-center gap-3">
+                                                <Avatar>
+                                                    <AvatarImage src={`https://picsum.photos/seed/${client.user.id}/100/100`} alt={client.user.name} />
+                                                    <AvatarFallback>{client.user.name.split(' ').map(n=>n[0]).join('')}</AvatarFallback>
+                                                </Avatar>
+                                                <div>
+                                                    <p className="font-medium">{client.user.name}</p>
+                                                    <p className="text-xs text-muted-foreground">{client.user.city}</p>
+                                                </div>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>{client.sessionDate}</TableCell>
+                                        <TableCell>
+                                            <Badge variant={getStatusVariant(client.status)}>{client.status}</Badge>
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <Button variant="ghost" size="icon">
+                                                <Calendar className="h-4 w-4"/>
+                                                <span className="sr-only">Reschedule</span>
+                                            </Button>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                         {clients.length === 0 && (
+                            <p className="py-8 text-center text-sm text-muted-foreground">
+                                You have no clients yet.
+                            </p>
+                        )}
+                    </CardContent>
+                </Card>
+            </TabsContent>
+          </Tabs>
         </TabsContent>
         <TabsContent value="creator" className="mt-6 space-y-6">
           <Card>
@@ -237,27 +363,35 @@ export default function ProfessionalHubPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               {creatorCourses.map((course) => (
-                <div key={course.id} className="flex items-center gap-4 rounded-lg border p-4">
+                <div
+                  key={course.id}
+                  className="flex items-center gap-4 rounded-lg border p-4"
+                >
                   <div className="flex-1">
                     <h3 className="font-semibold">{course.title}</h3>
                     <div className="mt-2 grid grid-cols-3 gap-4 text-sm text-muted-foreground">
-                        <div>
+                      <div>
                         <p className="font-medium">250</p>
                         <p>Enrollments</p>
-                        </div>
-                        <div>
+                      </div>
+                      <div>
                         <p className="font-medium">85%</p>
                         <p>Completion Rate</p>
-                        </div>
-                        <div>
+                      </div>
+                      <div>
                         <p className="font-medium">
-                            ₹{((course.price || 0) * 250).toLocaleString()}
+                          ₹{((course.price || 0) * 250).toLocaleString()}
                         </p>
                         <p>Revenue</p>
-                        </div>
+                      </div>
                     </div>
                   </div>
-                   <Button variant="outline" onClick={() => handleViewAnalytics(course.title)}>View Analytics</Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => handleViewAnalytics(course.title)}
+                  >
+                    View Analytics
+                  </Button>
                 </div>
               ))}
             </CardContent>
