@@ -188,7 +188,7 @@ export function ContestClient({ contest }: ContestClientProps) {
                     </DialogTrigger>
                     <DialogContent>
                         <DialogHeader>
-                            <DialogTitle>Enter the "{contest.title}" Contest</DialogTitle>
+                            <DialogTitle>Enter the &quot;{contest.title}&quot; Contest</DialogTitle>
                             <DialogDescription>Share your story and achievements to become a nominee. Your submission will be reviewed by the panel.</DialogDescription>
                         </DialogHeader>
                         <div className="space-y-4 py-4">
@@ -333,7 +333,7 @@ export function ContestClient({ contest }: ContestClientProps) {
                             </Avatar>
                             <div>
                                 <DialogTitle className="text-2xl">{nominee.name}</DialogTitle>
-                                <DialogDescription>Nominee for "{contest.title}"</DialogDescription>
+                                <DialogDescription>Nominee for &quot;{contest.title}&quot;</DialogDescription>
                             </div>
                         </div>
                     </DialogHeader>

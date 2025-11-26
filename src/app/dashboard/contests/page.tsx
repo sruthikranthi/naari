@@ -141,9 +141,10 @@ export default function ContestsPage() {
         toast({ variant: 'destructive', title: 'Please log in to share.' });
         return;
     }
-    // eslint-disable-next-line react-hooks/purity -- Date.now() is used in event handler, not during render
+    // Generate post ID using timestamp in event handler (not during render)
+    const postTimestamp = Date.now();
     const newPost: Post = {
-        id: `post-${Date.now()}`,
+        id: `post-${postTimestamp}`,
         author: {
           id: user.uid,
           name: user.displayName || 'A Sakhi',

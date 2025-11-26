@@ -89,12 +89,14 @@ export default function CommunitiesPage() {
         return;
     }
 
+    // Generate image URLs using timestamp in event handler (not during render)
+    const commTimestamp = Date.now();
     const newCommunity = {
       name: data.name,
       description: data.description,
       memberCount: 1,
-      image: `https://picsum.photos/seed/newComm${Date.now()}/400/300`,
-      bannerImage: `https://picsum.photos/seed/newCommBanner${Date.now()}/1200/400`,
+      image: `https://picsum.photos/seed/newComm${commTimestamp}/400/300`,
+      bannerImage: `https://picsum.photos/seed/newCommBanner${commTimestamp}/1200/400`,
       leaderId: user.uid,
       memberIds: [user.uid],
       isPrivate: data.isPrivate,
