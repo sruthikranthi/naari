@@ -218,15 +218,29 @@ export function KittyGroupClient({ group, groupMembers, upcomingEvent, currentUs
             </CardContent>
           </Card>
         </div>
-        <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-5">
-          <Card className={cn('lg:col-span-3', isLive && 'flex flex-col')}>
+        <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <Card className={cn('lg:col-span-2', isLive && 'flex flex-col')}>
               {isLive ? (
                   <div className='flex flex-col h-full'>
-                      <div className="relative w-full bg-black flex-1">
-                          <CameraCapture onMediaCaptured={() => {}} />
-                           <div className="absolute top-2 left-2 flex items-center gap-2 rounded-full bg-destructive px-3 py-1 text-white text-sm"><div className="h-2 w-2 rounded-full bg-white animate-pulse"></div>LIVE</div>
+                      <div className="relative w-full bg-black flex-1 p-2 rounded-t-lg">
+                          <div className="absolute top-4 left-4 z-10 flex items-center gap-2 rounded-full bg-destructive px-3 py-1 text-white text-sm"><div className="h-2 w-2 rounded-full bg-white animate-pulse"></div>LIVE</div>
+                          <div className="grid grid-cols-2 gap-2 h-full">
+                            <div className="relative rounded-md overflow-hidden bg-secondary">
+                               <CameraCapture onMediaCaptured={() => {}} showControls={false} />
+                               <div className="absolute bottom-2 left-2 text-white text-sm font-medium bg-black/50 px-2 py-1 rounded-md">{currentUser.name} (You)</div>
+                            </div>
+                            {groupMembers.slice(1,4).map(member => (
+                                <div key={member.id} className="relative rounded-md overflow-hidden bg-secondary flex items-center justify-center">
+                                    <Avatar className="h-16 w-16">
+                                        <AvatarImage src={`https://picsum.photos/seed/${member.id}/100/100`} alt={member.name} />
+                                        <AvatarFallback>{member.name.split(' ').map(n=>n[0]).join('')}</AvatarFallback>
+                                    </Avatar>
+                                    <div className="absolute bottom-2 left-2 text-white text-sm font-medium bg-black/50 px-2 py-1 rounded-md">{member.name}</div>
+                                </div>
+                            ))}
+                          </div>
                       </div>
-                      <CardContent className="p-4 flex justify-center gap-2 mt-auto">
+                      <CardContent className="p-4 flex justify-center gap-2 mt-auto bg-card rounded-b-lg">
                         <Button
                             variant="ghost"
                             size="icon"
@@ -294,7 +308,7 @@ export function KittyGroupClient({ group, groupMembers, upcomingEvent, currentUs
                 </>
               )}
           </Card>
-          <Card className='lg:col-span-2'>
+          <Card className='lg:col-span-1'>
               {isLive ? (
                   <>
                     <CardHeader>
