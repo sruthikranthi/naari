@@ -24,15 +24,26 @@ export const useDashboard = () => {
   return context;
 };
 
-function DashboardProvider({ children }: { children: React.ReactNode }) {
+export function DashboardProvider({ children }: { children: React.ReactNode }) {
   const [posts, setPosts] = useState<Post[]>(initialPosts);
 
   const addPost = (newPost: Post) => {
     setPosts(prevPosts => [newPost, ...prevPosts]);
   };
 
+  const value = { posts, addPost };
+
   return (
     <DashboardContext.Provider value={{ addPost }}>
+      {children}
+    </DashboardContext.Provider>
+  );
+}
+
+function PageContent() {
+  const { posts, addPost } = useDashboardWithPosts();
+
+  return (
       <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-3">
         {/* Main content */}
         <div className="space-y-6 lg:col-span-2">
@@ -51,25 +62,26 @@ function DashboardProvider({ children }: { children: React.ReactNode }) {
           <TrendingHashtags />
         </div>
       </div>
-    </DashboardContext.Provider>
   );
 }
 
+// A new hook that also exposes posts
+const useDashboardWithPosts = () => {
+    const context = useContext(DashboardContext);
+    if (!context) {
+      throw new Error('useDashboard must be used within a DashboardProvider');
+    }
+    // We need to manage posts state here now for the main page
+    const [posts, setPosts] = useState<Post[]>(initialPosts);
+
+    const addPost = (newPost: Post) => {
+        setPosts(prevPosts => [newPost, ...prevPosts]);
+        context.addPost(newPost); // Also call the context's addPost if it has its own logic
+    };
+
+    return { posts, addPost };
+}
 
 export default function DashboardPage() {
-    return (
-        <DashboardProvider>
-            <PageContent />
-        </DashboardProvider>
-    )
+    return <PageContent />;
 }
-
-// We need a separate component to consume the context
-function PageContent() {
-  // useDashboard hook can be used here if needed, 
-  // but the main logic is now in DashboardProvider.
-  return null; // The actual content is rendered by DashboardProvider's children
-}
-
-// This allows child pages like 'contests' to import useDashboard
-export { DashboardProvider as _DashboardProvider };
