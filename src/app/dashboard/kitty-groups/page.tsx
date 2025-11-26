@@ -21,7 +21,7 @@ import {
   Video,
   BookOpen,
 } from 'lucide-react';
-import { kittyGroups as initialKittyGroups } from '@/lib/mock-data';
+import { kittyGroups as initialKittyGroups, users } from '@/lib/mock-data';
 import type { KittyGroup as KittyGroupType } from '@/lib/mock-data';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -52,10 +52,18 @@ import { Controller } from 'react-hook-form';
 
 
 const tools = [
-  { icon: ClipboardList, name: 'Contribution Tracker' },
-  { icon: Trophy, name: 'Winner Selection' },
-  { icon: IndianRupee, name: 'Expense Tracking' },
-  { icon: Cake, name: 'Event Planning' },
+  { 
+    id: 'winner-selection', 
+    icon: Trophy, 
+    name: 'Winner Selection' 
+  },
+  {
+    id: 'contribution-tracker',
+    icon: ClipboardList,
+    name: 'Contribution Tracker',
+  },
+  { id: 'expense-tracking', icon: IndianRupee, name: 'Expense Tracking' },
+  { id: 'event-planning', icon: Cake, name: 'Event Planning' },
 ];
 
 const kittyGroupSchema = z.object({
@@ -98,6 +106,23 @@ export default function KittyGroupsPage() {
     });
     reset();
     setIsDialogOpen(false);
+  };
+  
+  const handleToolClick = (toolId: string) => {
+    if (toolId === 'winner-selection') {
+      const allMembers = users.map(u => u.name);
+      const winner = allMembers[Math.floor(Math.random() * allMembers.length)];
+      toast({
+        title: '🎉 And the Winner is...',
+        description: `${winner}! Congratulations!`,
+        duration: 5000,
+      });
+    } else {
+      toast({
+        title: 'Feature Coming Soon!',
+        description: `The tool you selected will be available soon.`,
+      });
+    }
   };
 
   return (
@@ -283,15 +308,16 @@ export default function KittyGroupsPage() {
           <Card>
             <CardHeader>
               <CardTitle className="text-lg font-headline">Kitty Tools</CardTitle>
+              <CardDescription>Handy tools to manage your group.</CardDescription>
             </CardHeader>
             <CardContent className="p-4">
               <div className="grid grid-cols-2 gap-4">
                 {tools.map((tool) => (
                   <Button
-                    key={tool.name}
+                    key={tool.id}
                     variant="outline"
-                    className="flex h-24 flex-col items-center justify-center gap-2"
-                     onClick={() => toast({ title: 'Feature Coming Soon!', description: `The "${tool.name}" tool will be available soon.`})}
+                    className="flex h-24 flex-col items-center justify-center gap-2 p-2"
+                    onClick={() => handleToolClick(tool.id)}
                   >
                     <tool.icon className="h-6 w-6 text-primary" />
                     <span className="text-center text-xs">{tool.name}</span>
