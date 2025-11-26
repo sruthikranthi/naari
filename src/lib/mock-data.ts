@@ -160,6 +160,24 @@ export const posts: Post[] = [
     image: 'https://picsum.photos/seed/post1/600/400'
   },
   {
+    id: 'p2',
+    author: users[2],
+    content: "Feeling incredibly stressed with work lately. It's hard to find a balance. Any tips for managing work-life balance as an entrepreneur?",
+    timestamp: "5h ago",
+    likes: 120,
+    comments: 34,
+    isAnonymous: true,
+  },
+    {
+    id: 'p5',
+    author: users[4],
+    content: "Need some advice on handling a difficult situation at home, but don't want to talk about it openly. Grateful for this safe space to ask.",
+    timestamp: "8h ago",
+    likes: 88,
+    comments: 22,
+    isAnonymous: true,
+  },
+  {
     id: 'p4',
     author: users[3],
     content: "What should be our next kitty party theme?",
@@ -172,15 +190,6 @@ export const posts: Post[] = [
       { text: 'Masquerade Ball', votes: 28 },
       { text: '90s Nostalgia', votes: 15 },
     ]
-  },
-  {
-    id: 'p2',
-    author: users[2],
-    content: "Feeling incredibly stressed with work lately. It's hard to find a balance. Any tips for managing work-life balance as an entrepreneur?",
-    timestamp: "5h ago",
-    likes: 120,
-    comments: 34,
-    isAnonymous: true,
   },
   {
     id: 'p3',

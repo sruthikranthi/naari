@@ -9,6 +9,7 @@ import { Suggestions } from '@/components/suggestions';
 import { TrendingHashtags } from '@/components/trending-hashtags';
 import { posts as initialPosts } from '@/lib/mock-data';
 import type { Post } from '@/lib/mock-data';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 type DashboardContextType = {
   addPost: (newPost: Post) => void;
@@ -35,25 +36,45 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <DashboardContext.Provider value={{ addPost }}>
-      {children}
+      {React.cloneElement(children as React.ReactElement, { posts, addPost })}
     </DashboardContext.Provider>
   );
 }
 
 function PageContent() {
-  const { posts, addPost } = useDashboardWithPosts();
+    const { posts, addPost } = useDashboardWithPosts();
+    const anonymousPosts = posts.filter(p => p.isAnonymous);
 
-  return (
+    return (
       <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-3">
         {/* Main content */}
         <div className="space-y-6 lg:col-span-2">
           <Stories />
           <CreatePost onPostCreated={addPost} />
-          <div className="space-y-6">
-            {posts.map((post) => (
-              <PostCard key={post.id} post={post} />
-            ))}
-          </div>
+          
+          <Tabs defaultValue="all-posts">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="all-posts">All Posts</TabsTrigger>
+              <TabsTrigger value="anonymous-support">Anonymous Support</TabsTrigger>
+            </TabsList>
+            <TabsContent value="all-posts" className="mt-6 space-y-6">
+              {posts.map((post) => (
+                <PostCard key={post.id} post={post} />
+              ))}
+            </TabsContent>
+            <TabsContent value="anonymous-support" className="mt-6 space-y-6">
+               {anonymousPosts.length > 0 ? (
+                anonymousPosts.map((post) => (
+                    <PostCard key={post.id} post={post} />
+                ))
+               ) : (
+                <div className="py-20 text-center text-muted-foreground">
+                    <h3 className="text-lg font-semibold">No anonymous posts yet</h3>
+                    <p>This is a safe space to share without revealing your identity.</p>
+                </div>
+               )}
+            </TabsContent>
+          </Tabs>
         </div>
 
         {/* Sidebar */}
@@ -62,7 +83,7 @@ function PageContent() {
           <TrendingHashtags />
         </div>
       </div>
-  );
+    );
 }
 
 // A new hook that also exposes posts
@@ -76,7 +97,8 @@ const useDashboardWithPosts = () => {
 
     const addPost = (newPost: Post) => {
         setPosts(prevPosts => [newPost, ...prevPosts]);
-        context.addPost(newPost); // Also call the context's addPost if it has its own logic
+        // The context addPost is now mainly for other pages that might need to add a post
+        context.addPost(newPost);
     };
 
     return { posts, addPost };

@@ -1,3 +1,4 @@
+
 'use client';
 import { useState, useRef } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -8,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { users } from '@/lib/mock-data';
 import type { Post } from '@/lib/mock-data';
-import { BarChart, Image as ImageIcon, Video, X, Camera } from 'lucide-react';
+import { BarChart, Image as ImageIcon, Video, X, Camera, Shield } from 'lucide-react';
 import { Input } from './ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { CameraCapture } from './camera-capture';
@@ -192,7 +193,7 @@ export function CreatePost({ onPostCreated }: { onPostCreated?: (post: Post) => 
               </div>
             )}
             
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-y-2">
               <div className="flex items-center gap-1">
                 <input
                     type="file"
@@ -224,19 +225,19 @@ export function CreatePost({ onPostCreated }: { onPostCreated?: (post: Post) => 
                 </Button>
               </div>
               <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <Checkbox 
-                    id="anonymous-post" 
-                    checked={isAnonymous}
-                    onCheckedChange={(checked) => setIsAnonymous(checked as boolean)}
-                  />
-                  <Label
+                <Label
                     htmlFor="anonymous-post"
-                    className="text-sm font-normal text-muted-foreground"
+                    className="flex cursor-pointer items-center gap-2 rounded-full py-1 px-3 text-sm font-normal text-muted-foreground transition-colors hover:bg-accent has-[[data-state=checked]]:bg-primary/10 has-[[data-state=checked]]:text-primary has-[[data-state=checked]]:font-medium"
                   >
-                    Post Anonymously
+                    <Shield className="h-4 w-4" />
+                    <span>Post Anonymously</span>
+                    <Checkbox 
+                        id="anonymous-post" 
+                        className="sr-only"
+                        checked={isAnonymous}
+                        onCheckedChange={(checked) => setIsAnonymous(checked as boolean)}
+                    />
                   </Label>
-                </div>
                 <Button size="sm" onClick={handlePost}>Post</Button>
               </div>
             </div>
