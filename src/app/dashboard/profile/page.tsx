@@ -1,7 +1,7 @@
 
 'use client';
 import Image from 'next/image';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import {
   Edit,
   MapPin,
@@ -17,6 +17,7 @@ import {
   Book,
   Heart,
   Building,
+  Camera,
 } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, updateDoc, arrayUnion, arrayRemove, collection, query, where, limit } from 'firebase/firestore';
@@ -73,6 +74,7 @@ export default function ProfilePage() {
   const { user: currentUser, isUserLoading } = useUser();
   const firestore = useFirestore();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch the current user's profile document
   const userDocRef = useMemoFirebase(() => currentUser ? doc(firestore, 'users', currentUser.uid) : null, [currentUser, firestore]);
@@ -131,14 +133,7 @@ export default function ProfilePage() {
     }
   };
 
-  const handleGoPremium = () => {
-    toast({
-      title: 'Premium Coming Soon!',
-      description: 'Unlock exclusive features with Sakhi Premium. Stay tuned!',
-    });
-  };
-  
-    const handleFollow = async (targetUserId: string) => {
+  const handleFollow = async (targetUserId: string) => {
     if(!currentUser || !firestore) return;
     
     const currentUserRef = doc(firestore, 'users', currentUser.uid);
@@ -172,6 +167,29 @@ export default function ProfilePage() {
     }
   }
 
+  const handleImageUpload = async (type: 'avatar' | 'banner') => {
+    if (!userDocRef) return;
+    // This is a simulation. In a real app, you would upload the file to Firebase Storage
+    // and then get the download URL to save in Firestore.
+    const newImageUrl = `https://picsum.photos/seed/${type}${Date.now()}/${type === 'avatar' ? '200' : '1200'}/${type === 'avatar' ? '200' : '400'}`;
+    
+    const fieldToUpdate = type === 'avatar' ? 'avatar' : 'bannerImage';
+
+    try {
+        await updateDoc(userDocRef, { [fieldToUpdate]: newImageUrl });
+        toast({
+            title: `${type === 'avatar' ? 'Profile Photo' : 'Banner'} Updated!`,
+            description: 'Your new image has been saved.',
+        });
+    } catch (e) {
+        console.error(`Error updating ${type}:`, e);
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not update your image.' });
+    }
+  }
+
+  const triggerFileUpload = () => {
+      fileInputRef.current?.click();
+  }
 
   const userBadges = [
     { icon: Baby, label: 'Super Mom' },
@@ -221,19 +239,29 @@ export default function ProfilePage() {
     <div className="space-y-6">
       <Card className="overflow-hidden">
         <CardHeader className="p-0">
-          <div className="relative h-48 w-full bg-muted md:h-64">
+          <div className="group relative h-48 w-full bg-muted md:h-64">
             <Image
-              src="https://picsum.photos/seed/profile-banner/1200/400"
+              src={user.bannerImage || "https://picsum.photos/seed/profile-banner/1200/400"}
               alt="Profile banner"
               fill
               className="object-cover"
               data-ai-hint="abstract texture"
             />
+            <div className="absolute inset-0 bg-black/10 transition-colors group-hover:bg-black/30" />
+            <input type="file" ref={fileInputRef} onChange={() => handleImageUpload('banner')} className="hidden" accept="image/*" />
+            <Button 
+                variant="secondary" 
+                className="absolute top-4 right-4 opacity-0 transition-opacity group-hover:opacity-100"
+                onClick={triggerFileUpload}
+            >
+                <Camera className="mr-2 h-4 w-4" />
+                Edit Banner
+            </Button>
           </div>
         </CardHeader>
         <CardContent className="relative p-6 pt-0">
           <div className="flex flex-col items-center gap-4 md:flex-row md:items-end">
-            <div className="-mt-20 shrink-0 md:-mt-24">
+            <div className="group relative -mt-20 shrink-0 md:-mt-24">
               <Avatar className="h-32 w-32 border-4 border-card md:h-40 md:w-40">
                 <AvatarImage
                   src={user.avatar}
@@ -247,6 +275,16 @@ export default function ProfilePage() {
                     .join('')}
                 </AvatarFallback>
               </Avatar>
+               <input type="file" ref={fileInputRef} onChange={() => handleImageUpload('avatar')} className="hidden" accept="image/*" />
+               <Button 
+                    variant="secondary" 
+                    size="icon" 
+                    className="absolute bottom-2 right-2 h-8 w-8 rounded-full opacity-0 transition-opacity group-hover:opacity-100"
+                    onClick={triggerFileUpload}
+                >
+                    <Camera className="h-4 w-4"/>
+                    <span className="sr-only">Edit Profile Photo</span>
+                </Button>
             </div>
             <div className="flex-1 text-center md:ml-6 md:text-left">
               <div className="flex items-center justify-center gap-2 md:justify-start">
@@ -532,5 +570,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-
-    
