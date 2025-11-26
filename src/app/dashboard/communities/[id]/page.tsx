@@ -1,7 +1,12 @@
 
-import { notFound } from 'next/navigation';
-import { communities, posts, users } from '@/lib/mock-data';
+'use client';
+import { notFound, useParams } from 'next/navigation';
+import { useDoc, useFirestore, useMemoFirebase, useCollection } from '@/firebase';
+import { collection, doc, query, where } from 'firebase/firestore';
+
 import { CommunityClient } from './community-client';
+import type { Community, Post, User as UserType } from '@/lib/mock-data';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const communityEvents = [
   {
@@ -33,28 +38,70 @@ const communityResources = [
         description: 'Learn about the most effective marketing strategies for small businesses in 2024.',
         link: 'https://neilpatel.com/blog/marketing-strategies/'
     }
-]
+];
 
-export default function CommunityDetailPage({
-  params,
-}: {
-  params: { id: string };
-}) {
-  const { id } = params;
-  const community = communities.find((c) => c.id === id);
-  const communityMembers = users.slice(0, 4);
 
-  if (!community) {
-    notFound();
-  }
+function CommunityDetailPageContent() {
+    const params = useParams();
+    const { id } = params;
+    const firestore = useFirestore();
 
-  return (
-    <CommunityClient 
-        community={community}
-        communityMembers={communityMembers}
-        communityEvents={communityEvents}
-        posts={posts}
-        initialResources={community.id === 'comm3' ? communityResources : []}
-    />
-  );
+    const communityRef = useMemoFirebase(
+        () => (firestore && id ? doc(firestore, 'communities', id as string) : null),
+        [firestore, id]
+    );
+
+    const { data: community, isLoading: isCommunityLoading, error: communityError } = useDoc<Community>(communityRef);
+
+    const postsQuery = useMemoFirebase(
+      () => (firestore ? query(collection(firestore, 'posts'), orderBy('timestamp', 'desc')) : null),
+      [firestore]
+    );
+    const { data: posts, isLoading: arePostsLoading } = useCollection<Post>(postsQuery);
+
+    const membersQuery = useMemoFirebase(
+      () => (firestore && community?.memberIds && community.memberIds.length > 0) ? query(collection(firestore, 'users'), where('id', 'in', community.memberIds)) : null,
+      [firestore, community]
+    );
+    const { data: communityMembers, isLoading: areMembersLoading } = useCollection<UserType>(membersQuery);
+
+
+    if (isCommunityLoading || arePostsLoading || areMembersLoading) {
+        return (
+            <div className="space-y-6">
+                <Skeleton className="h-64 w-full" />
+                <div className="mx-auto max-w-3xl space-y-6">
+                    <Skeleton className="h-32 w-full" />
+                    <Skeleton className="h-48 w-full" />
+                </div>
+            </div>
+        );
+    }
+    
+    if (communityError) {
+        console.error("Error fetching community:", communityError);
+        return <p>Error loading community.</p>;
+    }
+
+    if (!community) {
+        notFound();
+    }
+
+    // For now, we show all posts. Filtering by community would be a future step.
+    const displayPosts = posts || [];
+    const displayMembers = communityMembers || [];
+
+    return (
+        <CommunityClient 
+            community={community}
+            communityMembers={displayMembers}
+            communityEvents={communityEvents}
+            posts={displayPosts}
+            initialResources={community.id === 'comm3' ? communityResources : []}
+        />
+    );
+}
+
+export default function CommunityDetailPage() {
+  return <CommunityDetailPageContent />;
 }
