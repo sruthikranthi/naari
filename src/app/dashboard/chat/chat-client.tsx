@@ -42,7 +42,7 @@ import {
 } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useUser, useFirestore, useCollection, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, query, where, addDoc, serverTimestamp, orderBy } from 'firebase/firestore';
 
 type SafetyCheckState = {
@@ -133,18 +133,25 @@ export function ChatClient() {
 
   useEffect(() => {
     // This effect runs after the safety check is complete
-    if (!isSafetyCheckPending && state.result && state.message && activeChatId && user) {
+    if (!isSafetyCheckPending && state.result && state.message && activeChatId && user && firestore) {
         if (state.result.safetyScore >= 40) {
             const messagesCol = collection(firestore, 'chats', activeChatId, 'messages');
-            addDoc(messagesCol, {
+            const messageData = {
                 senderId: user.uid,
                 text: state.message,
                 timestamp: serverTimestamp(),
                 chatId: activeChatId,
-            }).catch(e => {
-              console.error("Error sending message: ", e);
-              toast({ variant: 'destructive', title: 'Error', description: 'Could not send message.' });
+            };
+            
+            addDoc(messagesCol, messageData).catch(serverError => {
+                const permissionError = new FirestorePermissionError({
+                    path: messagesCol.path,
+                    operation: 'create',
+                    requestResourceData: messageData,
+                });
+                errorEmitter.emit('permission-error', permissionError);
             });
+
             setMessage('');
         } else {
              toast({
@@ -155,7 +162,7 @@ export function ChatClient() {
         }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state, isSafetyCheckPending, activeChatId, toast, user]);
+  }, [state, isSafetyCheckPending, activeChatId, toast, user, firestore]);
 
   const activeChat = chatList.find(c => c.id === activeChatId);
 
@@ -280,7 +287,7 @@ export function ChatClient() {
                     >
                       <p className="text-sm">{msg.text}</p>
                     </div>
-                    {msg.senderId === user?.uid && (
+                    {msg.senderId === user?.uid && user && (
                       <Avatar className="h-8 w-8">
                           <AvatarImage
                           src={`https://picsum.photos/seed/${user.uid}/100/100`}
@@ -427,3 +434,4 @@ function MessageReactions() {
   );
 }
 
+    

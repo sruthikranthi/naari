@@ -688,36 +688,42 @@ export default function AdminPanelPage() {
                             </CardHeader>
                             <CardContent className="space-y-4 text-sm">
                                 <ContestDetailItem
+                                    key={`rules-${managingContest.id}`}
                                     icon={FileText}
                                     label="Rules"
                                     value={managingContest.rules || 'Not set'}
                                     onEdit={(value) => handleUpdateContestDetail('rules', value)}
                                 />
                                 <ContestDetailItem
+                                    key={`eligibility-${managingContest.id}`}
                                     icon={UserCheck}
                                     label="Eligibility"
                                     value={managingContest.eligibility || 'Not set'}
                                     onEdit={(value) => handleUpdateContestDetail('eligibility', value)}
                                 />
                                 <ContestDetailItem
+                                    key={`ageRange-${managingContest.id}`}
                                     icon={Calendar}
                                     label="Age Range"
                                     value={managingContest.ageRange || 'Not set'}
                                     onEdit={(value) => handleUpdateContestDetail('ageRange', value)}
                                 />
                                 <ContestDetailItem
+                                    key={`education-${managingContest.id}`}
                                     icon={GraduationCap}
                                     label="Education"
                                     value={managingContest.education || 'Not set'}
                                     onEdit={(value) => handleUpdateContestDetail('education', value)}
                                 />
                                 <ContestDetailItem
+                                    key={`maxNominees-${managingContest.id}`}
                                     icon={Users2}
                                     label="Max Nominees"
                                     value={String(managingContest.maxNominees) || 'Not set'}
                                     onEdit={(value) => handleUpdateContestDetail('maxNominees', value)}
                                 />
                                 <ContestDetailItem
+                                    key={`nominationEndDate-${managingContest.id}`}
                                     icon={CalendarClock}
                                     label="Nomination Deadline"
                                     value={managingContest.nominationEndDate || 'Not set'}
@@ -867,4 +873,5 @@ function ContestDetailItem({ icon: Icon, label, value, onEdit }: { icon: React.E
     );
 }
 
+    
     
