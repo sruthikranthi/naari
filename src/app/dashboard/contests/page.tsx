@@ -142,6 +142,7 @@ export default function ContestsPage() {
         return;
     }
     // Generate post ID using timestamp in event handler (not during render)
+    // eslint-disable-next-line react-hooks/purity -- Date.now() is used in event handler, not during render
     const postTimestamp = Date.now();
     const newPost: Post = {
         id: `post-${postTimestamp}`,

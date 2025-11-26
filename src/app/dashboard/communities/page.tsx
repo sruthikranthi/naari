@@ -90,6 +90,7 @@ export default function CommunitiesPage() {
     }
 
     // Generate image URLs using timestamp in event handler (not during render)
+    // eslint-disable-next-line react-hooks/purity -- Date.now() is used in event handler, not during render
     const commTimestamp = Date.now();
     const newCommunity = {
       name: data.name,
