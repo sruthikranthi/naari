@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import Image from 'next/image';
-import { Plus, Calendar, User, MapPin, Check, Link as LinkIcon, FileText } from 'lucide-react';
+import { Plus, Calendar, User, MapPin, Check, Link as LinkIcon, FileText, Video } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -30,6 +30,8 @@ import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { CameraCapture } from '@/components/camera-capture';
 
 type CommunityEvent = {
     id: string;
@@ -67,6 +69,7 @@ export function CommunityClient({ community, communityMembers, communityEvents, 
   const [isJoined, setIsJoined] = useState(true);
   const [connectedMembers, setConnectedMembers] = useState<string[]>([]);
   const [resources, setResources] = useState(initialResources);
+  const [isMeetDialogOpen, setIsMeetDialogOpen] = useState(false);
   
   const { register, handleSubmit, reset, formState: { errors } } = useForm<ResourceFormValues>({
     resolver: zodResolver(resourceSchema),
@@ -109,6 +112,20 @@ export function CommunityClient({ community, communityMembers, communityEvents, 
     reset();
   };
 
+  const handleStartBroadcast = () => {
+    setIsMeetDialogOpen(false);
+    toast({
+      title: 'Broadcast Started!',
+      description: 'Your video seminar is now live for the community.',
+    });
+  };
+
+  const handleMediaCaptured = (dataUrl: string, type: 'image' | 'video') => {
+    // In a real app, you might use this for a thumbnail or preview
+    console.log('Media captured for meet:', type, dataUrl.substring(0, 50));
+  };
+
+
   return (
     <div className="space-y-6">
       <div className="relative h-48 w-full overflow-hidden rounded-lg md:h-64">
@@ -128,14 +145,36 @@ export function CommunityClient({ community, communityMembers, communityEvents, 
             {community.description}
           </p>
         </div>
-        <Button 
-            className="absolute top-4 right-4" 
-            variant={isJoined ? 'secondary' : 'default'}
-            onClick={handleJoinToggle}
-        >
-          {isJoined ? <Check className="mr-2 h-4 w-4" /> : <Plus className="mr-2 h-4 w-4" />}
-          {isJoined ? 'Joined' : 'Join'}
-        </Button>
+        <div className="absolute top-4 right-4 flex gap-2">
+            <Dialog open={isMeetDialogOpen} onOpenChange={setIsMeetDialogOpen}>
+                <DialogTrigger asChild>
+                    <Button variant="secondary"><Video className="mr-2 h-4 w-4" /> Start a Meet</Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-2xl">
+                    <DialogHeader>
+                        <DialogTitle>Start a Live Video Seminar</DialogTitle>
+                        <DialogDescription>
+                            Host a live session for your community. Your camera will be used.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        <Input placeholder="Enter a title for your seminar..." />
+                        <CameraCapture onMediaCaptured={handleMediaCaptured} />
+                    </div>
+                    <DialogFooter>
+                        <Button variant="ghost" onClick={() => setIsMeetDialogOpen(false)}>Cancel</Button>
+                        <Button onClick={handleStartBroadcast}>Start Broadcast</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+            <Button 
+                variant={isJoined ? 'secondary' : 'default'}
+                onClick={handleJoinToggle}
+            >
+            {isJoined ? <Check className="mr-2 h-4 w-4" /> : <Plus className="mr-2 h-4 w-4" />}
+            {isJoined ? 'Joined' : 'Join'}
+            </Button>
+        </div>
       </div>
 
       <Tabs defaultValue="discussions" className="w-full">
