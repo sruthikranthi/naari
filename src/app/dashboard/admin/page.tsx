@@ -1,6 +1,7 @@
 
 'use client';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Shield,
   Users,
@@ -25,6 +26,7 @@ import {
   Edit,
   Users2,
   CalendarClock,
+  Loader,
 } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
 import {
@@ -73,8 +75,11 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Textarea } from '@/components/ui/textarea';
 import { allContestsData } from '@/lib/contests-data';
 import type { Contest, JuryMember } from '@/lib/contests-data';
+import { useUser } from '@/firebase';
 
 type UserWithRole = User & { role: 'User' | 'Professional' | 'Creator'; status: 'Active' | 'Inactive' | 'Pending' };
+
+const SUPER_ADMIN_ID = 'ebixEzJ8UuYjIYTXrkOObW1obSw1';
 
 const initialUsers: UserWithRole[] = allUsers.map(u => ({
     ...u,
@@ -103,6 +108,8 @@ const allContests = allContestsData.map(c => ({
 allContests.push({ id: 'prop1', name: 'Pune Baking Championship', nominees: 0, status: 'Pending Approval', fee: '₹200' });
 
 export default function AdminPanelPage() {
+  const { user, isUserLoading } = useUser();
+  const router = useRouter();
   const { toast } = useToast();
   const [users, setUsers] = useState<UserWithRole[]>(initialUsers);
   const [contests, setContests] = useState(allContestsData);
@@ -114,6 +121,19 @@ export default function AdminPanelPage() {
   });
   const [isBroadcastOpen, setIsBroadcastOpen] = useState(false);
   const [managingContest, setManagingContest] = useState<Contest | null>(null);
+
+  const isSuperAdmin = user?.uid === SUPER_ADMIN_ID;
+
+  useEffect(() => {
+    if (!isUserLoading && !isSuperAdmin) {
+      toast({
+        variant: 'destructive',
+        title: 'Access Denied',
+        description: 'You do not have permission to view this page.',
+      });
+      router.push('/dashboard');
+    }
+  }, [isUserLoading, isSuperAdmin, router, toast]);
 
   const filteredUsers = useMemo(() => {
     if (filterRole === 'All') return users;
@@ -202,6 +222,13 @@ export default function AdminPanelPage() {
     })
   }
 
+  if (isUserLoading || !isSuperAdmin) {
+    return (
+      <div className="flex h-full min-h-[calc(100vh-10rem)] w-full items-center justify-center">
+        <Loader className="h-10 w-10 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

@@ -1,5 +1,10 @@
 
+'use client';
+
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useAuth, useUser } from '@/firebase';
+import { signOut } from 'firebase/auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -11,35 +16,68 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { users } from '@/lib/mock-data';
+import { useToast } from '@/hooks/use-toast';
+import { Skeleton } from './ui/skeleton';
 
 export function UserNav() {
-  const user = users[0]; // mock user
+  const auth = useAuth();
+  const { user, isUserLoading } = useUser();
+  const router = useRouter();
+  const { toast } = useToast();
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      toast({
+        title: 'Logged Out',
+        description: 'You have been successfully logged out.',
+      });
+      router.push('/');
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Logout Failed',
+        description: 'There was an error logging you out.',
+      });
+    }
+  };
+
+  if (isUserLoading) {
+    return <Skeleton className="h-10 w-10 rounded-full" />;
+  }
+  
+  if (!user) {
+    return (
+        <Button asChild>
+            <Link href="/login">Sign In</Link>
+        </Button>
+    )
+  }
+
+  const userInitial = user.displayName
+    ? user.displayName.split(' ').map((n) => n[0]).join('')
+    : user.email?.charAt(0).toUpperCase() || 'U';
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-8 w-8 rounded-full">
           <Avatar className="h-9 w-9">
             <AvatarImage
-              src={user.avatar}
-              alt={user.name}
+              src={user.photoURL || `https://picsum.photos/seed/${user.uid}/100/100`}
+              alt={user.displayName || 'User'}
               data-ai-hint="woman portrait"
             />
-            <AvatarFallback>
-              {user.name
-                .split(' ')
-                .map((n) => n[0])
-                .join('')}
-            </AvatarFallback>
+            <AvatarFallback>{userInitial}</AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{user.name}</p>
+            <p className="text-sm font-medium leading-none">{user.displayName || 'Sakhi User'}</p>
             <p className="text-xs leading-none text-muted-foreground">
-              {user.id}@sakhicircle.com
+              {user.email}
             </p>
           </div>
         </DropdownMenuLabel>
@@ -51,7 +89,7 @@ export function UserNav() {
           <DropdownMenuItem>Settings</DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem>Log out</DropdownMenuItem>
+        <DropdownMenuItem onClick={handleLogout}>Log out</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

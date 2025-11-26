@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -12,12 +13,20 @@ import { Logo } from '@/components/logo';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { CameraCapture } from '@/components/camera-capture';
 import { useToast } from '@/hooks/use-toast';
+import { useUser } from '@/firebase';
 
 export default function VerificationPage() {
   const [isVerificationOpen, setIsVerificationOpen] = useState(false);
   const [verificationStep, setVerificationStep] = useState<'capture' | 'verifying' | 'success'>('capture');
   const router = useRouter();
   const { toast } = useToast();
+  const { user, isUserLoading } = useUser();
+
+  useEffect(() => {
+    if (!isUserLoading && user) {
+        router.push('/dashboard');
+    }
+  }, [user, isUserLoading, router]);
 
   const handleMediaCaptured = (dataUrl: string, type: 'image' | 'video') => {
     // In a real app, this media would be sent to a backend for analysis.
@@ -35,6 +44,7 @@ export default function VerificationPage() {
     }
     if (verificationStep === 'success') {
       // After success, redirect to dashboard
+      // In a real app, this would happen after anonymous user is created or logged in.
       const timer = setTimeout(() => {
         router.push('/dashboard');
       }, 1500);
@@ -126,7 +136,7 @@ export default function VerificationPage() {
           <p className="text-center text-sm text-muted-foreground">
             Already have an account?{' '}
             <Link
-              href="/dashboard"
+              href="/login"
               className="font-semibold text-primary underline-offset-4 hover:underline"
             >
               Sign In
