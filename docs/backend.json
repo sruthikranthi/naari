@@ -315,7 +315,7 @@
           "type": "string",
           "description": "Unique identifier for the Course entity."
         },
-        "name": {
+        "title": {
           "type": "string",
           "description": "Name of the course."
         },
@@ -333,13 +333,38 @@
           "items": {
             "type": "string"
           }
+        },
+        "category": {
+            "type": "string",
+            "description": "Category of the course (e.g., Business, Beauty, Wellness)."
+        },
+        "level": {
+            "type": "string",
+            "description": "Difficulty level of the course (e.g., Beginner, Intermediate)."
+        },
+        "duration": {
+            "type": "string",
+            "description": "Estimated duration to complete the course."
+        },
+        "price": {
+            "type": "number",
+            "description": "Price of the course. 0 indicates free."
+        },
+        "image": {
+            "type": "string",
+            "description": "URL for the course's cover image."
         }
       },
       "required": [
         "id",
-        "name",
+        "title",
         "description",
-        "instructorId"
+        "instructorId",
+        "category",
+        "level",
+        "duration",
+        "price",
+        "image"
       ]
     },
     "Event": {

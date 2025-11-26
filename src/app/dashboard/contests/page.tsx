@@ -51,7 +51,7 @@ import {
 } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { useState } from 'react';
-import { useDashboard } from '../page';
+import { useDashboard } from '../layout';
 import { users } from '@/lib/mock-data';
 import type { Post } from '@/lib/mock-data';
 
@@ -383,5 +383,3 @@ export default function ContestsPage() {
     </div>
   );
 }
-
-    

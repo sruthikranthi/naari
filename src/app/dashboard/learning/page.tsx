@@ -2,8 +2,9 @@
 'use client';
 import { useState } from 'react';
 import Image from 'next/image';
-import { Clock, User, BarChart2, BookCheck, Plus, IndianRupee } from 'lucide-react';
-import { courses as allCourses } from '@/lib/mock-data';
+import { Clock, User, BarChart2, BookCheck, Plus, Loader } from 'lucide-react';
+import { useCollection, useFirestore, useUser, useMemoFirebase } from '@/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import type { Course } from '@/lib/mock-data';
 import { PageHeader } from '@/components/page-header';
 import {
@@ -29,6 +30,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { Skeleton } from '@/components/ui/skeleton';
+
 
 const categories = [
   'Business',
@@ -41,7 +44,6 @@ const categories = [
 
 const courseSchema = z.object({
   title: z.string().min(5, 'Title must be at least 5 characters.'),
-  instructor: z.string().min(3, 'Instructor name is required.'),
   duration: z.string().min(2, 'Duration is required.'),
   category: z.string().nonempty('Please select a category.'),
   level: z.string().nonempty('Please select a level.'),
@@ -51,9 +53,17 @@ const courseSchema = z.object({
 type CourseFormValues = z.infer<typeof courseSchema>;
 
 export default function LearningPage() {
-  const [courses, setCourses] = useState<Course[]>(allCourses);
-  const [enrolledCourses, setEnrolledCourses] = useState<Course[]>([]);
   const { toast } = useToast();
+  const firestore = useFirestore();
+  const { user, isUserLoading } = useUser();
+
+  const coursesQuery = useMemoFirebase(
+    () => (firestore && user ? collection(firestore, 'courses') : null),
+    [firestore, user]
+  );
+  const { data: courses, isLoading: areCoursesLoading } = useCollection<Course>(coursesQuery);
+
+  const [enrolledCourses, setEnrolledCourses] = useState<Course[]>([]);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
   const { control, register, handleSubmit, formState: { errors }, reset } = useForm<CourseFormValues>({
@@ -69,25 +79,44 @@ export default function LearningPage() {
     });
   };
 
-  const handleCreateCourse = (data: CourseFormValues) => {
-    const newCourse: Course = {
-        id: `c${Date.now()}`,
+  const handleCreateCourse = async (data: CourseFormValues) => {
+    if (!user) {
+        toast({ variant: 'destructive', title: 'Not authenticated'});
+        return;
+    }
+
+    const newCourse = {
         title: data.title,
-        category: data.category as Course['category'],
-        instructor: data.instructor,
+        category: data.category,
+        instructorId: user.uid,
+        instructor: user.displayName || 'Anonymous Instructor',
         duration: data.duration,
-        level: data.level as Course['level'],
+        level: data.level,
         price: data.price,
-        image: `https://picsum.photos/seed/newCourse${courses.length + 1}/600/400`,
+        image: `https://picsum.photos/seed/newCourse${courses?.length || 0 + 1}/600/400`,
+        createdAt: serverTimestamp(),
+        enrolledUserIds: [],
     };
-    setCourses([newCourse, ...courses]);
-    toast({
-        title: 'Course Created!',
-        description: `"${data.title}" has been added to the discoverable courses.`
-    });
-    reset();
-    setIsCreateDialogOpen(false);
+    
+    try {
+        await addDoc(collection(firestore, 'courses'), newCourse);
+        toast({
+            title: 'Course Created!',
+            description: `"${data.title}" has been added to the discoverable courses.`
+        });
+        reset();
+        setIsCreateDialogOpen(false);
+    } catch(e) {
+        console.error("Error creating course:", e);
+        toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'Could not create course. Please try again.'
+        });
+    }
   }
+  
+  const isLoading = isUserLoading || areCoursesLoading;
 
   return (
     <div>
@@ -113,9 +142,8 @@ export default function LearningPage() {
                     </div>
                      <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <Label htmlFor="instructor">Instructor</Label>
-                            <Input id="instructor" {...register("instructor")} />
-                            {errors.instructor && <p className="text-destructive text-xs mt-1">{errors.instructor.message}</p>}
+                           <Label htmlFor="instructor">Instructor</Label>
+                           <Input id="instructor" value={user?.displayName || 'Your Name'} disabled />
                         </div>
                          <div>
                             <Label htmlFor="duration">Duration</Label>
@@ -188,7 +216,12 @@ export default function LearningPage() {
         </TabsList>
 
         <TabsContent value="discover" className="mt-6">
-            <DiscoverCourses courses={courses} onEnroll={handleEnroll} enrolledIds={enrolledCourses.map(c => c.id)} />
+            <DiscoverCourses 
+                courses={courses || []} 
+                onEnroll={handleEnroll} 
+                enrolledIds={enrolledCourses.map(c => c.id)}
+                isLoading={isLoading}
+            />
         </TabsContent>
 
         <TabsContent value="my-learning" className="mt-6">
@@ -210,7 +243,7 @@ export default function LearningPage() {
   );
 }
 
-function DiscoverCourses({ courses, onEnroll, enrolledIds }: { courses: Course[], onEnroll: (course: Course) => void; enrolledIds: string[] }) {
+function DiscoverCourses({ courses, onEnroll, enrolledIds, isLoading }: { courses: Course[], onEnroll: (course: Course) => void; enrolledIds: string[]; isLoading: boolean; }) {
   const [activeCategory, setActiveCategory] = useState('All');
 
   const filteredCourses =
@@ -230,19 +263,24 @@ function DiscoverCourses({ courses, onEnroll, enrolledIds }: { courses: Course[]
           ))}
         </TabsList>
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {filteredCourses.map((course) => (
-                <CourseCard 
-                    key={course.id} 
-                    course={course} 
-                    onEnroll={onEnroll}
-                    isEnrolled={enrolledIds.includes(course.id)}
-                />
-            ))}
-            {filteredCourses.length === 0 && (
-            <div className="col-span-full py-20 text-center text-muted-foreground">
-                <h3 className="text-lg font-semibold">No courses found in this category</h3>
-                <p>Check back later for new courses!</p>
-            </div>
+            {isLoading ? (
+                [...Array(3)].map((_, i) => (
+                    <Card key={i}><Skeleton className="h-full w-full aspect-[4/5]" /></Card>
+                ))
+            ) : filteredCourses.length > 0 ? (
+                filteredCourses.map((course) => (
+                    <CourseCard 
+                        key={course.id} 
+                        course={course} 
+                        onEnroll={onEnroll}
+                        isEnrolled={enrolledIds.includes(course.id)}
+                    />
+                ))
+            ) : (
+                <div className="col-span-full py-20 text-center text-muted-foreground">
+                    <h3 className="text-lg font-semibold">No courses found in this category</h3>
+                    <p>Check back later for new courses!</p>
+                </div>
             )}
         </div>
     </Tabs>
