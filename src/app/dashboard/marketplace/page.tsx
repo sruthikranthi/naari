@@ -1,10 +1,10 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Star, Plus } from 'lucide-react';
+import { Star, Plus, SlidersHorizontal, ChevronDown } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -33,6 +33,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Slider } from '@/components/ui/slider';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
 
 const productSchema = z.object({
   name: z.string().min(3, { message: 'Product name must be at least 3 characters.' }),
@@ -43,10 +48,20 @@ const productSchema = z.object({
 
 type ProductFormValues = z.infer<typeof productSchema>;
 
+const allCategories = [...new Set(initialProducts.map(p => p.category))];
+const maxPrice = Math.max(...initialProducts.map(p => p.price));
+
 export default function MarketplacePage() {
   const [products, setProducts] = useState<Product[]>(initialProducts);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
+
+  // Filter and sort state
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [priceRange, setPriceRange] = useState([maxPrice]);
+  const [selectedRating, setSelectedRating] = useState(0);
+  const [sortBy, setSortBy] = useState('newest');
+
 
   const {
     register,
@@ -78,6 +93,35 @@ export default function MarketplacePage() {
     reset();
     setIsDialogOpen(false);
   };
+  
+  const handleCategoryChange = (category: string) => {
+    setSelectedCategories(prev => 
+      prev.includes(category) 
+        ? prev.filter(c => c !== category) 
+        : [...prev, category]
+    );
+  };
+
+  const filteredAndSortedProducts = useMemo(() => {
+    let filtered = products
+      .filter(p => selectedCategories.length === 0 || selectedCategories.includes(p.category))
+      .filter(p => p.price <= priceRange[0])
+      .filter(p => p.rating >= selectedRating);
+
+    switch (sortBy) {
+        case 'price-asc':
+            filtered.sort((a, b) => a.price - b.price);
+            break;
+        case 'price-desc':
+            filtered.sort((a, b) => b.price - a.price);
+            break;
+        case 'newest':
+        default:
+            // Assuming newer products are at the beginning of the original array
+            break;
+    }
+    return filtered;
+  }, [products, selectedCategories, priceRange, selectedRating, sortBy]);
 
   return (
     <div>
@@ -143,57 +187,146 @@ export default function MarketplacePage() {
         </Dialog>
       </div>
 
-      <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {products.map((product) => (
-          <Link key={product.id} href={`/dashboard/marketplace/${product.id}`} className="group">
-            <Card className="overflow-hidden h-full flex flex-col">
-              <CardHeader className="p-0">
-                <div className="relative aspect-4/3 w-full">
-                  <Image
-                    src={product.images[0]}
-                    alt={product.name}
-                    fill
-                    className="object-cover transition-transform duration-300 group-hover:scale-105"
-                    data-ai-hint="product lifestyle"
-                  />
-                </div>
-              </CardHeader>
-              <CardContent className="p-4 flex flex-col flex-grow">
-                <p className="mb-1 text-lg font-headline flex-grow">{product.name}</p>
-                <div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground">
-                  <Avatar className="h-5 w-5">
-                    <AvatarImage
-                      src={`https://picsum.photos/seed/${product.seller.id}/100/100`}
-                      alt={product.seller.name}
-                      data-ai-hint="woman seller"
-                    />
-                    <AvatarFallback>
-                      {product.seller.name
-                        .split(' ')
-                        .map((n) => n[0])
-                        .join('')}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span>{product.seller.name}</span>
-                </div>
-                <div className="flex items-center justify-between mt-auto">
-                  <Badge variant="secondary" className="text-base">
-                    ₹{product.price.toLocaleString()}
-                  </Badge>
-                  <div className="flex items-center gap-1 text-sm text-amber-500">
-                    <Star className="h-4 w-4 fill-current" />
-                    <span className="font-semibold text-foreground">
-                      {product.rating}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      ({product.reviewCount})
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mt-6">
+        {/* Filters Sidebar */}
+        <aside className="md:col-span-1">
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center justify-between">
+                        Filters
+                        <Button variant="ghost" size="sm" onClick={() => {
+                            setSelectedCategories([]);
+                            setPriceRange([maxPrice]);
+                            setSelectedRating(0);
+                        }}>Clear</Button>
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    <div>
+                        <h4 className="font-semibold mb-2">Category</h4>
+                        <div className="space-y-2">
+                            {allCategories.map(category => (
+                                <div key={category} className="flex items-center gap-2">
+                                    <Checkbox 
+                                        id={`cat-${category}`} 
+                                        checked={selectedCategories.includes(category)}
+                                        onCheckedChange={() => handleCategoryChange(category)}
+                                    />
+                                    <Label htmlFor={`cat-${category}`}>{category}</Label>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                    <Separator />
+                    <div>
+                        <h4 className="font-semibold mb-4">Price Range</h4>
+                        <Slider 
+                            value={priceRange} 
+                            onValueChange={setPriceRange} 
+                            max={maxPrice} 
+                            step={100}
+                        />
+                         <p className="text-sm text-muted-foreground mt-2 text-right">Up to ₹{priceRange[0].toLocaleString()}</p>
+                    </div>
+                    <Separator />
+                     <div>
+                        <h4 className="font-semibold mb-2">Rating</h4>
+                        <RadioGroup value={String(selectedRating)} onValueChange={(val) => setSelectedRating(Number(val))}>
+                            {[4, 3, 2, 1, 0].map(rating => (
+                                <div key={rating} className="flex items-center space-x-2">
+                                    <RadioGroupItem value={String(rating)} id={`rating-${rating}`} />
+                                    <Label htmlFor={`rating-${rating}`} className="flex items-center">
+                                       {rating > 0 ? (
+                                           <>
+                                            {[...Array(5)].map((_, i) => (
+                                                <Star key={i} className={`h-4 w-4 ${i < rating ? 'text-amber-500 fill-amber-500' : 'text-muted-foreground/30'}`}/>
+                                            ))}
+                                            <span className="ml-2 text-muted-foreground">& up</span>
+                                           </>
+                                       ) : 'Any Rating'}
+                                    </Label>
+                                </div>
+                            ))}
+                        </RadioGroup>
+                    </div>
+
+                </CardContent>
             </Card>
-          </Link>
-        ))}
+        </aside>
+
+        {/* Products Grid */}
+        <main className="md:col-span-3">
+             <div className="flex justify-end mb-4">
+                 <Select value={sortBy} onValueChange={setSortBy}>
+                    <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="Sort by" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="newest">Newest</SelectItem>
+                        <SelectItem value="price-asc">Price: Low to High</SelectItem>
+                        <SelectItem value="price-desc">Price: High to Low</SelectItem>
+                    </SelectContent>
+                </Select>
+            </div>
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
+                {filteredAndSortedProducts.map((product) => (
+                <Link key={product.id} href={`/dashboard/marketplace/${product.id}`} className="group">
+                    <Card className="overflow-hidden h-full flex flex-col">
+                    <CardHeader className="p-0">
+                        <div className="relative aspect-4/3 w-full">
+                        <Image
+                            src={product.images[0]}
+                            alt={product.name}
+                            fill
+                            className="object-cover transition-transform duration-300 group-hover:scale-105"
+                            data-ai-hint="product lifestyle"
+                        />
+                        </div>
+                    </CardHeader>
+                    <CardContent className="p-4 flex flex-col flex-grow">
+                        <p className="mb-1 text-lg font-headline flex-grow">{product.name}</p>
+                        <div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground">
+                        <Avatar className="h-5 w-5">
+                            <AvatarImage
+                            src={`https://picsum.photos/seed/${product.seller.id}/100/100`}
+                            alt={product.seller.name}
+                            data-ai-hint="woman seller"
+                            />
+                            <AvatarFallback>
+                            {product.seller.name
+                                .split(' ')
+                                .map((n) => n[0])
+                                .join('')}
+                            </AvatarFallback>
+                        </Avatar>
+                        <span>{product.seller.name}</span>
+                        </div>
+                        <div className="flex items-center justify-between mt-auto">
+                        <Badge variant="secondary" className="text-base">
+                            ₹{product.price.toLocaleString()}
+                        </Badge>
+                        <div className="flex items-center gap-1 text-sm text-amber-500">
+                            <Star className="h-4 w-4 fill-current" />
+                            <span className="font-semibold text-foreground">
+                            {product.rating.toFixed(1)}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                            ({product.reviewCount})
+                            </span>
+                        </div>
+                        </div>
+                    </CardContent>
+                    </Card>
+                </Link>
+                ))}
+            </div>
+            {filteredAndSortedProducts.length === 0 && (
+                <div className="col-span-full py-20 text-center text-muted-foreground">
+                    <h3 className="text-lg font-semibold">No products found</h3>
+                    <p>Try adjusting your filters.</p>
+                </div>
+            )}
+        </main>
       </div>
     </div>
   );
