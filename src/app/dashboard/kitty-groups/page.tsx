@@ -18,6 +18,8 @@ import {
   ClipboardList,
   Cake,
   Plus,
+  Video,
+  BookOpen,
 } from 'lucide-react';
 import { kittyGroups as initialKittyGroups } from '@/lib/mock-data';
 import type { KittyGroup as KittyGroupType } from '@/lib/mock-data';
@@ -158,27 +160,9 @@ export default function KittyGroupsPage() {
           ))}
         </div>
         <div className="space-y-6 lg:col-span-1">
-          <h2 className="text-2xl font-bold font-headline">Kitty Tools</h2>
-          <Card>
-            <CardContent className="p-4">
-              <div className="grid grid-cols-2 gap-4">
-                {tools.map((tool) => (
-                  <Button
-                    key={tool.name}
-                    variant="outline"
-                    className="flex h-24 flex-col items-center justify-center gap-2"
-                     onClick={() => toast({ title: 'Feature Coming Soon!', description: `The "${tool.name}" tool will be available soon.`})}
-                  >
-                    <tool.icon className="h-6 w-6 text-primary" />
-                    <span className="text-center text-xs">{tool.name}</span>
-                  </Button>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="w-full">
+              <Button className="w-full" size="lg">
                 <Plus className="mr-2 h-4 w-4" />
                 Create New Kitty Group
               </Button>
@@ -268,6 +252,54 @@ export default function KittyGroupsPage() {
               </form>
             </DialogContent>
           </Dialog>
+
+          <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2"><BookOpen className="text-primary" />How-To Guide</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4 text-sm">
+                <div>
+                    <h4 className="font-semibold flex items-center gap-2"><Video className="h-4 w-4"/>For Online Kitty Parties</h4>
+                    <ul className="list-disc pl-5 mt-2 text-muted-foreground space-y-1">
+                        <li>The designated host starts a "Virtual Party" from the group page.</li>
+                        <li>Members receive a notification and can join the live video stream.</li>
+                        <li>Interact with everyone using the live chat and send fun reactions.</li>
+                        <li>The lucky draw can be held live for full transparency!</li>
+                    </ul>
+                </div>
+                <Separator />
+                 <div>
+                    <h4 className="font-semibold flex items-center gap-2"><Users className="h-4 w-4"/>For Offline (In-Person) Parties</h4>
+                    <ul className="list-disc pl-5 mt-2 text-muted-foreground space-y-1">
+                        <li>Use the app as your digital diary for the kitty group.</li>
+                        <li>Track member contributions easily with "Payment Status".</li>
+                        <li>Use the "Members" tab to manage your group and send reminders.</li>
+                        <li>Keep a record of hosts and event dates all in one place.</li>
+                    </ul>
+                </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg font-headline">Kitty Tools</CardTitle>
+            </CardHeader>
+            <CardContent className="p-4">
+              <div className="grid grid-cols-2 gap-4">
+                {tools.map((tool) => (
+                  <Button
+                    key={tool.name}
+                    variant="outline"
+                    className="flex h-24 flex-col items-center justify-center gap-2"
+                     onClick={() => toast({ title: 'Feature Coming Soon!', description: `The "${tool.name}" tool will be available soon.`})}
+                  >
+                    <tool.icon className="h-6 w-6 text-primary" />
+                    <span className="text-center text-xs">{tool.name}</span>
+                  </Button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
