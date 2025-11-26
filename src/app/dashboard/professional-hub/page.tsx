@@ -1,6 +1,6 @@
 
 'use client';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Users,
   BookOpen,
@@ -10,9 +10,10 @@ import {
   Star,
   Check,
   X,
-  Calendar,
+  Calendar as CalendarIcon,
   MoreVertical,
   Loader,
+  Briefcase,
 } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
 import {
@@ -50,10 +51,14 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { useCollection, useFirestore, useUser, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { collection, query, where, addDoc } from 'firebase/firestore';
 import type { Professional } from '@/lib/directory';
 import type { Course, User } from '@/lib/mock-data';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import Link from 'next/link';
 
 type IncomingRequest = {
   user: User;
@@ -66,6 +71,61 @@ type Client = {
   status: 'Upcoming' | 'Completed' | 'Cancelled';
 };
 
+function BecomeProfessionalCard() {
+    const { toast } = useToast();
+    
+    const handleApply = () => {
+        toast({
+            title: "Application Submitted!",
+            description: "Your application to become a professional is under review.",
+        });
+    }
+
+    return (
+        <Card className="text-center">
+            <CardHeader>
+                <div className="mx-auto bg-primary/10 text-primary p-3 rounded-full w-fit">
+                    <Briefcase className="h-8 w-8" />
+                </div>
+                <CardTitle>Become a Professional or Creator</CardTitle>
+                <CardDescription>
+                    Ready to offer your services or create content? Apply to get access to the Professional & Creator Hub.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                 <Dialog>
+                    <DialogTrigger asChild>
+                       <Button>Apply Now</Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Professional Application</DialogTitle>
+                            <DialogDescription>
+                                Tell us a bit about your expertise. Your application will be reviewed by our team.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                            <div>
+                                <Label htmlFor="specialty">Your Specialty</Label>
+                                <Input id="specialty" placeholder="e.g., Career Coach, Yoga Instructor" />
+                            </div>
+                             <div>
+                                <Label htmlFor="bio">Short Bio</Label>
+                                <Textarea id="bio" placeholder="Describe your experience and what you offer." />
+                            </div>
+                        </div>
+                        <DialogFooter>
+                            <DialogClose asChild><Button variant="ghost">Cancel</Button></DialogClose>
+                            <Button onClick={handleApply}>Submit Application</Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+            </CardContent>
+        </Card>
+    )
+}
+
+
 export default function ProfessionalHubPage() {
   const { toast } = useToast();
   const [incomingRequests, setIncomingRequests] = useState<IncomingRequest[]>([]);
@@ -77,37 +137,31 @@ export default function ProfessionalHubPage() {
   const firestore = useFirestore();
   const { user: currentUser, isUserLoading } = useUser();
 
-  const directoryQuery = useMemoFirebase(
-    () => (firestore && currentUser ? collection(firestore, 'directory') : null),
+  // Check if the current user is listed in the professionals directory
+  const professionalQuery = useMemoFirebase(
+    () => (firestore && currentUser ? query(collection(firestore, 'directory'), where('id', '==', currentUser.uid), limit(1)) : null),
     [firestore, currentUser]
   );
-  const { data: professionals, isLoading: areProfessionalsLoading } = useCollection<Professional>(directoryQuery);
+  const { data: professionalData, isLoading: isProfLoading } = useCollection<Professional>(professionalQuery);
+  const professional = professionalData?.[0];
 
+  // Check if the current user is an instructor for any course
   const coursesQuery = useMemoFirebase(
-    () => (firestore && currentUser ? collection(firestore, 'courses') : null),
+    () => (firestore && currentUser ? query(collection(firestore, 'courses'), where('instructorId', '==', currentUser.uid)) : null),
     [firestore, currentUser]
   );
-  const { data: courses, isLoading: areCoursesLoading } = useCollection<Course>(coursesQuery);
+  const { data: creatorCourses, isLoading: areCoursesLoading } = useCollection<Course>(coursesQuery);
 
-  const usersQuery = useMemoFirebase(
-    () => (firestore && currentUser ? collection(firestore, 'users') : null),
-    [firestore, currentUser]
+  const isProfessional = !!professional;
+  const isCreator = (creatorCourses?.length || 0) > 0;
+
+
+  const { data: users, isLoading: areUsersLoading } = useCollection<User>(
+    useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore])
   );
-  const { data: users, isLoading: areUsersLoading } = useCollection<User>(usersQuery);
 
-  const professional = useMemo(() => professionals?.[0], [professionals]);
-  
-  const { courseCreator, creatorCourses } = useMemo(() => {
-    if (!courses || !users) return { courseCreator: null, creatorCourses: [] };
-    const creator = users.find(u => u.id === 'u3'); // Mocking: finding a specific user as creator
-    if (!creator) return { courseCreator: null, creatorCourses: [] };
-    
-    const created = courses.filter(c => c.instructorId === creator.id);
-    return { courseCreator: creator, creatorCourses: created };
-  }, [courses, users]);
 
-  // Set up mock requests and clients once users are loaded
-  useState(() => {
+  useEffect(() => {
     if (users && users.length > 3) {
       setIncomingRequests([
         { user: users[1], message: "Hi Dr. Gupta, I'd like to book a session." },
@@ -118,7 +172,7 @@ export default function ProfessionalHubPage() {
         { user: users[2], sessionDate: 'July 15, 2024', status: 'Completed' },
       ]);
     }
-  });
+  }, [users]);
 
   const handleRequest = (request: IncomingRequest, accepted: boolean) => {
     setIncomingRequests((prev) =>
@@ -194,7 +248,7 @@ export default function ProfessionalHubPage() {
     }
   }
 
-  const isLoading = isUserLoading || areProfessionalsLoading || areCoursesLoading || areUsersLoading;
+  const isLoading = isUserLoading || isProfLoading || areCoursesLoading || areUsersLoading;
 
   if (isLoading) {
     return (
@@ -208,14 +262,15 @@ export default function ProfessionalHubPage() {
         </div>
     )
   }
-
-  if (!professional || !courseCreator) {
-    return (
-        <div className="text-center py-10">
-            <p>Could not load professional or creator data.</p>
-        </div>
-    )
+  
+  if (!isProfessional && !isCreator) {
+      return (
+          <div className="flex items-center justify-center h-full min-h-[60vh]">
+            <BecomeProfessionalCard />
+          </div>
+      )
   }
+
 
   return (
     <div className="space-y-6">
@@ -223,19 +278,19 @@ export default function ProfessionalHubPage() {
         title="Professional & Creator Hub"
         description="Manage your professional activities and content."
       />
-      <Tabs defaultValue="professional">
+      <Tabs defaultValue={isProfessional ? "professional" : "creator"}>
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="professional">
+          <TabsTrigger value="professional" disabled={!isProfessional}>
             <Users className="mr-2 h-4 w-4" /> Professional View
           </TabsTrigger>
-          <TabsTrigger value="creator">
+          <TabsTrigger value="creator" disabled={!isCreator}>
             <BookOpen className="mr-2 h-4 w-4" /> Creator View
           </TabsTrigger>
         </TabsList>
         <TabsContent value="professional" className="mt-6 space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Welcome back, {professional.name}</CardTitle>
+              <CardTitle>Welcome back, {professional?.name}</CardTitle>
               <CardDescription>
                 Here's a summary of your activity.
               </CardDescription>
@@ -416,7 +471,7 @@ export default function ProfessionalHubPage() {
         <TabsContent value="creator" className="mt-6 space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Welcome back, {courseCreator.name}</CardTitle>
+              <CardTitle>Welcome back, {currentUser?.displayName}</CardTitle>
               <CardDescription>
                 Here's a summary of your course performance.
               </CardDescription>
@@ -432,7 +487,7 @@ export default function ProfessionalHubPage() {
                 <CardContent>
                   <div className="text-2xl font-bold">852</div>
                   <p className="text-xs text-muted-foreground">
-                    Across {creatorCourses.length} courses
+                    Across {creatorCourses?.length} courses
                   </p>
                 </CardContent>
               </Card>
@@ -472,7 +527,7 @@ export default function ProfessionalHubPage() {
               <CardTitle>Your Courses</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {creatorCourses.map((course) => (
+              {creatorCourses?.map((course) => (
                 <div
                   key={course.id}
                   className="flex items-center gap-4 rounded-lg border p-4"
@@ -481,7 +536,7 @@ export default function ProfessionalHubPage() {
                     <h3 className="font-semibold">{course.title}</h3>
                     <div className="mt-2 grid grid-cols-3 gap-4 text-sm text-muted-foreground">
                       <div>
-                        <p className="font-medium">250</p>
+                        <p className="font-medium">{course.enrolledUserIds?.length || 0}</p>
                         <p>Enrollments</p>
                       </div>
                       <div>
@@ -490,7 +545,7 @@ export default function ProfessionalHubPage() {
                       </div>
                       <div>
                         <p className="font-medium">
-                          ₹{((course.price || 0) * 250).toLocaleString()}
+                          ₹{((course.price || 0) * (course.enrolledUserIds?.length || 0)).toLocaleString()}
                         </p>
                         <p>Revenue</p>
                       </div>
@@ -504,6 +559,12 @@ export default function ProfessionalHubPage() {
                   </Button>
                 </div>
               ))}
+                {(!creatorCourses || creatorCourses.length === 0) && (
+                    <Link href="/dashboard/learning" className="flex flex-col items-center justify-center py-10 text-center border-2 border-dashed rounded-lg hover:border-primary transition-colors">
+                        <p className="font-semibold">You haven't created any courses yet.</p>
+                        <p className="text-muted-foreground text-sm">Click here to create your first course!</p>
+                    </Link>
+                )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -537,5 +598,3 @@ export default function ProfessionalHubPage() {
     </div>
   );
 }
-
-    
