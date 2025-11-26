@@ -1,46 +1,14 @@
 
 'use client';
 
-import React, { useState, createContext, useContext } from 'react';
+import React from 'react';
 import { CreatePost } from '@/components/create-post';
 import { PostCard } from '@/components/post-card';
 import { Stories } from '@/components/stories';
 import { Suggestions } from '@/components/suggestions';
 import { TrendingHashtags } from '@/components/trending-hashtags';
-import { posts as initialPosts } from '@/lib/mock-data';
-import type { Post } from '@/lib/mock-data';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-
-type DashboardContextType = {
-  posts: Post[];
-  addPost: (newPost: Post) => void;
-};
-
-const DashboardContext = createContext<DashboardContextType | null>(null);
-
-export const useDashboard = () => {
-  const context = useContext(DashboardContext);
-  if (!context) {
-    throw new Error('useDashboard must be used within a DashboardProvider');
-  }
-  return context;
-};
-
-export function DashboardProvider({ children }: { children: React.ReactNode }) {
-  const [posts, setPosts] = useState<Post[]>(initialPosts);
-
-  const addPost = (newPost: Post) => {
-    setPosts(prevPosts => [newPost, ...prevPosts]);
-  };
-
-  const value = { posts, addPost };
-
-  return (
-    <DashboardContext.Provider value={value}>
-      {children}
-    </DashboardContext.Provider>
-  );
-}
+import { useDashboard } from './layout';
 
 function PageContent() {
     const { posts, addPost } = useDashboard();
