@@ -12,6 +12,7 @@ import type { Post } from '@/lib/mock-data';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 type DashboardContextType = {
+  posts: Post[];
   addPost: (newPost: Post) => void;
 };
 
@@ -35,14 +36,14 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   const value = { posts, addPost };
 
   return (
-    <DashboardContext.Provider value={{ addPost }}>
-      {React.cloneElement(children as React.ReactElement, { posts, addPost })}
+    <DashboardContext.Provider value={value}>
+      {children}
     </DashboardContext.Provider>
   );
 }
 
 function PageContent() {
-    const { posts, addPost } = useDashboardWithPosts();
+    const { posts, addPost } = useDashboard();
     const anonymousPosts = posts.filter(p => p.isAnonymous);
 
     return (
@@ -86,23 +87,6 @@ function PageContent() {
     );
 }
 
-// A new hook that also exposes posts
-const useDashboardWithPosts = () => {
-    const context = useContext(DashboardContext);
-    if (!context) {
-      throw new Error('useDashboard must be used within a DashboardProvider');
-    }
-    // We need to manage posts state here now for the main page
-    const [posts, setPosts] = useState<Post[]>(initialPosts);
-
-    const addPost = (newPost: Post) => {
-        setPosts(prevPosts => [newPost, ...prevPosts]);
-        // The context addPost is now mainly for other pages that might need to add a post
-        context.addPost(newPost);
-    };
-
-    return { posts, addPost };
-}
 
 export default function DashboardPage() {
     return <PageContent />;
