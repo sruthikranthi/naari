@@ -45,17 +45,19 @@ export function ContestClient({ contest }: ContestClientProps) {
   const handleVote = (nomineeId: string) => {
     setNominees(
       nominees.map((n) =>
-        n.id === nomineeId
+        n.id === nomineeId && !n.hasVoted
           ? { ...n, votes: n.votes + 1, hasVoted: true }
           : n
       )
     );
-    toast({
-      title: 'Vote Cast!',
-      description: `You have successfully voted for ${
-        nominees.find((n) => n.id === nomineeId)?.name
-      }.`,
-    });
+    if (!nominees.find(n => n.id === nomineeId)?.hasVoted) {
+      toast({
+        title: 'Vote Cast!',
+        description: `You have successfully voted for ${
+          nominees.find((n) => n.id === nomineeId)?.name
+        }.`,
+      });
+    }
   };
   
   const handleComment = (nomineeId: string) => {
@@ -230,69 +232,129 @@ export function ContestClient({ contest }: ContestClientProps) {
           </div>
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             {filteredNominees.map((nominee) => (
-              <Card key={nominee.id} className="overflow-hidden flex flex-col">
-                <CardHeader className="p-0">
-                  <div className="relative aspect-video w-full">
-                    <Image
-                      src={nominee.story.image}
-                      alt={nominee.name}
-                      fill
-                      className="object-cover"
-                    />
-                    <Badge className="absolute top-2 right-2 flex items-center gap-1.5 text-base">
-                      <Heart className="h-4 w-4" />
-                      {nominee.votes.toLocaleString()}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-4 flex-1">
-                  <div className="flex items-center gap-3">
-                    <Avatar>
-                      <AvatarImage src={nominee.avatar} alt={nominee.name} />
-                      <AvatarFallback>
-                        {nominee.name
-                          .split(' ')
-                          .map((n) => n[0])
-                          .join('')}
-                      </AvatarFallback>
-                    </Avatar>
-                    <CardTitle>{nominee.name}</CardTitle>
-                  </div>
-                  <CardDescription className="mt-3 line-clamp-3 h-[60px]">
-                    {nominee.story.text}
-                  </CardDescription>
-                </CardContent>
-                <CardFooter className="flex justify-between gap-1 p-2 bg-muted/50">
-                   <Button
-                    variant="ghost"
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => handleVote(nominee.id)}
-                    disabled={nominee.hasVoted}
-                  >
-                    <Trophy className="mr-2 h-4 w-4" />
-                    {nominee.hasVoted ? 'Voted' : 'Vote'}
-                  </Button>
-                   <Button
-                    variant="ghost"
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => handleComment(nominee.id)}
-                  >
-                    <MessageSquare className="mr-2 h-4 w-4" />
-                    {nominee.comments}
-                  </Button>
-                   <Button
-                    variant="ghost"
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => handleShare(nominee.id, nominee.name)}
-                  >
-                    <Share2 className="mr-2 h-4 w-4" />
-                    {nominee.shares}
-                  </Button>
-                </CardFooter>
-              </Card>
+              <Dialog key={nominee.id}>
+                <DialogTrigger asChild>
+                  <Card className="overflow-hidden flex flex-col cursor-pointer transition-shadow hover:shadow-lg">
+                    <CardHeader className="p-0">
+                      <div className="relative aspect-video w-full">
+                        <Image
+                          src={nominee.story.image}
+                          alt={nominee.name}
+                          fill
+                          className="object-cover"
+                        />
+                        <Badge className="absolute top-2 right-2 flex items-center gap-1.5 text-base">
+                          <Heart className="h-4 w-4" />
+                          {nominee.votes.toLocaleString()}
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="p-4 flex-1">
+                      <div className="flex items-center gap-3">
+                        <Avatar>
+                          <AvatarImage src={nominee.avatar} alt={nominee.name} />
+                          <AvatarFallback>
+                            {nominee.name
+                              .split(' ')
+                              .map((n) => n[0])
+                              .join('')}
+                          </AvatarFallback>
+                        </Avatar>
+                        <CardTitle>{nominee.name}</CardTitle>
+                      </div>
+                      <CardDescription className="mt-3 line-clamp-3 h-[60px]">
+                        {nominee.story.text}
+                      </CardDescription>
+                    </CardContent>
+                    <CardFooter className="flex justify-between gap-1 p-2 bg-muted/50">
+                       <Button
+                        variant="ghost"
+                        size="sm"
+                        className="flex-1"
+                        disabled
+                      >
+                        <Trophy className="mr-2 h-4 w-4" />
+                        Vote
+                      </Button>
+                       <Button
+                        variant="ghost"
+                        size="sm"
+                        className="flex-1"
+                         disabled
+                      >
+                        <MessageSquare className="mr-2 h-4 w-4" />
+                        {nominee.comments}
+                      </Button>
+                       <Button
+                        variant="ghost"
+                        size="sm"
+                        className="flex-1"
+                         disabled
+                      >
+                        <Share2 className="mr-2 h-4 w-4" />
+                        {nominee.shares}
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-3xl">
+                    <DialogHeader>
+                        <div className="flex items-center gap-4">
+                            <Avatar className="h-16 w-16">
+                                <AvatarImage src={nominee.avatar} alt={nominee.name} />
+                                <AvatarFallback>{nominee.name.split(' ').map(n=>n[0]).join('')}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                                <DialogTitle className="text-2xl">{nominee.name}</DialogTitle>
+                                <DialogDescription>Nominee for "{contest.title}"</DialogDescription>
+                            </div>
+                        </div>
+                    </DialogHeader>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
+                        <div className="relative aspect-video w-full rounded-lg overflow-hidden">
+                             <Image
+                                src={nominee.story.image}
+                                alt={nominee.name + " story image"}
+                                fill
+                                className="object-cover"
+                                />
+                        </div>
+                        <div className="space-y-4">
+                            <h3 className="font-semibold">Their Story</h3>
+                            <p className="text-sm text-muted-foreground">{nominee.story.text}</p>
+                            <div className="flex justify-between items-center rounded-lg border p-4 bg-secondary/50">
+                                <span className="font-bold text-lg">{nominee.votes.toLocaleString()} Votes</span>
+                                <Button
+                                    variant={nominee.hasVoted ? "secondary" : "default"}
+                                    onClick={() => handleVote(nominee.id)}
+                                    disabled={nominee.hasVoted}
+                                >
+                                    <Trophy className="mr-2 h-4 w-4" />
+                                    {nominee.hasVoted ? 'Voted' : 'Vote Now'}
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                     <DialogFooter className="sm:justify-start gap-2">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleComment(nominee.id)}
+                        >
+                            <MessageSquare className="mr-2 h-4 w-4" />
+                            Comment ({nominee.comments})
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleShare(nominee.id, nominee.name)}
+                        >
+                            <Share2 className="mr-2 h-4 w-4" />
+                            Share ({nominee.shares})
+                        </Button>
+                     </DialogFooter>
+                </DialogContent>
+              </Dialog>
             ))}
           </div>
           {filteredNominees.length === 0 && (
