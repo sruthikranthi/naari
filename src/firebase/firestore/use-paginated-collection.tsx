@@ -10,6 +10,7 @@ import {
   limit,
   startAfter,
   getDocs,
+  query,
   FirestoreError,
 } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -64,28 +65,30 @@ export function usePaginatedCollection<T = any>(
 
     try {
       // Build query with pagination
-      let query: Query<DocumentData>;
+      let firestoreQuery: Query<DocumentData>;
       
       if (isRefresh || !lastDoc) {
         // First page or refresh
         if (memoizedQuery.type === 'collection') {
-          query = limit(memoizedQuery as CollectionReference<DocumentData>, pageSize);
+          const collectionRef = memoizedQuery as CollectionReference<DocumentData>;
+          firestoreQuery = query(collectionRef, limit(pageSize));
         } else {
           // If it's already a query, add limit to it
-          query = limit(memoizedQuery as Query<DocumentData>, pageSize);
+          const existingQuery = memoizedQuery as Query<DocumentData>;
+          firestoreQuery = query(existingQuery, limit(pageSize));
         }
       } else {
         // Subsequent pages - use startAfter
         if (memoizedQuery.type === 'collection') {
-          const baseQuery = memoizedQuery as CollectionReference<DocumentData>;
-          query = limit(startAfter(lastDoc, baseQuery), pageSize);
+          const collectionRef = memoizedQuery as CollectionReference<DocumentData>;
+          firestoreQuery = query(collectionRef, startAfter(lastDoc), limit(pageSize));
         } else {
-          const baseQuery = memoizedQuery as Query<DocumentData>;
-          query = limit(startAfter(lastDoc, baseQuery), pageSize);
+          const existingQuery = memoizedQuery as Query<DocumentData>;
+          firestoreQuery = query(existingQuery, startAfter(lastDoc), limit(pageSize));
         }
       }
 
-      const snapshot: QuerySnapshot<DocumentData> = await getDocs(query);
+      const snapshot: QuerySnapshot<DocumentData> = await getDocs(firestoreQuery);
       
       const results: WithId<T>[] = [];
       snapshot.forEach((doc) => {
