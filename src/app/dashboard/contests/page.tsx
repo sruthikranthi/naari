@@ -9,6 +9,7 @@ import {
   Calendar,
   IndianRupee,
   Check,
+  Share2,
 } from 'lucide-react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -58,7 +59,6 @@ const featuredContests = [
     prize: '₹1,00,000 + Trophy',
     endsIn: '45 days',
     participants: 1250,
-    image: 'https://picsum.photos/seed/naarimani/800/600',
     action: 'Nominate',
   },
   {
@@ -140,7 +140,7 @@ export default function ContestsPage() {
     setNominatedContests([...nominatedContests, contestId]);
     toast({
       title: 'Nomination Submitted!',
-      description: `Your nomination for "${contestTitle}" has been received.`,
+      description: `Your submission for "${contestTitle}" is in. Now spread the word to gather support!`,
     });
   };
 
@@ -148,7 +148,7 @@ export default function ContestsPage() {
     console.log('New Contest Data:', data);
     toast({
       title: 'Contest Submitted for Review!',
-      description: `Your contest "${data.title}" will be live after approval.`,
+      description: `Your contest "${data.title}" will be live after admin approval.`,
     });
     reset();
     setIsDialogOpen(false);
@@ -166,16 +166,15 @@ export default function ContestsPage() {
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button>
-              <Plus className="mr-2 h-4 w-4" /> Create Contest
+              <Plus className="mr-2 h-4 w-4" /> Propose a Contest
             </Button>
           </DialogTrigger>
           <DialogContent>
             <form onSubmit={handleSubmit(handleCreateContest)}>
               <DialogHeader>
-                <DialogTitle>Create a New Community Contest</DialogTitle>
+                <DialogTitle>Propose a New Community Contest</DialogTitle>
                 <DialogDescription>
-                  Fill in the details to launch a new contest. All contests are
-                  subject to review.
+                  Fill in the details to propose a new contest. All submissions are subject to admin review.
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">

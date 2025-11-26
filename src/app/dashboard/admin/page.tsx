@@ -14,6 +14,7 @@ import {
   AreaChart,
   Server,
   Hammer,
+  Award,
 } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
 import {
@@ -77,8 +78,14 @@ initialUsers.push({
     interests: ['Wellness'],
     role: 'Professional',
     status: 'Pending'
-})
+});
 
+const allContests = [
+    { id: 'c1', name: 'NAARIMANI of the Year', participants: 1250, status: 'Live' },
+    { id: 'c2', name: 'Woman Entrepreneur of The Year', participants: 480, status: 'Live' },
+    { id: 'cc1', name: 'Best Home Chef', participants: 120, status: 'Community-run' },
+    { id: 'prop1', name: 'Pune Baking Championship', participants: 0, status: 'Pending Approval' }
+];
 
 export default function AdminPanelPage() {
   const { toast } = useToast();
@@ -112,11 +119,18 @@ export default function AdminPanelPage() {
     }
   }
 
-  const getStatusVariant = (status: UserWithRole['status']) => {
+  const getStatusVariant = (status: UserWithRole['status'] | string) => {
     switch (status) {
-      case 'Active': return 'default';
-      case 'Inactive': return 'destructive';
-      case 'Pending': return 'secondary';
+      case 'Active':
+      case 'Live':
+         return 'default';
+      case 'Inactive': 
+      case 'Pending Approval':
+        return 'secondary';
+      case 'Pending': 
+      case 'Community-run':
+        return 'outline';
+      case 'Overdue': return 'destructive';
     }
   }
 
@@ -134,6 +148,13 @@ export default function AdminPanelPage() {
         description: 'Your announcement has been sent to all users.'
     })
   }
+  
+  const handleManageContest = (contestName: string) => {
+      toast({
+          title: `Managing: ${contestName}`,
+          description: "From here, an admin could assign a jury panel, monitor voting, and declare the winner."
+      })
+  }
 
   return (
     <div className="space-y-6">
@@ -143,11 +164,12 @@ export default function AdminPanelPage() {
       />
 
       <Tabs defaultValue="dashboard">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-          <TabsTrigger value="users">Users & Professionals</TabsTrigger>
+          <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="commissions">Commissions</TabsTrigger>
           <TabsTrigger value="content">Content</TabsTrigger>
+          <TabsTrigger value="contests">Contests</TabsTrigger>
         </TabsList>
         
         {/* Dashboard Tab */}
@@ -386,8 +408,45 @@ export default function AdminPanelPage() {
              </div>
         </TabsContent>
 
+        {/* Contests Tab */}
+        <TabsContent value="contests" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Contest Management</CardTitle>
+              <CardDescription>Oversee all contests and awards on the platform.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Contest Name</TableHead>
+                    <TableHead>Participants</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {allContests.map((contest) => (
+                    <TableRow key={contest.id}>
+                      <TableCell className="font-medium">{contest.name}</TableCell>
+                      <TableCell>{contest.participants.toLocaleString()}</TableCell>
+                      <TableCell>
+                        <Badge variant={getStatusVariant(contest.status)}>{contest.status}</Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="outline" size="sm" onClick={() => handleManageContest(contest.name)}>
+                          Manage
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
       </Tabs>
     </div>
   );
 }
-    
