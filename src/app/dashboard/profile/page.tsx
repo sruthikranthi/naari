@@ -18,6 +18,7 @@ import {
   Heart,
   Building,
   Camera,
+  Upload,
 } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, updateDoc, arrayUnion, arrayRemove, collection, query, where, limit } from 'firebase/firestore';
@@ -57,9 +58,11 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { CameraCapture } from '@/components/camera-capture';
 
 const profileSchema = z.object({
     name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
+    username: z.string().min(3, 'Username must be at least 3 characters.').regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores.'),
     city: z.string().min(2, { message: 'City must be at least 2 characters.' }),
     interests: z.string().optional(),
     education: z.string().optional(),
@@ -73,7 +76,8 @@ export default function ProfilePage() {
   const { toast } = useToast();
   const { user: currentUser, isUserLoading } = useUser();
   const firestore = useFirestore();
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isAvatarDialogOpen, setIsAvatarDialogOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch the current user's profile document
@@ -101,6 +105,7 @@ export default function ProfilePage() {
     resolver: zodResolver(profileSchema),
     values: { // Use values to auto-populate the form when user data loads
         name: user?.name || '',
+        username: user?.username || '',
         city: user?.city || '',
         interests: user?.interests?.join(', ') || '',
         education: user?.education || '',
@@ -126,7 +131,7 @@ export default function ProfilePage() {
           title: 'Profile Updated',
           description: 'Your profile information has been successfully saved.',
         });
-        setIsDialogOpen(false);
+        setIsEditDialogOpen(false);
     } catch(e) {
         console.error('Error updating profile: ', e);
         toast({ variant: 'destructive', title: 'Error', description: 'Could not update your profile.' });
@@ -167,11 +172,19 @@ export default function ProfilePage() {
     }
   }
 
-  const handleImageUpload = async (type: 'avatar' | 'banner') => {
+  const handleImageUpload = async (type: 'avatar' | 'banner', dataUrl?: string) => {
     if (!userDocRef) return;
-    // This is a simulation. In a real app, you would upload the file to Firebase Storage
-    // and then get the download URL to save in Firestore.
-    const newImageUrl = `https://picsum.photos/seed/${type}${Date.now()}/${type === 'avatar' ? '200' : '1200'}/${type === 'avatar' ? '200' : '400'}`;
+    
+    let newImageUrl: string;
+
+    if (dataUrl) {
+        // This is where you would upload the dataUrl to Firebase Storage
+        // For now, we'll just use the dataUrl directly for a preview effect
+        newImageUrl = dataUrl;
+    } else {
+        // Fallback for file upload simulation
+        newImageUrl = `https://picsum.photos/seed/${type}${Date.now()}/${type === 'avatar' ? '200' : '1200'}/${type === 'avatar' ? '200' : '400'}`;
+    }
     
     const fieldToUpdate = type === 'avatar' ? 'avatar' : 'bannerImage';
 
@@ -184,6 +197,8 @@ export default function ProfilePage() {
     } catch (e) {
         console.error(`Error updating ${type}:`, e);
         toast({ variant: 'destructive', title: 'Error', description: 'Could not update your image.' });
+    } finally {
+        setIsAvatarDialogOpen(false);
     }
   }
 
@@ -276,21 +291,48 @@ export default function ProfilePage() {
                 </AvatarFallback>
               </Avatar>
                <input type="file" ref={fileInputRef} onChange={() => handleImageUpload('avatar')} className="hidden" accept="image/*" />
-               <Button 
-                    variant="secondary" 
-                    size="icon" 
-                    className="absolute bottom-2 right-2 h-8 w-8 rounded-full opacity-0 transition-opacity group-hover:opacity-100"
-                    onClick={triggerFileUpload}
-                >
-                    <Camera className="h-4 w-4"/>
-                    <span className="sr-only">Edit Profile Photo</span>
-                </Button>
+               <Dialog open={isAvatarDialogOpen} onOpenChange={setIsAvatarDialogOpen}>
+                 <DialogTrigger asChild>
+                    <Button 
+                        variant="secondary" 
+                        size="icon" 
+                        className="absolute bottom-2 right-2 h-8 w-8 rounded-full opacity-0 transition-opacity group-hover:opacity-100"
+                    >
+                        <Camera className="h-4 w-4"/>
+                        <span className="sr-only">Edit Profile Photo</span>
+                    </Button>
+                 </DialogTrigger>
+                 <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Update Profile Photo</DialogTitle>
+                    </DialogHeader>
+                    <div className="grid grid-cols-2 gap-4">
+                        <Button variant="outline" onClick={triggerFileUpload}>
+                            <Upload className="mr-2 h-4 w-4" /> Upload Photo
+                        </Button>
+                         <Dialog>
+                            <DialogTrigger asChild>
+                                <Button><Camera className="mr-2 h-4 w-4"/> Take Selfie</Button>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-2xl">
+                                <DialogHeader>
+                                    <DialogTitle>Take a Selfie</DialogTitle>
+                                </DialogHeader>
+                                <div className="h-96">
+                                    <CameraCapture onMediaCaptured={(dataUrl) => handleImageUpload('avatar', dataUrl)} />
+                                </div>
+                            </DialogContent>
+                        </Dialog>
+                    </div>
+                 </DialogContent>
+               </Dialog>
             </div>
             <div className="flex-1 text-center md:ml-6 md:text-left">
               <div className="flex items-center justify-center gap-2 md:justify-start">
                 <h1 className="font-headline text-3xl font-bold">{user.name}</h1>
                 <CheckCircle className="h-6 w-6 text-primary" />
               </div>
+              {user.username && <p className="text-muted-foreground">@{user.username}</p>}
               <p className="flex items-center justify-center text-muted-foreground md:justify-start">
                 <MapPin className="mr-1.5 h-4 w-4" />
                 {user.city}
@@ -301,7 +343,7 @@ export default function ProfilePage() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-               <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+               <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
                 <DialogTrigger asChild>
                   <Button variant="outline" onClick={() => reset()}>
                     <Edit className="mr-2 h-4 w-4" /> Edit Profile
@@ -320,6 +362,11 @@ export default function ProfilePage() {
                         <Label htmlFor="name">Name</Label>
                         <Input id="name" {...register('name')} />
                         {errors.name && <p className="text-destructive text-xs mt-1">{errors.name.message}</p>}
+                      </div>
+                      <div>
+                        <Label htmlFor="username">Username</Label>
+                        <Input id="username" {...register('username')} placeholder="e.g. priya_sharma" />
+                        {errors.username && <p className="text-destructive text-xs mt-1">{errors.username.message}</p>}
                       </div>
                       <div>
                         <Label htmlFor="city">City</Label>
@@ -570,3 +617,5 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+    
