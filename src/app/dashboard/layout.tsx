@@ -2,7 +2,6 @@
 import type { ReactNode } from 'react';
 import {
   Search,
-  Bell,
 } from 'lucide-react';
 
 import {
@@ -14,12 +13,12 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/logo';
 import { UserNav } from '@/components/user-nav';
 import { MainNav } from '@/components/main-nav';
 import { CartProvider } from '@/context/cart-context';
 import { CartSheet } from '@/components/cart-sheet';
+import { NotificationsNav } from '@/components/notifications-nav';
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
@@ -47,10 +46,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               </div>
             </div>
             <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" className="rounded-full">
-                <Bell className="h-5 w-5" />
-                <span className="sr-only">Toggle notifications</span>
-              </Button>
+              <NotificationsNav />
               <CartSheet />
               <UserNav />
             </div>
