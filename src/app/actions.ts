@@ -8,6 +8,8 @@ import { generateMeditationScript } from '@/ai/flows/generate-meditation-script'
 import { textToSpeech } from '@/ai/flows/text-to-speech';
 import { z } from 'zod';
 
+export type { AIPoweredChatSafetyOutput };
+
 const safetyCheckSchema = z.object({
   message: z.string().min(1, 'Message cannot be empty.'),
 });
