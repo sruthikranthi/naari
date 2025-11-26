@@ -16,6 +16,8 @@ import {
   Server,
   Hammer,
   Award,
+  Plus,
+  UserSearch,
 } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
 import {
@@ -62,6 +64,8 @@ import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
+import { allContestsData } from '@/lib/contests-data';
+import type { Contest, JuryMember } from '@/lib/contests-data';
 
 type UserWithRole = User & { role: 'User' | 'Professional' | 'Creator'; status: 'Active' | 'Inactive' | 'Pending' };
 
@@ -81,16 +85,20 @@ initialUsers.push({
     status: 'Pending'
 });
 
-const allContests = [
-    { id: 'c1', name: 'NAARIMANI of the Year', nominees: 12, status: 'Live', fee: 'Free' },
-    { id: 'c2', name: 'Woman Entrepreneur of The Year', nominees: 8, status: 'Live', fee: '₹500' },
-    { id: 'cc1', name: 'Best Home Chef', nominees: 25, status: 'Community-run', fee: '₹100' },
-    { id: 'prop1', name: 'Pune Baking Championship', nominees: 0, status: 'Pending Approval', fee: '₹200' }
-];
+const allContests = allContestsData.map(c => ({
+    id: c.id,
+    name: c.title,
+    nominees: c.nominees.length,
+    status: c.endsIn.includes('days') ? 'Live' : 'Ended',
+    fee: c.nominationFee > 0 ? `₹${c.nominationFee}`: 'Free',
+}));
+
+allContests.push({ id: 'prop1', name: 'Pune Baking Championship', nominees: 0, status: 'Pending Approval', fee: '₹200' });
 
 export default function AdminPanelPage() {
   const { toast } = useToast();
   const [users, setUsers] = useState<UserWithRole[]>(initialUsers);
+  const [contests, setContests] = useState(allContestsData);
   const [filterRole, setFilterRole] = useState('All');
   const [commissions, setCommissions] = useState({
     marketplace: 10,
@@ -98,6 +106,7 @@ export default function AdminPanelPage() {
     courses: 20,
   });
   const [isBroadcastOpen, setIsBroadcastOpen] = useState(false);
+  const [managingContest, setManagingContest] = useState<Contest | null>(null);
 
   const filteredUsers = useMemo(() => {
     if (filterRole === 'All') return users;
@@ -132,6 +141,7 @@ export default function AdminPanelPage() {
       case 'Community-run':
         return 'outline';
       case 'Overdue': return 'destructive';
+      case 'Ended': return 'destructive'
     }
   }
 
@@ -150,12 +160,30 @@ export default function AdminPanelPage() {
     })
   }
   
-  const handleManageContest = (contestName: string) => {
-      toast({
-          title: `Managing: ${contestName}`,
-          description: "From here, an admin could assign a jury panel, monitor voting, and declare the winner."
-      })
+  const handleManageContest = (contestId: string) => {
+      const contest = contests.find(c => c.id === contestId);
+      if(contest) {
+          setManagingContest(contest);
+      }
   }
+
+  const handleAddJuror = (contestId: string, jurorName: string) => {
+    if (!jurorName.trim()) return;
+    const newJuror: JuryMember = {
+        name: jurorName,
+        title: "Industry Expert",
+        avatar: `https://picsum.photos/seed/${jurorName.replace(/\s+/g, '-')}/100/100`
+    };
+    setContests(prev => prev.map(c => 
+        c.id === contestId ? { ...c, jury: [...c.jury, newJuror] } : c
+    ));
+     setManagingContest(prev => prev ? { ...prev, jury: [...prev.jury, newJuror] } : null);
+    toast({
+        title: 'Juror Added!',
+        description: `${jurorName} has been added to the jury panel.`
+    });
+  }
+
 
   return (
     <div className="space-y-6">
@@ -437,7 +465,7 @@ export default function AdminPanelPage() {
                         <Badge variant={getStatusVariant(contest.status)}>{contest.status}</Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button variant="outline" size="sm" onClick={() => handleManageContest(contest.name)}>
+                        <Button variant="outline" size="sm" onClick={() => handleManageContest(contest.id)}>
                           Manage
                         </Button>
                       </TableCell>
@@ -448,8 +476,113 @@ export default function AdminPanelPage() {
             </CardContent>
           </Card>
         </TabsContent>
-
       </Tabs>
+      
+      {/* Contest Management Dialog */}
+      <Dialog open={!!managingContest} onOpenChange={(open) => !open && setManagingContest(null)}>
+        <DialogContent className="sm:max-w-3xl">
+          {managingContest && (
+            <>
+              <DialogHeader>
+                <DialogTitle>Manage: {managingContest.title}</DialogTitle>
+                <DialogDescription>
+                  Oversee the jury, monitor nominees, and manage the contest.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4 max-h-[60vh] overflow-y-auto">
+                 {/* Jury Panel */}
+                <Card>
+                    <CardHeader>
+                        <div className="flex items-center justify-between">
+                            <CardTitle>Jury Panel</CardTitle>
+                            <Dialog>
+                                <DialogTrigger asChild>
+                                    <Button variant="outline" size="sm"><Plus className="mr-2 h-4 w-4" /> Add Juror</Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <DialogHeader>
+                                        <DialogTitle>Add a Juror</DialogTitle>
+                                        <DialogDescription>Search for a user to add to the jury panel.</DialogDescription>
+                                    </DialogHeader>
+                                    <form id="add-juror-form" onSubmit={(e) => {
+                                        e.preventDefault();
+                                        const form = e.target as HTMLFormElement;
+                                        const input = form.elements.namedItem('juror-name') as HTMLInputElement;
+                                        handleAddJuror(managingContest.id, input.value);
+                                        // Ideally, you'd close this specific dialog
+                                    }}>
+                                        <div className="flex items-center gap-2 py-4">
+                                            <Label htmlFor="juror-name" className="sr-only">Juror Name</Label>
+                                            <Input id="juror-name" name="juror-name" placeholder="Enter user name..." />
+                                            <Button type="submit">Add</Button>
+                                        </div>
+                                    </form>
+                                </DialogContent>
+                            </Dialog>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        {managingContest.jury.map((juror) => (
+                            <div key={juror.name} className="flex items-center gap-3">
+                                <Avatar>
+                                    <AvatarImage src={juror.avatar} />
+                                    <AvatarFallback>{juror.name.split(' ').map(n=>n[0]).join('')}</AvatarFallback>
+                                </Avatar>
+                                <div>
+                                    <p className="font-semibold">{juror.name}</p>
+                                    <p className="text-xs text-muted-foreground">{juror.title}</p>
+                                </div>
+                                <Button variant="ghost" size="icon" className="ml-auto h-8 w-8 text-destructive"><XCircle className="h-4 w-4"/></Button>
+                            </div>
+                        ))}
+                    </CardContent>
+                </Card>
+
+                {/* Nominee Overview */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Nominees ({managingContest.nominees.length})</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Nominee</TableHead>
+                                    <TableHead>Votes</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {managingContest.nominees.sort((a,b) => b.votes - a.votes).map(nominee => (
+                                     <TableRow key={nominee.id}>
+                                         <TableCell>{nominee.name}</TableCell>
+                                         <TableCell>{nominee.votes.toLocaleString()}</TableCell>
+                                     </TableRow>
+                                ))}
+                                {managingContest.nominees.length === 0 && (
+                                    <TableRow>
+                                        <TableCell colSpan={2} className="text-center">No nominees yet.</TableCell>
+                                    </TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                </Card>
+              </div>
+              <DialogFooter>
+                <Button variant="destructive" onClick={() => {
+                    toast({ title: 'Winner Declared!', description: 'The winner has been announced to the community.'});
+                    setManagingContest(null);
+                }}>
+                    Declare Winner
+                </Button>
+                <Button onClick={() => setManagingContest(null)}>Close</Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+
+    
