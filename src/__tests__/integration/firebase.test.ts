@@ -9,19 +9,54 @@ import {
   getNotificationPreferences,
 } from '@/lib/notifications';
 
-// Mock Firebase functions
-jest.mock('@/firebase', () => ({
-  initializeFirebase: jest.fn(() => ({
-    firestore: {
-      collection: jest.fn(() => ({
-        addDoc: jest.fn(),
-        doc: jest.fn(),
-      })),
-    },
-  })),
-}));
+// Mock Firebase Firestore functions
+jest.mock('firebase/firestore', () => {
+  const mockAddDoc = jest.fn().mockResolvedValue({ id: 'test-id' });
+  const mockUpdateDoc = jest.fn().mockResolvedValue(undefined);
+  const mockGetDocs = jest.fn().mockResolvedValue({
+    docs: [],
+  });
+  const mockCollection = jest.fn(() => ({
+    addDoc: mockAddDoc,
+  }));
+  const mockDoc = jest.fn(() => ({
+    updateDoc: mockUpdateDoc,
+  }));
+
+  return {
+    collection: mockCollection,
+    doc: mockDoc,
+    addDoc: mockAddDoc,
+    updateDoc: mockUpdateDoc,
+    getDocs: mockGetDocs,
+    query: jest.fn(),
+    where: jest.fn(),
+    orderBy: jest.fn(),
+    limit: jest.fn(),
+    serverTimestamp: jest.fn(() => ({ seconds: Date.now() / 1000 })),
+    onSnapshot: jest.fn(),
+  };
+});
+
+// Mock Firebase initialization
+jest.mock('@/firebase', () => {
+  const mockCollection = jest.fn();
+  const mockDoc = jest.fn();
+  return {
+    initializeFirebase: jest.fn(() => ({
+      firestore: {
+        collection: mockCollection,
+        doc: mockDoc,
+      },
+    })),
+  };
+});
 
 describe('Firebase Operations', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
   describe('Notifications', () => {
     it('should create a notification', async () => {
       const notification = {
@@ -31,8 +66,6 @@ describe('Firebase Operations', () => {
         message: 'Someone liked your post',
       };
 
-      // This would test actual Firebase operation
-      // In a real scenario, you'd use Firebase emulator
       await expect(createNotification(notification)).resolves.not.toThrow();
     });
 

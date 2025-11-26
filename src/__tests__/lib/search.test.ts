@@ -2,6 +2,26 @@
  * Unit tests for search utilities
  */
 
+// Mock Firebase before importing search module
+jest.mock('@/firebase', () => ({
+  initializeFirebase: jest.fn(() => ({
+    firestore: {
+      collection: jest.fn(),
+      doc: jest.fn(),
+    },
+  })),
+}));
+
+jest.mock('firebase/firestore', () => ({
+  collection: jest.fn(),
+  query: jest.fn(),
+  where: jest.fn(),
+  orderBy: jest.fn(),
+  limit: jest.fn(),
+  getDocs: jest.fn(),
+  serverTimestamp: jest.fn(),
+}));
+
 import {
   saveSearchHistory,
   getSearchHistory,

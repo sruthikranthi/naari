@@ -33,55 +33,55 @@ describe('Validation Utilities', () => {
   describe('validationSchemas', () => {
     describe('email', () => {
       it('should validate correct email addresses', () => {
-        const result = validationSchemas.email.safeParse('test@example.com');
-        expect(result.success).toBe(true);
+        const result = validationSchemas.email.validate('test@example.com');
+        expect(result).toBe(true);
       });
 
       it('should reject invalid email addresses', () => {
-        const result = validationSchemas.email.safeParse('invalid-email');
-        expect(result.success).toBe(false);
+        const result = validationSchemas.email.validate('invalid-email');
+        expect(result).toBe(false);
       });
     });
 
     describe('password', () => {
       it('should validate passwords with minimum length', () => {
-        const result = validationSchemas.password.safeParse('password123');
-        expect(result.success).toBe(true);
+        const result = validationSchemas.password.validate('password123');
+        expect(result).toBe(true);
       });
 
       it('should reject short passwords', () => {
-        const result = validationSchemas.password.safeParse('short');
-        expect(result.success).toBe(false);
+        const result = validationSchemas.password.validate('short');
+        expect(result).toBe(false);
       });
     });
 
     describe('postContent', () => {
       it('should validate post content', () => {
-        const result = validationSchemas.postContent.safeParse('This is a valid post');
-        expect(result.success).toBe(true);
+        const result = validationSchemas.postContent.validate('This is a valid post');
+        expect(result).toBe(true);
       });
 
       it('should reject empty content', () => {
-        const result = validationSchemas.postContent.safeParse('');
-        expect(result.success).toBe(false);
+        const result = validationSchemas.postContent.validate('');
+        expect(result).toBe(false);
       });
 
       it('should reject content that is too long', () => {
         const longContent = 'a'.repeat(10001);
-        const result = validationSchemas.postContent.safeParse(longContent);
-        expect(result.success).toBe(false);
+        const result = validationSchemas.postContent.validate(longContent);
+        expect(result).toBe(false);
       });
     });
 
     describe('chatMessage', () => {
       it('should validate chat messages', () => {
-        const result = validationSchemas.chatMessage.safeParse('Hello!');
-        expect(result.success).toBe(true);
+        const result = validationSchemas.chatMessage.validate('Hello!');
+        expect(result).toBe(true);
       });
 
       it('should reject empty messages', () => {
-        const result = validationSchemas.chatMessage.safeParse('');
-        expect(result.success).toBe(false);
+        const result = validationSchemas.chatMessage.validate('');
+        expect(result).toBe(false);
       });
     });
   });

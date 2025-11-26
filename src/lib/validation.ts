@@ -20,10 +20,19 @@ export function sanitizeHtml(html: string): string {
 
 /**
  * Sanitizes plain text input
- * Removes control characters and trims whitespace
+ * Removes HTML tags, control characters and trims whitespace
  */
 export function sanitizeText(text: string): string {
-  return text
+  // First remove script and style tags with their content
+  let sanitized = text
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '');
+  
+  // Then remove all remaining HTML tags
+  sanitized = sanitized.replace(/<[^>]*>/g, '');
+  
+  // Remove control characters and normalize whitespace
+  return sanitized
     .trim()
     .replace(/[\x00-\x1F\x7F]/g, '') // Remove control characters
     .replace(/\s+/g, ' '); // Normalize whitespace
@@ -133,6 +142,21 @@ export const validationSchemas = {
   required: {
     validate: (value: string) => value.trim().length > 0,
     message: 'This field is required',
+  },
+  password: {
+    validate: (value: string) => value.trim().length >= 8,
+    message: 'Password must be at least 8 characters',
+  },
+  postContent: {
+    validate: (value: string) => {
+      const trimmed = value.trim();
+      return trimmed.length > 0 && trimmed.length <= 10000;
+    },
+    message: 'Post content must be between 1 and 10000 characters',
+  },
+  chatMessage: {
+    validate: (value: string) => value.trim().length > 0,
+    message: 'Message cannot be empty',
   },
   minLength: (min: number) => ({
     validate: (value: string) => value.trim().length >= min,
