@@ -205,8 +205,8 @@ export default function TambolaPage() {
         {/* Main Game Area */}
         <div className="space-y-6 lg:col-span-2">
           <Card className="flex flex-col items-center justify-center p-6 text-center bg-primary text-primary-foreground">
-            <CardDescription className="text-lg">Current Number</CardDescription>
-            <div className="font-bold text-8xl tracking-tighter">
+            <CardDescription className="text-lg text-primary-foreground/80">Current Number</CardDescription>
+            <div className="font-bold text-8xl tracking-tighter text-primary-foreground">
               {currentNumber || '--'}
             </div>
           </Card>
@@ -319,4 +319,3 @@ export default function TambolaPage() {
     </div>
   );
 }
-
