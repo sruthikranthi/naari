@@ -1,8 +1,5 @@
 {
   "indexes": [
-    // ============================================
-    // SINGLE FIELD INDEXES
-    // ============================================
     {
       "collectionGroup": "posts",
       "queryScope": "COLLECTION",
@@ -143,10 +140,6 @@
         }
       ]
     },
-    
-    // ============================================
-    // COMPOSITE INDEXES (Multiple Fields)
-    // ============================================
     {
       "collectionGroup": "posts",
       "queryScope": "COLLECTION",
