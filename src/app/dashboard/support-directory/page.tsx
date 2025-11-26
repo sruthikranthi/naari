@@ -97,9 +97,11 @@ export default function SupportDirectoryPage() {
   const onAddProfessional = async (data: ProfessionalFormValues) => {
     if (!firestore) return;
     
+    // Generate avatar URL - using timestamp in event handler is allowed (not during render)
+    const timestamp = Date.now();
     const newProfessional: Omit<Professional, 'id'> = {
       name: data.name,
-      avatar: `https://picsum.photos/seed/prof${Date.now()}/100/100`,
+      avatar: `https://picsum.photos/seed/prof${timestamp}/100/100`,
       specialties: data.specialties.split(',').map(s => s.trim()).filter(Boolean),
       description: data.description,
       verified: data.verified,

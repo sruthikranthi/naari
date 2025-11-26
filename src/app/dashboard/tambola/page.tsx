@@ -262,7 +262,7 @@ export default function TambolaPage() {
               <ul className="list-decimal pl-4 space-y-1">
                 <li>Click <strong>Start New</strong> to begin a new game.</li>
                 <li>As numbers are announced, check your ticket below.</li>
-                <li>If a called number is on your ticket, click on it to "dab" it. It will be marked.</li>
+                <li>If a called number is on your ticket, click on it to &quot;dab&quot; it. It will be marked.</li>
                 <li>When you complete a prize pattern (e.g., Top Line), click the corresponding <strong>Claim</strong> button.</li>
                 <li>The system will verify your claim. Good luck!</li>
               </ul>
@@ -319,7 +319,7 @@ export default function TambolaPage() {
                             </DialogTrigger>
                             <DialogContent>
                                 <DialogHeader>
-                                    <DialogTitle>Confirm Claim for "{prize.name}"?</DialogTitle>
+                                    <DialogTitle>Confirm Claim for &quot;{prize.name}&quot;?</DialogTitle>
                                 </DialogHeader>
                                 <div className="py-4">
                                   <p>The system will verify if you have completed this prize. False claims may lead to disqualification.</p>

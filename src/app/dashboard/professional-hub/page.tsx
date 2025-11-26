@@ -325,7 +325,7 @@ export default function ProfessionalHubPage() {
             <CardHeader>
               <CardTitle>Welcome back, {professional?.name}</CardTitle>
               <CardDescription>
-                Here's a summary of your activity.
+                Here&apos;s a summary of your activity.
               </CardDescription>
             </CardHeader>
             <CardContent className="grid grid-cols-1 gap-6 md:grid-cols-3">
@@ -506,7 +506,7 @@ export default function ProfessionalHubPage() {
             <CardHeader>
               <CardTitle>Welcome back, {currentUser?.displayName}</CardTitle>
               <CardDescription>
-                Here's a summary of your course performance.
+                Here&apos;s a summary of your course performance.
               </CardDescription>
             </CardHeader>
             <CardContent className="grid grid-cols-1 gap-6 md:grid-cols-3">
@@ -594,7 +594,7 @@ export default function ProfessionalHubPage() {
               ))}
                 {(!creatorCourses || creatorCourses.length === 0) && (
                     <Link href="/dashboard/learning" className="flex flex-col items-center justify-center py-10 text-center border-2 border-dashed rounded-lg hover:border-primary transition-colors">
-                        <p className="font-semibold">You haven't created any courses yet.</p>
+                        <p className="font-semibold">You haven&apos;t created any courses yet.</p>
                         <p className="text-muted-foreground text-sm">Click here to create your first course!</p>
                     </Link>
                 )}
