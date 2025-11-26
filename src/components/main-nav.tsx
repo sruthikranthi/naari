@@ -60,12 +60,17 @@ export function MainNav() {
     <SidebarMenu>
       {navItems.map((item) => (
         <SidebarMenuItem key={item.label}>
-          <Link href={item.href} className="w-full">
+          <Link 
+            href={item.href} 
+            className="w-full"
+            aria-label={item.label}
+          >
             <SidebarMenuButton
               tooltip={isMobile ? undefined : item.label}
-              className="w-full justify-start"
+              className="w-full justify-start focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              aria-label={item.label}
             >
-              <item.icon className="size-5" />
+              <item.icon className="size-5" aria-hidden="true" />
               <span>{item.label}</span>
             </SidebarMenuButton>
           </Link>

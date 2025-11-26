@@ -137,16 +137,35 @@ export function PostCard({ post }: { post: PostFromFirestore }) {
         )}
       </CardContent>
       <CardFooter className="flex justify-between p-2 px-4">
-        <Button variant="ghost" size="sm" className="flex items-center gap-2" onClick={handleLike}>
-          <Heart className={cn("size-4", isLiked && "fill-destructive text-destructive")} />
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="flex items-center gap-2 min-h-[44px] min-w-[44px] touch-manipulation" 
+          onClick={handleLike}
+          aria-label={isLiked ? 'Unlike post' : 'Like post'}
+          aria-pressed={isLiked}
+        >
+          <Heart className={cn("size-4", isLiked && "fill-destructive text-destructive")} aria-hidden="true" />
           <span>{likeCount}</span>
         </Button>
-        <Button variant="ghost" size="sm" className="flex items-center gap-2" onClick={handleComment}>
-          <MessageCircle className="size-4" />
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="flex items-center gap-2 min-h-[44px] min-w-[44px] touch-manipulation" 
+          onClick={handleComment}
+          aria-label={`Comment on post by ${authorName}. ${post.comments} comments`}
+        >
+          <MessageCircle className="size-4" aria-hidden="true" />
           <span>{post.comments} Comments</span>
         </Button>
-        <Button variant="ghost" size="sm" className="flex items-center gap-2" onClick={handleShare}>
-          <Share2 className="size-4" />
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="flex items-center gap-2 min-h-[44px] min-w-[44px] touch-manipulation" 
+          onClick={handleShare}
+          aria-label="Share post"
+        >
+          <Share2 className="size-4" aria-hidden="true" />
           <span>Share</span>
         </Button>
       </CardFooter>

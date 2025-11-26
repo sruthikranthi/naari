@@ -204,10 +204,12 @@ export function CreatePost() {
           <div className="w-full space-y-3">
             <Textarea
               placeholder="What's on your mind, Sakhi?"
-              className="border-none bg-secondary focus-visible:ring-0 focus-visible:ring-offset-0"
+              className="border-none bg-secondary focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               rows={3}
               value={content}
               onChange={(e) => setContent(e.target.value)}
+              aria-label="Post content"
+              maxLength={5000}
             />
 
             {mediaPreview && (
@@ -263,16 +265,33 @@ export function CreatePost() {
                     onChange={handleFileChange}
                     className="hidden"
                 />
-                <Button variant="ghost" size="icon" onClick={() => triggerFileSelect('image/*')}>
-                  <ImageIcon className="text-muted-foreground" />
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => triggerFileSelect('image/*')}
+                  aria-label="Add image"
+                  className="min-h-[44px] min-w-[44px] touch-manipulation"
+                >
+                  <ImageIcon className="text-muted-foreground" aria-hidden="true" />
                 </Button>
-                <Button variant="ghost" size="icon" onClick={() => triggerFileSelect('video/*')}>
-                  <Video className="text-muted-foreground" />
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => triggerFileSelect('video/*')}
+                  aria-label="Add video"
+                  className="min-h-[44px] min-w-[44px] touch-manipulation"
+                >
+                  <Video className="text-muted-foreground" aria-hidden="true" />
                 </Button>
                  <Dialog open={isCameraOpen} onOpenChange={setIsCameraOpen}>
                   <DialogTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                      <Camera className="text-muted-foreground" />
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      aria-label="Open camera"
+                      className="min-h-[44px] min-w-[44px] touch-manipulation"
+                    >
+                      <Camera className="text-muted-foreground" aria-hidden="true" />
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="max-w-2xl">
@@ -282,25 +301,40 @@ export function CreatePost() {
                     <CameraCapture onMediaCaptured={handleMediaCaptured} />
                   </DialogContent>
                 </Dialog>
-                <Button variant="ghost" size="icon" onClick={() => { setShowPoll(!showPoll); removeMedia(); }}>
-                  <BarChart className="text-muted-foreground" />
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => { setShowPoll(!showPoll); removeMedia(); }}
+                  aria-label="Add poll"
+                  className="min-h-[44px] min-w-[44px] touch-manipulation"
+                >
+                  <BarChart className="text-muted-foreground" aria-hidden="true" />
                 </Button>
               </div>
               <div className="flex items-center gap-4">
                 <Label
                     htmlFor="anonymous-post"
-                    className="flex cursor-pointer items-center gap-2 rounded-full py-1 px-3 text-sm font-normal text-muted-foreground transition-colors hover:bg-accent has-[[data-state=checked]]:bg-primary/10 has-[[data-state=checked]]:text-primary has-[[data-state=checked]]:font-medium"
+                    className="flex cursor-pointer items-center gap-2 rounded-full py-1 px-3 text-sm font-normal text-muted-foreground transition-colors hover:bg-accent has-[[data-state=checked]]:bg-primary/10 has-[[data-state=checked]]:text-primary has-[[data-state=checked]]:font-medium min-h-[44px] touch-manipulation"
                   >
-                    <Shield className="h-4 w-4" />
+                    <Shield className="h-4 w-4" aria-hidden="true" />
                     <span>Post Anonymously</span>
                     <Checkbox 
                         id="anonymous-post" 
                         className="sr-only"
                         checked={isAnonymous}
                         onCheckedChange={(checked) => setIsAnonymous(checked as boolean)}
+                        aria-label="Post anonymously"
                     />
                   </Label>
-                <Button size="sm" onClick={handlePost}>Post</Button>
+                <Button 
+                  size="sm" 
+                  onClick={handlePost}
+                  aria-label="Publish post"
+                  className="min-h-[44px] touch-manipulation"
+                  disabled={!content.trim() && !mediaPreview && !showPoll}
+                >
+                  Post
+                </Button>
               </div>
             </div>
           </div>

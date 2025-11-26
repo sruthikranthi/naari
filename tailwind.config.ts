@@ -104,6 +104,13 @@ export default {
         'accordion-up': 'accordion-up 0.2s ease-out',
         'fade-in-up': 'fade-in-up 0.5s ease-out forwards',
       },
+      // Accessibility: Ensure minimum touch target size
+      minHeight: {
+        'touch-target': '44px',
+      },
+      minWidth: {
+        'touch-target': '44px',
+      },
     },
   },
   plugins: [require('tailwindcss-animate')],
