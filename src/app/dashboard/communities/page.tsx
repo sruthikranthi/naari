@@ -2,10 +2,12 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Users, Search, Plus, Lock, Globe } from 'lucide-react';
+import { Users, Search, Plus, Lock, Globe, Loader } from 'lucide-react';
 import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { collection, addDoc } from 'firebase/firestore';
+import { useCollection, useFirestore, useUser, useMemoFirebase } from '@/firebase';
 
 import {
   Card,
@@ -16,7 +18,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { communities as initialCommunities, type Community } from '@/lib/mock-data';
+import type { Community } from '@/lib/mock-data';
 import { PageHeader } from '@/components/page-header';
 import { Input } from '@/components/ui/input';
 import {
@@ -34,6 +36,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const communitySchema = z.object({
   name: z.string().min(3, { message: 'Name must be at least 3 characters long.' }),
@@ -47,9 +50,16 @@ type CommunityFormValues = z.infer<typeof communitySchema>;
 
 export default function CommunitiesPage() {
   const [searchTerm, setSearchTerm] = useState('');
-  const [communities, setCommunities] = useState(initialCommunities);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
+  const firestore = useFirestore();
+  const { user } = useUser();
+
+  const communitiesQuery = useMemoFirebase(
+    () => (firestore ? collection(firestore, 'communities') : null),
+    [firestore]
+  );
+  const { data: communities, isLoading } = useCollection<Community>(communitiesQuery);
 
   const {
     register,
@@ -68,25 +78,47 @@ export default function CommunitiesPage() {
     }
   });
 
-  const onSubmit = (data: CommunityFormValues) => {
-    const newCommunity: Community = {
-      id: `comm${communities.length + 1}`,
+  const onSubmit = async (data: CommunityFormValues) => {
+    if (!user) {
+        toast({
+            variant: 'destructive',
+            title: 'Not Authenticated',
+            description: 'You must be logged in to create a community.',
+        });
+        return;
+    }
+
+    const newCommunity = {
       name: data.name,
       description: data.description,
       memberCount: 1,
-      image: `https://picsum.photos/seed/newComm${communities.length + 1}/400/300`,
-      bannerImage: `https://picsum.photos/seed/newCommBanner${communities.length + 1}/1200/400`,
+      image: `https://picsum.photos/seed/newComm${Date.now()}/400/300`,
+      bannerImage: `https://picsum.photos/seed/newCommBanner${Date.now()}/1200/400`,
+      leaderId: user.uid,
+      memberIds: [user.uid],
+      isPrivate: data.isPrivate,
+      category: data.category,
     };
-    setCommunities([newCommunity, ...communities]);
-    toast({
-      title: 'Community Created!',
-      description: `Your new community "${data.name}" has been created.`,
-    });
-    reset();
-    setIsDialogOpen(false);
+
+    try {
+        await addDoc(collection(firestore, 'communities'), newCommunity);
+        toast({
+          title: 'Community Created!',
+          description: `Your new community "${data.name}" has been created.`,
+        });
+        reset();
+        setIsDialogOpen(false);
+    } catch(error) {
+        console.error("Error creating community: ", error);
+        toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'Could not create community. Please try again.',
+        });
+    }
   };
 
-  const filteredCommunities = communities.filter((community) =>
+  const filteredCommunities = communities?.filter((community) =>
     community.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -228,9 +260,30 @@ export default function CommunitiesPage() {
           </DialogContent>
         </Dialog>
       </div>
+      
+      {isLoading && (
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {[...Array(3)].map((_, i) => (
+              <Card key={i}>
+                  <CardHeader className="p-0">
+                      <Skeleton className="aspect-video w-full" />
+                  </CardHeader>
+                  <CardContent className="p-4">
+                      <Skeleton className="h-6 w-3/4 mb-2" />
+                      <Skeleton className="h-4 w-full" />
+                      <Skeleton className="h-4 w-1/2 mt-1" />
+                  </CardContent>
+                  <CardFooter className="flex justify-between p-4 pt-2">
+                       <Skeleton className="h-6 w-20" />
+                       <Skeleton className="h-9 w-20" />
+                  </CardFooter>
+              </Card>
+          ))}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {filteredCommunities.map((community) => (
+        {filteredCommunities && filteredCommunities.map((community) => (
           <Card key={community.id} className="flex flex-col overflow-hidden">
             <CardHeader className="p-0">
               <div className="relative aspect-video w-full">
@@ -265,7 +318,7 @@ export default function CommunitiesPage() {
           </Card>
         ))}
       </div>
-      {filteredCommunities.length === 0 && (
+      {!isLoading && filteredCommunities?.length === 0 && (
         <div className="py-20 text-center text-muted-foreground">
           <h3 className="text-lg font-semibold">No communities found</h3>
           <p>Try adjusting your search or create a new community!</p>
