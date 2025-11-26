@@ -8,16 +8,14 @@
  * require a user to be authenticated, providing a baseline level of security.
  *
  * Data Structure:
- * - User-specific data, such as profiles (`UserProfile`) and their posts (`Post`),
- *   is nested under the `/users/{userId}` path. This structure naturally maps
- *   ownership and simplifies security rules.
- * - Collaborative resources like chats, communities, and kitty groups are stored in
- *   top-level collections. Authorization for these resources is managed by
- *   denormalizing member lists (e.g., a `participants` or `memberIds` array)
- *   directly onto the documents.
- * - Publicly discoverable content like marketplace listings, courses, and events
- *   are also in top-level collections, allowing for public reads but restricting
- *   writes to the designated owner (e.g., `sellerId`, `instructorId`).
+ * - User-specific data, such as profiles (`UserProfile`), is stored under the
+ *   `/users/{userId}` path. This structure naturally maps ownership.
+ * - Publicly readable content like posts, marketplace listings, courses, and
+ *   events are in top-level collections, allowing for public reads by authenticated
+ *   users but restricting writes to the designated owner.
+ * - Collaborative resources like chats and kitty groups are also in top-level
+ *   collections. Authorization is managed by denormalizing member lists directly
+ *   onto the documents.
  *
  * Key Security Decisions:
  * - User Enumeration is Disabled: Listing the top-level `/users` collection is
@@ -25,26 +23,15 @@
  * - Default to Signed-In Users: Public read access is generally granted only to
  *   authenticated users (`isSignedIn()`) rather than being fully open (`if true;`),
  *   ensuring a logged-in context for all data interaction.
- * - Immutable Ownership: Critical relational IDs (e.g., `authorId`, `sellerId`, `userId`)
+ * - Immutable Ownership: Critical relational IDs (e.g., `author.id`, `sellerId`)
  *   are enforced as immutable upon document creation to maintain data integrity.
- * - Secure Collaboration: For shared documents like chats and private groups,
- *   management of the member list (updates/deletes) is disabled in the rules. This
- *   is a deliberate security choice that assumes such sensitive operations should
- *   be handled by trusted server-side code (e.g., Cloud Functions) rather than
- *   exposed directly to clients.
  *
  * Denormalization for Authorization:
  * This ruleset relies heavily on denormalization to ensure fast and secure
- * authorization checks without costly `get()` or impossible `exists()` calls. For
- * example, a `/chats/{chatId}` document contains a `participants` array, so a rule
- * can instantly check if a user is a member without reading any other document.
- * This is crucial for securing list operations on subcollections like `/messages`.
- *
- * Structural Segregation:
- * The separation of private user data (`/users/{userId}`) from shared, top-level
- * collections (`/chats`, `/communities`) provides a clear and secure boundary. This
- * prevents complex rules that would otherwise have to check flags or fields to
- * differentiate between private and public data within a single collection.
+ * authorization checks without costly `get()` calls. For example, a `/chats/{chatId}`
+ * document contains a `participants` array, so a rule can instantly check if a user
+ * is a member without reading another document. This is crucial for securing list
+ * operations on subcollections like `/messages`.
  */
 rules_version = '2';
 service cloud.firestore {
@@ -68,7 +55,7 @@ service cloud.firestore {
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
-
+    
     /**
      * A stricter ownership check for updates and deletes that also ensures the
      * document being modified actually exists.
@@ -80,26 +67,17 @@ service cloud.firestore {
     /**
      * Verifies if the authenticated user's UID is present in a specified
      * array field (e.g., 'participants', 'memberIds') on a document.
-     * Used for shared resource access.
      */
     function isMember(docData, key) {
       return isSignedIn() && request.auth.uid in docData[key];
-    }
-
-    /**
-     * Validates that the user is creating a document with an ownership field
-     * (e.g., authorId, sellerId) correctly set to their own UID.
-     */
-    function isSelfAssignedAsOwner(key) {
-      return request.resource.data[key] == request.auth.uid;
     }
     
     /**
      * Enforces immutability on a critical relational ID field during an update.
      * Prevents re-assigning ownership of a document.
      */
-    function isRelationalIdImmutable(key) {
-      return request.resource.data[key] == resource.data[key];
+    function isRelationalIdImmutable(path) {
+      return request.resource.data[path] == resource.data[path];
     }
 
     // -------------------------------------------------------------------------
@@ -118,24 +96,27 @@ service cloud.firestore {
     match /users/{userId} {
       allow get: if isSignedIn();
       allow list: if false;
-      allow create: if isOwner(userId) && isSelfAssignedAsOwner('id');
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
       allow update: if isExistingOwner(userId) && isRelationalIdImmutable('id');
       allow delete: if isExistingOwner(userId);
+    }
+    
+    // -------------------------------------------------------------------------
+    // Posts (/posts)
+    // -------------------------------------------------------------------------
 
-      /**
-       * @description A user can manage their own posts. Other authenticated users can read them.
-       * @path /users/{userId}/posts/{postId}
-       * @allow (create) User `user_abc` creating a new post under their own path `/users/user_abc/posts/new_post`.
-       * @allow (list) User `user_xyz` listing all posts for user `user_abc`.
-       * @deny (update) User `user_xyz` trying to edit a post owned by `user_abc`.
-       * @principle Enforces document ownership for writes while allowing reads within a user's data tree.
-       */
-      match /posts/{postId} {
-        allow get, list: if isSignedIn();
-        allow create: if isOwner(userId) && isSelfAssignedAsOwner('authorId');
-        allow update: if isExistingOwner(userId) && isRelationalIdImmutable('authorId');
-        allow delete: if isExistingOwner(userId);
-      }
+    /**
+     * @description All authenticated users can read posts. Users can only create posts as themselves. Only the author can update or delete their own post.
+     * @path /posts/{postId}
+     * @allow (list) Any authenticated user listing all posts for the main feed.
+     * @allow (create) User `user_abc` creating a post where `author.id` is `user_abc`.
+     * @deny (update) User `user_xyz` trying to edit a post authored by `user_abc`.
+     * @principle Allows public discovery for authenticated users while enforcing ownership for writes.
+     */
+    match /posts/{postId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.author.id == request.auth.uid;
+      allow update, delete: if isSignedIn() && resource.data.author.id == request.auth.uid;
     }
 
     // -------------------------------------------------------------------------
@@ -169,7 +150,7 @@ service cloud.firestore {
        */
       match /messages/{messageId} {
         allow get, list: if isMember(get(/databases/$(database)/documents/chats/$(chatId)).data, 'participants');
-        allow create: if isMember(get(/databases/$(database)/documents/chats/$(chatId)).data, 'participants') && isSelfAssignedAsOwner('senderId') && request.resource.data.chatId == chatId;
+        allow create: if isMember(get(/databases/$(database)/documents/chats/$(chatId)).data, 'participants') && request.resource.data.senderId == request.auth.uid && request.resource.data.chatId == chatId;
         allow update: if isExistingOwner(resource.data.senderId) && isRelationalIdImmutable('senderId') && isRelationalIdImmutable('chatId');
         allow delete: if isExistingOwner(resource.data.senderId);
       }
@@ -189,7 +170,7 @@ service cloud.firestore {
      */
     match /communities/{communityId} {
       allow get, list: if isSignedIn();
-      allow create: if isSignedIn() && isSelfAssignedAsOwner('leaderId');
+      allow create: if isSignedIn() && request.resource.data.leaderId == request.auth.uid;
       allow update: if isOwner(resource.data.leaderId) && resource != null;
       allow delete: if isOwner(resource.data.leaderId) && resource != null;
     }
@@ -229,7 +210,7 @@ service cloud.firestore {
      */
     match /marketplace_listings/{listingId} {
       allow get, list: if isSignedIn();
-      allow create: if isSignedIn() && isSelfAssignedAsOwner('sellerId');
+      allow create: if isSignedIn() && request.resource.data.sellerId == request.auth.uid;
       allow update: if isExistingOwner(resource.data.sellerId) && isRelationalIdImmutable('sellerId');
       allow delete: if isExistingOwner(resource.data.sellerId);
     }
@@ -248,7 +229,7 @@ service cloud.firestore {
      */
     match /courses/{courseId} {
       allow get, list: if isSignedIn();
-      allow create: if isSignedIn() && isSelfAssignedAsOwner('instructorId');
+      allow create: if isSignedIn() && request.resource.data.instructorId == request.auth.uid;
       allow update: if isOwner(resource.data.instructorId) && resource != null;
       allow delete: if isOwner(resource.data.instructorId) && resource != null;
     }
@@ -267,7 +248,7 @@ service cloud.firestore {
      */
     match /events/{eventId} {
       allow get, list: if isSignedIn();
-      allow create: if isSignedIn() && isSelfAssignedAsOwner('organizerId');
+      allow create: if isSignedIn() && request.resource.data.organizerId == request.auth.uid;
       allow update: if isOwner(resource.data.organizerId) && resource != null;
       allow delete: if isOwner(resource.data.organizerId) && resource != null;
     }
