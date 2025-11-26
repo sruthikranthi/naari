@@ -4,6 +4,8 @@ export type Nominee = {
   name: string;
   avatar: string;
   votes: number;
+  comments: number;
+  shares: number;
   hasVoted?: boolean;
   story: {
     text: string;
@@ -52,6 +54,8 @@ export const allContestsData: Contest[] = [
         name: 'Dr. Ritu Sharma',
         avatar: 'https://picsum.photos/seed/nominee1/100/100',
         votes: 1250,
+        comments: 45,
+        shares: 82,
         story: {
           text: 'Dr. Sharma provides free medical care to underprivileged children in rural Rajasthan through her mobile clinic initiative.',
           image: 'https://picsum.photos/seed/nominee-story1/600/400',
@@ -62,6 +66,8 @@ export const allContestsData: Contest[] = [
         name: 'Sunita Devi',
         avatar: 'https://picsum.photos/seed/nominee2/100/100',
         votes: 980,
+        comments: 32,
+        shares: 65,
         story: {
           text: 'Sunita started a self-help group that has empowered over 200 women in her village to become financially independent through handicrafts.',
           image: 'https://picsum.photos/seed/nominee-story2/600/400',
@@ -89,6 +95,8 @@ export const allContestsData: Contest[] = [
         name: 'Priya Mehta',
         avatar: 'https://picsum.photos/seed/nominee3/100/100',
         votes: 480,
+        comments: 21,
+        shares: 40,
         story: {
           text: 'Priya founded "FarmFresh," an organic food delivery service that connects urban consumers directly with local farmers, ensuring fair prices for producers.',
           image: 'https://picsum.photos/seed/nominee-story3/600/400',
@@ -99,6 +107,8 @@ export const allContestsData: Contest[] = [
         name: 'Aisha Khan',
         avatar: 'https://picsum.photos/seed/nominee4/100/100',
         votes: 320,
+        comments: 15,
+        shares: 25,
         story: {
           text: 'Aisha created an ed-tech platform that teaches coding to young girls in Tier-2 and Tier-3 cities, bridging the digital divide.',
           image: 'https://picsum.photos/seed/nominee-story4/600/400',

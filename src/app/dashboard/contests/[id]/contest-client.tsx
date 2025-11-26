@@ -46,7 +46,7 @@ export function ContestClient({ contest }: ContestClientProps) {
     setNominees(
       nominees.map((n) =>
         n.id === nomineeId
-          ? { ...n, votes: (n.votes || 0) + 1, hasVoted: true }
+          ? { ...n, votes: n.votes + 1, hasVoted: true }
           : n
       )
     );
@@ -58,14 +58,28 @@ export function ContestClient({ contest }: ContestClientProps) {
     });
   };
   
-  const handleComment = () => {
+  const handleComment = (nomineeId: string) => {
+    setNominees(
+      nominees.map((n) =>
+        n.id === nomineeId
+          ? { ...n, comments: n.comments + 1 }
+          : n
+      )
+    );
     toast({
       title: 'Commenting coming soon!',
       description: 'You will be able to comment on nominees here.',
     });
   }
   
-  const handleShare = (nomineeName: string) => {
+  const handleShare = (nomineeId: string, nomineeName: string) => {
+     setNominees(
+      nominees.map((n) =>
+        n.id === nomineeId
+          ? { ...n, shares: n.shares + 1 }
+          : n
+      )
+    );
      toast({
       title: 'Shared!',
       description: `A post to support ${nomineeName} has been created on your feed.`,
@@ -82,7 +96,7 @@ export function ContestClient({ contest }: ContestClientProps) {
 
   const filteredNominees = nominees
     .filter((n) => n.name.toLowerCase().includes(searchTerm.toLowerCase()))
-    .sort((a, b) => (b.votes || 0) - (a.votes || 0));
+    .sort((a, b) => b.votes - a.votes);
 
   return (
     <div className="space-y-8">
@@ -227,7 +241,7 @@ export function ContestClient({ contest }: ContestClientProps) {
                     />
                     <Badge className="absolute top-2 right-2 flex items-center gap-1.5 text-base">
                       <Heart className="h-4 w-4" />
-                      {(nominee.votes || 0).toLocaleString()}
+                      {nominee.votes.toLocaleString()}
                     </Badge>
                   </div>
                 </CardHeader>
@@ -248,7 +262,7 @@ export function ContestClient({ contest }: ContestClientProps) {
                     {nominee.story.text}
                   </CardDescription>
                 </CardContent>
-                <CardFooter className="flex justify-between gap-2 p-2">
+                <CardFooter className="flex justify-between gap-1 p-2 bg-muted/50">
                    <Button
                     variant="ghost"
                     size="sm"
@@ -263,19 +277,19 @@ export function ContestClient({ contest }: ContestClientProps) {
                     variant="ghost"
                     size="sm"
                     className="flex-1"
-                    onClick={handleComment}
+                    onClick={() => handleComment(nominee.id)}
                   >
                     <MessageSquare className="mr-2 h-4 w-4" />
-                    Comment
+                    {nominee.comments}
                   </Button>
                    <Button
                     variant="ghost"
                     size="sm"
                     className="flex-1"
-                    onClick={() => handleShare(nominee.name)}
+                    onClick={() => handleShare(nominee.id, nominee.name)}
                   >
                     <Share2 className="mr-2 h-4 w-4" />
-                    Share
+                    {nominee.shares}
                   </Button>
                 </CardFooter>
               </Card>
