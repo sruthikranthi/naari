@@ -15,6 +15,7 @@ export type User = {
   name: string;
   avatar: string;
   city: string;
+  mobileNumber?: string | null;
   interests: string[];
   stories?: StoryItem[];
   kittyScore?: number;

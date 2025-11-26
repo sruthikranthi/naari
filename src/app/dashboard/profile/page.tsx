@@ -19,6 +19,7 @@ import {
   Building,
   Camera,
   Upload,
+  Phone,
 } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, updateDoc, arrayUnion, arrayRemove, collection, query, where, limit } from 'firebase/firestore';
@@ -64,6 +65,18 @@ const profileSchema = z.object({
     name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
     username: z.string().min(3, 'Username must be at least 3 characters.').regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores.'),
     city: z.string().min(2, { message: 'City must be at least 2 characters.' }),
+    mobileNumber: z
+      .string()
+      .optional()
+      .refine(
+        (value) => {
+          if (!value) return true;
+          const trimmed = value.trim();
+          if (!trimmed) return true;
+          return /^\+?[0-9]{10,15}$/.test(trimmed.replace(/\s+/g, ''));
+        },
+        { message: 'Enter a valid phone number with 10-15 digits.' }
+      ),
     interests: z.string().optional(),
     education: z.string().optional(),
     profession: z.string().optional(),
@@ -107,6 +120,7 @@ export default function ProfilePage() {
         name: user?.name || '',
         username: user?.username || '',
         city: user?.city || '',
+        mobileNumber: user?.mobileNumber || '',
         interests: user?.interests?.join(', ') || '',
         education: user?.education || '',
         profession: user?.profession || '',
@@ -120,10 +134,16 @@ export default function ProfilePage() {
         return;
     };
 
-    const updatedData = {
-      ...data,
-      interests: data.interests?.split(',').map(interest => interest.trim()).filter(Boolean),
+    const { interests, mobileNumber, ...rest } = data;
+    const trimmedMobile = mobileNumber?.trim() ?? '';
+    const normalizedMobileNumber = trimmedMobile.replace(/\s+/g, '');
+
+    const updatedData: Record<string, unknown> = {
+      ...rest,
+      interests: interests?.split(',').map(interest => interest.trim()).filter(Boolean),
     };
+
+    updatedData.mobileNumber = normalizedMobileNumber || null;
 
     try {
         await updateDoc(userDocRef, updatedData);
@@ -374,6 +394,16 @@ export default function ProfilePage() {
                          {errors.city && <p className="text-destructive text-xs mt-1">{errors.city.message}</p>}
                       </div>
                       <div>
+                        <Label htmlFor="mobileNumber">Mobile Number</Label>
+                        <Input
+                          id="mobileNumber"
+                          type="tel"
+                          placeholder="e.g., +91 9876543210"
+                          {...register('mobileNumber')}
+                        />
+                        {errors.mobileNumber && <p className="text-destructive text-xs mt-1">{errors.mobileNumber.message}</p>}
+                      </div>
+                      <div>
                         <Label htmlFor="education">Education</Label>
                         <Input id="education" placeholder="e.g., MBA in Marketing" {...register('education')} />
                       </div>
@@ -469,6 +499,7 @@ export default function ProfilePage() {
                  {user.education && <div className="flex items-center gap-3"><Book className="h-5 w-5 text-primary" /> <div><p className="font-semibold">Education</p><p className="text-muted-foreground">{user.education}</p></div></div>}
                  {user.maritalStatus && <div className="flex items-center gap-3"><Heart className="h-5 w-5 text-primary" /> <div><p className="font-semibold">Marital Status</p><p className="text-muted-foreground">{user.maritalStatus}</p></div></div>}
                  {user.city && <div className="flex items-center gap-3"><Building className="h-5 w-5 text-primary" /> <div><p className="font-semibold">City</p><p className="text-muted-foreground">{user.city}</p></div></div>}
+                 {user.mobileNumber && <div className="flex items-center gap-3"><Phone className="h-5 w-5 text-primary" /> <div><p className="font-semibold">Mobile</p><p className="text-muted-foreground">{user.mobileNumber}</p></div></div>}
                </div>
 
               <div>
