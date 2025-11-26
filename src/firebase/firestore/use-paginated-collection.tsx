@@ -71,16 +71,17 @@ export function usePaginatedCollection<T = any>(
         if (memoizedQuery.type === 'collection') {
           query = limit(memoizedQuery as CollectionReference<DocumentData>, pageSize);
         } else {
-          // If it's already a query, we need to add limit
-          // Note: This assumes the query doesn't already have a limit
+          // If it's already a query, add limit to it
           query = limit(memoizedQuery as Query<DocumentData>, pageSize);
         }
       } else {
-        // Subsequent pages
+        // Subsequent pages - use startAfter
         if (memoizedQuery.type === 'collection') {
-          query = limit(startAfter(lastDoc, memoizedQuery as CollectionReference<DocumentData>), pageSize);
+          const baseQuery = memoizedQuery as CollectionReference<DocumentData>;
+          query = limit(startAfter(lastDoc, baseQuery), pageSize);
         } else {
-          query = limit(startAfter(lastDoc, memoizedQuery as Query<DocumentData>), pageSize);
+          const baseQuery = memoizedQuery as Query<DocumentData>;
+          query = limit(startAfter(lastDoc, baseQuery), pageSize);
         }
       }
 
