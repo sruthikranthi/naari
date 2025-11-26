@@ -8,6 +8,36 @@ This document outlines the testing infrastructure and how to write and run tests
 - **E2E Tests**: Playwright
 - **Coverage**: Jest coverage reports
 
+## Setup
+
+### Initial Setup
+
+After cloning the repository and installing dependencies, you need to install Playwright browsers:
+
+```bash
+# Install Playwright browsers
+npx playwright install
+```
+
+### System Dependencies (Linux)
+
+On Linux systems, you may need to install additional system dependencies:
+
+```bash
+# Install system dependencies (requires sudo)
+sudo npx playwright install-deps
+
+# Or manually with apt
+sudo apt-get install \
+  libevent-2.1-7t64 \
+  libgstreamer-plugins-bad1.0-0 \
+  libflite1 \
+  libavif16 \
+  gstreamer1.0-libav
+```
+
+**Note**: The browsers will still work without these dependencies, but some features (like video recording) may not function properly.
+
 ## Running Tests
 
 ### Unit Tests
