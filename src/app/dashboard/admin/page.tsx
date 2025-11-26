@@ -77,7 +77,7 @@ import type { ProfessionalApplication } from '@/lib/applications';
 
 type UserWithRole = User & { role: 'User' | 'Professional' | 'Creator'; status: 'Active' | 'Inactive' | 'Pending' };
 
-const SUPER_ADMIN_ID = 'ebixEzJ8UuYjIYTXrkOObW1obSw1';
+const SUPER_ADMIN_ID = process.env.NEXT_PUBLIC_SUPER_ADMIN_ID || 'ebixEzJ8UuYjIYTXrkOObW1obSw1';
 
 
 export default function AdminPanelPage() {

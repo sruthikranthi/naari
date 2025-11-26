@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { CameraCapture } from './camera-capture';
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/firebase';
+import { sanitizeText, validationSchemas } from '@/lib/validation';
 
 
 export function CreatePost() {
@@ -44,7 +45,20 @@ export function CreatePost() {
         return;
     }
 
-    if (!content.trim() && !mediaPreview) {
+    // Check email verification
+    if (!user.emailVerified) {
+      toast({
+        variant: 'destructive',
+        title: 'Email Not Verified',
+        description: 'Please verify your email address before creating posts.',
+      });
+      return;
+    }
+
+    // Validate and sanitize content
+    const sanitizedContent = content.trim();
+    
+    if (!sanitizedContent && !mediaPreview) {
       toast({
         variant: 'destructive',
         title: 'Cannot create empty post',
@@ -53,19 +67,39 @@ export function CreatePost() {
       return;
     }
 
+    // Validate content length
+    if (sanitizedContent.length > 5000) {
+      toast({
+        variant: 'destructive',
+        title: 'Content Too Long',
+        description: 'Post content must be less than 5000 characters.',
+      });
+      return;
+    }
+
+    // Sanitize poll options
+    const sanitizedPollOptions = showPoll 
+      ? pollOptions
+          .filter(opt => opt.trim() !== '')
+          .map(opt => ({ 
+            text: opt.trim().substring(0, 100), // Limit poll option length
+            votes: 0 
+          }))
+      : undefined;
+
     const newPost = {
       author: {
         id: user.uid,
         name: user.displayName || 'Anonymous Sakhi',
         avatar: user.photoURL || `https://picsum.photos/seed/${user.uid}/100/100`,
       },
-      content,
+      content: sanitizedContent,
       timestamp: serverTimestamp(),
       likes: 0,
       comments: 0,
       isAnonymous,
       image: mediaType === 'image' ? mediaPreview! : undefined,
-      pollOptions: showPoll ? pollOptions.filter(opt => opt.trim() !== '').map(opt => ({ text: opt, votes: 0 })) : undefined
+      pollOptions: sanitizedPollOptions
     };
     
     try {

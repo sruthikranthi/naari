@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth, useUser } from '@/firebase';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -18,7 +18,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Logo } from '@/components/logo';
-import { Loader } from 'lucide-react';
+import { Loader, Mail } from 'lucide-react';
+import { sanitizeText, isValidEmail, validationSchemas } from '@/lib/validation';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function LoginPage() {
   const auth = useAuth();
@@ -29,10 +31,17 @@ export default function LoginPage() {
   const [password, setPassword] = useState('password');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [emailNotVerified, setEmailNotVerified] = useState(false);
+  const [isResendingVerification, setIsResendingVerification] = useState(false);
 
   useEffect(() => {
     if (!isUserLoading && user) {
-      router.push('/dashboard');
+      // Check if email is verified
+      if (user.emailVerified) {
+        router.push('/dashboard');
+      } else {
+        setEmailNotVerified(true);
+      }
     }
   }, [user, isUserLoading, router]);
 
@@ -40,23 +49,82 @@ export default function LoginPage() {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
+    setEmailNotVerified(false);
+
+    // Validate and sanitize inputs
+    const sanitizedEmail = sanitizeText(email);
+    const sanitizedPassword = password.trim();
+
+    if (!validationSchemas.email.validate(sanitizedEmail)) {
+      setError(validationSchemas.email.message);
+      setIsLoading(false);
+      return;
+    }
+
+    if (sanitizedPassword.length < 6) {
+      setError('Password must be at least 6 characters');
+      setIsLoading(false);
+      return;
+    }
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      // The useEffect above will handle the redirect on successful login.
-      toast({
-        title: 'Login Successful!',
-        description: 'Redirecting to your dashboard...',
-      });
+      const userCredential = await signInWithEmailAndPassword(auth, sanitizedEmail, sanitizedPassword);
+      
+      // Check email verification
+      if (!userCredential.user.emailVerified) {
+        setEmailNotVerified(true);
+        toast({
+          variant: 'destructive',
+          title: 'Email Not Verified',
+          description: 'Please verify your email address before accessing the dashboard.',
+        });
+      } else {
+        toast({
+          title: 'Login Successful!',
+          description: 'Redirecting to your dashboard...',
+        });
+        router.push('/dashboard');
+      }
     } catch (error: any) {
-      setError(error.message);
+      let errorMessage = 'Please check your credentials and try again.';
+      if (error.code === 'auth/user-not-found') {
+        errorMessage = 'No account found with this email address.';
+      } else if (error.code === 'auth/wrong-password') {
+        errorMessage = 'Incorrect password. Please try again.';
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMessage = 'Too many failed attempts. Please try again later.';
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = 'Invalid email address.';
+      }
+      setError(errorMessage);
       toast({
         variant: 'destructive',
         title: 'Login Failed',
-        description: 'Please check your credentials and try again.',
+        description: errorMessage,
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    if (!auth.currentUser) return;
+    
+    setIsResendingVerification(true);
+    try {
+      await sendEmailVerification(auth.currentUser);
+      toast({
+        title: 'Verification Email Sent',
+        description: 'Please check your inbox and click the verification link.',
+      });
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Failed to Send Verification Email',
+        description: error.message || 'Please try again later.',
+      });
+    } finally {
+      setIsResendingVerification(false);
     }
   };
 
@@ -74,6 +142,32 @@ export default function LoginPage() {
         </CardHeader>
         <form onSubmit={handleLogin}>
           <CardContent className="grid gap-4">
+            {emailNotVerified && (
+              <Alert variant="destructive">
+                <Mail className="h-4 w-4" />
+                <AlertTitle>Email Verification Required</AlertTitle>
+                <AlertDescription className="mt-2">
+                  Your email address has not been verified. Please check your inbox and click the verification link.
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="mt-2 w-full"
+                    onClick={handleResendVerification}
+                    disabled={isResendingVerification}
+                  >
+                    {isResendingVerification ? (
+                      <>
+                        <Loader className="mr-2 h-4 w-4 animate-spin" />
+                        Sending...
+                      </>
+                    ) : (
+                      'Resend Verification Email'
+                    )}
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            )}
             <div className="grid gap-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -82,7 +176,19 @@ export default function LoginPage() {
                 placeholder="m@example.com"
                 required
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  const sanitized = sanitizeText(e.target.value);
+                  setEmail(sanitized);
+                  if (error && isValidEmail(sanitized)) {
+                    setError(null);
+                  }
+                }}
+                onBlur={(e) => {
+                  const sanitized = sanitizeText(e.target.value);
+                  if (!isValidEmail(sanitized) && sanitized.length > 0) {
+                    setError(validationSchemas.email.message);
+                  }
+                }}
               />
             </div>
             <div className="grid gap-2">
@@ -91,6 +197,7 @@ export default function LoginPage() {
                 id="password"
                 type="password"
                 required
+                minLength={6}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />

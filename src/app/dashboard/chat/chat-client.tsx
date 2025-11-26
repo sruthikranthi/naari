@@ -44,6 +44,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useUser, useFirestore, useCollection, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, query, where, addDoc, serverTimestamp, orderBy } from 'firebase/firestore';
+import { sanitizeText, validationSchemas } from '@/lib/validation';
 
 type SafetyCheckState = {
   result?: AIPoweredChatSafetyOutput;
@@ -124,9 +125,30 @@ export function ChatClient() {
         });
         return;
     }
+
+    // Validate and sanitize message
+    const sanitizedMessage = sanitizeText(message);
+    if (!sanitizedMessage || sanitizedMessage.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "Invalid Message",
+        description: "Message cannot be empty.",
+      });
+      return;
+    }
+
+    if (sanitizedMessage.length > 5000) {
+      toast({
+        variant: "destructive",
+        title: "Message Too Long",
+        description: "Message must be less than 5000 characters.",
+      });
+      return;
+    }
     
     if (formRef.current) {
         const formData = new FormData(formRef.current);
+        formData.set('message', sanitizedMessage); // Use sanitized message
         formAction(formData);
     }
   };
@@ -138,7 +160,7 @@ export function ChatClient() {
             const messagesCol = collection(firestore, 'chats', activeChatId, 'messages');
             const messageData = {
                 senderId: user.uid,
-                text: state.message,
+                text: sanitizeText(state.message), // Sanitize before storing
                 timestamp: serverTimestamp(),
                 chatId: activeChatId,
             };
