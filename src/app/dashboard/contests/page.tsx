@@ -1,3 +1,4 @@
+
 'use client';
 import { useState } from 'react';
 import Image from 'next/image';
@@ -59,6 +60,7 @@ const featuredContests = [
     prize: '₹1,00,000 + Trophy',
     endsIn: '45 days',
     participants: 1250,
+    image: 'https://picsum.photos/seed/naarimani/800/600',
     action: 'Nominate',
   },
   {
