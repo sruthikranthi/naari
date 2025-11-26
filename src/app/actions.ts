@@ -1,3 +1,4 @@
+
 'use server';
 import {
   aiPoweredChatSafety,
@@ -73,7 +74,10 @@ export async function getAudio(
   }
 
   try {
-    const result = await textToSpeech(validatedFields.data);
+    const result = await textToSpeech({
+        text: validatedFields.data.text,
+        language: validatedFields.data.language || 'en-US',
+    });
     return { result };
   } catch (e) {
     console.error(e);
