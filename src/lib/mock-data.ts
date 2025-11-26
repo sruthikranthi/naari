@@ -1,3 +1,5 @@
+import { directory } from './directory';
+import type { Professional } from './directory';
 
 export type User = {
   id: string;
@@ -433,3 +435,6 @@ export const selfCareActivities: SelfCareActivity[] = [
     description: 'Spend 15 minutes outdoors, observing your surroundings.',
   },
 ];
+
+export { directory };
+export type { Professional };

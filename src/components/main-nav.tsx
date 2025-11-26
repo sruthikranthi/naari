@@ -10,6 +10,7 @@ import {
   HeartPulse,
   BookOpen,
   Ticket,
+  HeartHandshake,
 } from 'lucide-react';
 
 import {
@@ -28,6 +29,7 @@ const navItems = [
   { href: '/dashboard/wellness', icon: HeartPulse, label: 'Wellness' },
   { href: '/dashboard/learning', icon: BookOpen, label: 'Learning' },
   { href: '/dashboard/tambola', icon: Ticket, label: 'Tambola' },
+  { href: '/dashboard/support-directory', icon: HeartHandshake, label: 'Support Directory' },
 ];
 
 export function MainNav() {

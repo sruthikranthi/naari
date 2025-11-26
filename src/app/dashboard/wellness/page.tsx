@@ -23,6 +23,7 @@ import {
   Check,
   Wand,
 } from 'lucide-react';
+import Link from 'next/link';
 import { PageHeader } from '@/components/page-header';
 import {
   Card,
@@ -427,16 +428,8 @@ export default function WellnessPage() {
           <Card>
             <CardHeader className="flex-row items-center justify-between">
               <CardTitle>Find Support</CardTitle>
-              <Button
-                onClick={() =>
-                  toast({
-                    title: 'Coming Soon!',
-                    description:
-                      'The professional directory is being curated.',
-                  })
-                }
-              >
-                View Directory
+              <Button asChild>
+                <Link href="/dashboard/support-directory">View Directory</Link>
               </Button>
             </CardHeader>
             <CardContent>
