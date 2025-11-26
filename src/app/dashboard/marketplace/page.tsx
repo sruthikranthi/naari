@@ -13,6 +13,7 @@ import {
   Card,
   CardContent,
   CardHeader,
+  CardTitle,
 } from '@/components/ui/card';
 import { products as initialProducts, users } from '@/lib/mock-data';
 import type { Product } from '@/lib/mock-data';
