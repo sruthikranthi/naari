@@ -17,7 +17,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { products as initialProducts, users as mockUsers } from '@/lib/mock-data';
 import type { Product, User } from '@/lib/mock-data';
 import { PageHeader } from '@/components/page-header';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -52,8 +51,6 @@ const productSchema = z.object({
 
 type ProductFormValues = z.infer<typeof productSchema>;
 
-const allCategories = [...new Set(initialProducts.map(p => p.category))];
-const maxPrice = Math.max(...initialProducts.map(p => p.price));
 
 export default function MarketplacePage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -66,11 +63,28 @@ export default function MarketplacePage() {
     [firestore, user]
   );
   const { data: products, isLoading: areProductsLoading } = useCollection<Product>(productsQuery);
+  
+  const allCategories = useMemo(() => {
+    if (!products) return [];
+    return [...new Set(products.map(p => p.category))];
+  }, [products]);
+  
+  const maxPrice = useMemo(() => {
+    if (!products || products.length === 0) return 10000;
+    return Math.max(...products.map(p => p.price));
+  }, [products]);
 
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [priceRange, setPriceRange] = useState([maxPrice]);
   const [selectedRating, setSelectedRating] = useState(0);
   const [sortBy, setSortBy] = useState('newest');
+
+  useEffect(() => {
+    if (maxPrice > 0) {
+        setPriceRange([maxPrice]);
+    }
+  }, [maxPrice]);
+
 
   const {
     register,
@@ -86,11 +100,10 @@ export default function MarketplacePage() {
         toast({ variant: 'destructive', title: 'Authentication required' });
         return;
     }
-    const sellerInfo = mockUsers.find(u => u.id === user.uid) || {
+    const sellerInfo = {
         id: user.uid,
         name: user.displayName || 'Anonymous Seller',
         avatar: user.photoURL || `https://picsum.photos/seed/${user.uid}/100/100`,
-        city: 'Unknown'
     };
 
     const newProduct = {

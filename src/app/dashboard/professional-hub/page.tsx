@@ -1,6 +1,6 @@
 
 'use client';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Users,
   BookOpen,
@@ -12,6 +12,7 @@ import {
   X,
   Calendar,
   MoreVertical,
+  Loader,
 } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
 import {
@@ -36,7 +37,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { courses, directory, users, type User } from '@/lib/mock-data';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
@@ -49,7 +49,11 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
-
+import { useCollection, useFirestore, useUser, useMemoFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
+import type { Professional } from '@/lib/directory';
+import type { Course, User } from '@/lib/mock-data';
+import { Skeleton } from '@/components/ui/skeleton';
 
 type IncomingRequest = {
   user: User;
@@ -62,38 +66,59 @@ type Client = {
   status: 'Upcoming' | 'Completed' | 'Cancelled';
 };
 
-const initialRequests: IncomingRequest[] = [
-  { user: users[1], message: "Hi Dr. Gupta, I'd like to book a session." },
-  { user: users[3], message: 'Looking for guidance on stress management.' },
-];
-
-const initialClients: Client[] = [
-  {
-    user: users[4],
-    sessionDate: 'July 28, 2024',
-    status: 'Upcoming',
-  },
-  {
-    user: users[2],
-    sessionDate: 'July 15, 2024',
-    status: 'Completed',
-  },
-];
-
 export default function ProfessionalHubPage() {
   const { toast } = useToast();
-  const [incomingRequests, setIncomingRequests] = useState<IncomingRequest[]>(initialRequests);
-  const [clients, setClients] = useState<Client[]>(initialClients);
+  const [incomingRequests, setIncomingRequests] = useState<IncomingRequest[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [isRescheduleOpen, setIsRescheduleOpen] = useState(false);
   const [newDate, setNewDate] = useState<Date | undefined>();
 
-  // Assuming the logged-in user is a professional.
-  const professional = directory[0];
-  const courseCreator = users[2];
-  const creatorCourses = courses.filter(
-    (c) => c.instructor === courseCreator.name
+  const firestore = useFirestore();
+  const { user: currentUser, isUserLoading } = useUser();
+
+  const directoryQuery = useMemoFirebase(
+    () => (firestore && currentUser ? collection(firestore, 'directory') : null),
+    [firestore, currentUser]
   );
+  const { data: professionals, isLoading: areProfessionalsLoading } = useCollection<Professional>(directoryQuery);
+
+  const coursesQuery = useMemoFirebase(
+    () => (firestore && currentUser ? collection(firestore, 'courses') : null),
+    [firestore, currentUser]
+  );
+  const { data: courses, isLoading: areCoursesLoading } = useCollection<Course>(coursesQuery);
+
+  const usersQuery = useMemoFirebase(
+    () => (firestore && currentUser ? collection(firestore, 'users') : null),
+    [firestore, currentUser]
+  );
+  const { data: users, isLoading: areUsersLoading } = useCollection<User>(usersQuery);
+
+  const professional = useMemo(() => professionals?.[0], [professionals]);
+  
+  const { courseCreator, creatorCourses } = useMemo(() => {
+    if (!courses || !users) return { courseCreator: null, creatorCourses: [] };
+    const creator = users.find(u => u.id === 'u3'); // Mocking: finding a specific user as creator
+    if (!creator) return { courseCreator: null, creatorCourses: [] };
+    
+    const created = courses.filter(c => c.instructorId === creator.id);
+    return { courseCreator: creator, creatorCourses: created };
+  }, [courses, users]);
+
+  // Set up mock requests and clients once users are loaded
+  useState(() => {
+    if (users && users.length > 3) {
+      setIncomingRequests([
+        { user: users[1], message: "Hi Dr. Gupta, I'd like to book a session." },
+        { user: users[3], message: 'Looking for guidance on stress management.' },
+      ]);
+      setClients([
+        { user: users[4], sessionDate: 'July 28, 2024', status: 'Upcoming' },
+        { user: users[2], sessionDate: 'July 15, 2024', status: 'Completed' },
+      ]);
+    }
+  });
 
   const handleRequest = (request: IncomingRequest, accepted: boolean) => {
     setIncomingRequests((prev) =>
@@ -167,6 +192,29 @@ export default function ProfessionalHubPage() {
         setSelectedClient(null);
         setNewDate(undefined);
     }
+  }
+
+  const isLoading = isUserLoading || areProfessionalsLoading || areCoursesLoading || areUsersLoading;
+
+  if (isLoading) {
+    return (
+        <div className="space-y-6">
+            <Skeleton className="h-16 w-3/4" />
+            <Skeleton className="h-10 w-full" />
+            <div className="space-y-6 mt-6">
+                <Skeleton className="h-48 w-full" />
+                <Skeleton className="h-64 w-full" />
+            </div>
+        </div>
+    )
+  }
+
+  if (!professional || !courseCreator) {
+    return (
+        <div className="text-center py-10">
+            <p>Could not load professional or creator data.</p>
+        </div>
+    )
   }
 
   return (
