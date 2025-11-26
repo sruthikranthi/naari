@@ -21,6 +21,11 @@ export type User = {
   paymentStatus?: 'Paid' | 'Unpaid' | 'Overdue';
   followerIds?: string[];
   followingIds?: string[];
+  username?: string;
+  education?: string;
+  profession?: string;
+  maritalStatus?: string;
+  bannerImage?: string;
 };
 
 export type StoryItem = {
@@ -53,11 +58,17 @@ export type Post = {
   pollOptions?: PollOption[];
 };
 
+export type Chat = {
+    id: string;
+    participants: string[];
+};
+
 export type Message = {
     id: string;
     senderId: string;
+    chatId: string;
     text: string;
-    timestamp: string;
+    timestamp: any;
 }
 
 export type Community = {
@@ -149,5 +160,3 @@ export const selfCareActivities: SelfCareActivity[] = [
     description: 'Spend 15 minutes outdoors, observing your surroundings.',
   },
 ];
-
-    
