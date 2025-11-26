@@ -23,6 +23,8 @@ import { CartSheet } from '@/components/cart-sheet';
 import { NotificationsNav } from '@/components/notifications-nav';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { SearchModal } from '@/components/search-modal';
+import { PageTransition } from '@/components/page-transition';
+import { MobileBottomNav } from '@/components/mobile-bottom-nav';
 import type { Post } from '@/lib/mock-data';
 
 // Create Dashboard Context
@@ -124,10 +126,13 @@ function Layout({ children }: { children: ReactNode }) {
             <UserNav />
           </div>
         </header>
-        <main id="main-content" className="flex-1 overflow-y-auto p-4 md:p-6" role="main">
-          {children}
+        <main id="main-content" className="flex-1 overflow-y-auto p-4 md:p-6 pb-20 md:pb-6" role="main">
+          <PageTransition>
+            {children}
+          </PageTransition>
         </main>
         <SearchModal open={isSearchOpen} onOpenChange={setIsSearchOpen} />
+        <MobileBottomNav />
       </SidebarInset>
     </SidebarProvider>
   )

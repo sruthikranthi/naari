@@ -19,6 +19,7 @@ import { cn } from '@/lib/utils';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Timestamp } from 'firebase/firestore';
 import { formatDistanceToNow } from 'date-fns';
+import { motion } from 'framer-motion';
 
 type PostFromFirestore = Omit<Post, 'timestamp'> & {
   timestamp: Timestamp | null;
@@ -81,8 +82,15 @@ export function PostCard({ post }: { post: PostFromFirestore }) {
   }
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center gap-4 p-4">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      whileHover={{ y: -2 }}
+      className="hover-lift"
+    >
+      <Card>
+        <CardHeader className="flex flex-row items-center gap-4 p-4">
         <Avatar>
           <AvatarImage src={authorAvatar} alt={authorName} data-ai-hint="woman portrait" />
           <AvatarFallback>
@@ -137,38 +145,59 @@ export function PostCard({ post }: { post: PostFromFirestore }) {
         )}
       </CardContent>
       <CardFooter className="flex justify-between p-2 px-4">
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className="flex items-center gap-2 min-h-[44px] min-w-[44px] touch-manipulation" 
-          onClick={handleLike}
-          aria-label={isLiked ? 'Unlike post' : 'Like post'}
-          aria-pressed={isLiked}
+        <motion.div
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
         >
-          <Heart className={cn("size-4", isLiked && "fill-destructive text-destructive")} aria-hidden="true" />
-          <span>{likeCount}</span>
-        </Button>
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className="flex items-center gap-2 min-h-[44px] min-w-[44px] touch-manipulation" 
-          onClick={handleComment}
-          aria-label={`Comment on post by ${authorName}. ${post.comments} comments`}
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="flex items-center gap-2 min-h-[44px] min-w-[44px] touch-manipulation scale-on-click" 
+            onClick={handleLike}
+            aria-label={isLiked ? 'Unlike post' : 'Like post'}
+            aria-pressed={isLiked}
+          >
+            <motion.div
+              animate={isLiked ? { scale: [1, 1.3, 1] } : {}}
+              transition={{ duration: 0.3 }}
+            >
+              <Heart className={cn("size-4", isLiked && "fill-destructive text-destructive")} aria-hidden="true" />
+            </motion.div>
+            <span>{likeCount}</span>
+          </Button>
+        </motion.div>
+        <motion.div
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
         >
-          <MessageCircle className="size-4" aria-hidden="true" />
-          <span>{post.comments} Comments</span>
-        </Button>
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className="flex items-center gap-2 min-h-[44px] min-w-[44px] touch-manipulation" 
-          onClick={handleShare}
-          aria-label="Share post"
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="flex items-center gap-2 min-h-[44px] min-w-[44px] touch-manipulation scale-on-click" 
+            onClick={handleComment}
+            aria-label={`Comment on post by ${authorName}. ${post.comments} comments`}
+          >
+            <MessageCircle className="size-4" aria-hidden="true" />
+            <span>{post.comments} Comments</span>
+          </Button>
+        </motion.div>
+        <motion.div
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
         >
-          <Share2 className="size-4" aria-hidden="true" />
-          <span>Share</span>
-        </Button>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="flex items-center gap-2 min-h-[44px] min-w-[44px] touch-manipulation scale-on-click" 
+            onClick={handleShare}
+            aria-label="Share post"
+          >
+            <Share2 className="size-4" aria-hidden="true" />
+            <span>Share</span>
+          </Button>
+        </motion.div>
       </CardFooter>
     </Card>
+    </motion.div>
   );
 }

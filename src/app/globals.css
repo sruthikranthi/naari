@@ -83,6 +83,17 @@
   }
   body {
     @apply bg-background text-foreground;
+    /* Smooth theme transitions */
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+  
+  /* Smooth transitions for theme-aware elements */
+  *,
+  *::before,
+  *::after {
+    transition-property: background-color, border-color, color, fill, stroke;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 200ms;
   }
   
   /* Accessibility: Focus indicators */
@@ -120,6 +131,20 @@
     }
   }
   
+  /* Tablet optimizations */
+  @media (min-width: 768px) and (max-width: 1024px) {
+    /* Optimize spacing for tablets */
+    .container {
+      padding-left: 1.5rem;
+      padding-right: 1.5rem;
+    }
+    
+    /* Improve card layouts for tablets */
+    .grid-responsive {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  
   /* Mobile: Improve touch targets and performance */
   @media (max-width: 768px) {
     button,
@@ -137,6 +162,94 @@
     textarea,
     select {
       touch-action: manipulation;
+    }
+    
+    /* Better mobile navigation */
+    .mobile-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 50;
+      background: hsl(var(--background));
+      border-top: 1px solid hsl(var(--border));
+      padding: 0.5rem;
+    }
+  }
+  
+  /* Dark mode contrast improvements */
+  .dark {
+    /* Ensure sufficient contrast for text */
+    --muted-foreground: 329 20% 70%;
+    
+    /* Improve card contrast */
+    --card: 329 20% 14%;
+    --card-foreground: 329 58% 96%;
+    
+    /* Better border visibility */
+    --border: 329 20% 25%;
+  }
+  
+  /* Micro-interactions */
+  @layer utilities {
+    .hover-lift {
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    
+    .hover-lift:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    
+    .dark .hover-lift:hover {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+    
+    .scale-on-click:active {
+      transform: scale(0.98);
+    }
+    
+    .fade-in {
+      animation: fadeIn 0.3s ease-in;
+    }
+    
+    .slide-up {
+      animation: slideUp 0.3s ease-out;
+    }
+    
+    .slide-down {
+      animation: slideDown 0.3s ease-out;
+    }
+  }
+  
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  @keyframes slideDown {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
     }
   }
 }
