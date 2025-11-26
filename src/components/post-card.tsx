@@ -107,6 +107,8 @@ export function PostCard({ post }: { post: PostFromFirestore }) {
               fill
               className="object-cover"
               data-ai-hint="social media lifestyle"
+              loading="lazy"
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             />
           </div>
         )}

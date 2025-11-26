@@ -110,6 +110,8 @@ export async function getCustomMeditationAudio(
   prevState: CustomMeditationState,
   formData: FormData
 ): Promise<CustomMeditationState> {
+  // Lazy load AI features
+  const meditationFn = await loadAIFeatures();
   const validatedFields = customMeditationSchema.safeParse({
     prompt: formData.get('prompt'),
     language: formData.get('language'),

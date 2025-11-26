@@ -64,6 +64,25 @@ npm run build
 npm start
 ```
 
+### Bundle Analysis
+
+To analyze bundle size:
+
+```bash
+npm run build:analyze
+```
+
+This will generate bundle analysis reports showing which packages are taking up the most space.
+
+## Performance Optimizations
+
+- ✅ Image optimization with Next.js Image component
+- ✅ Lazy loading for images and heavy components
+- ✅ Code splitting with dynamic imports
+- ✅ Firestore query optimization with indexes
+- ✅ Pagination support for large collections
+- ✅ Bundle size optimization
+
 ## Security Features
 
 - ✅ Firebase config via environment variables
@@ -72,6 +91,16 @@ npm start
 - ✅ Email verification required
 - ✅ Rate limiting utilities
 - ✅ XSS protection
+
+## Firestore Indexes
+
+The application uses composite indexes for optimized queries. Deploy indexes using:
+
+```bash
+firebase deploy --only firestore:indexes
+```
+
+Or manually create them in Firebase Console > Firestore Database > Indexes.
 
 ## Deployment
 
@@ -93,7 +122,8 @@ npm start
 src/
 ├── app/              # Next.js app router pages
 ├── components/       # React components
-├── firebase/        # Firebase configuration and hooks
+├── firebase/         # Firebase configuration and hooks
+│   └── firestore/    # Firestore hooks (use-collection, use-doc, use-paginated-collection)
 ├── lib/             # Utilities and validation
 └── hooks/           # Custom React hooks
 ```
