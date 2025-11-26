@@ -10,6 +10,8 @@ import {
   MessageCircle,
   Share2,
   Check,
+  IndianRupee,
+  Users,
 } from 'lucide-react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -48,7 +50,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { useDashboard } from '@/app/dashboard/page';
+import { useDashboard } from '@/app/dashboard/layout';
 import { users } from '@/lib/mock-data';
 
 const featuredContests = [
