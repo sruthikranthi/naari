@@ -20,7 +20,8 @@ import { MainNav } from '@/components/main-nav';
 import { CartProvider } from '@/context/cart-context';
 import { CartSheet } from '@/components/cart-sheet';
 import { NotificationsNav } from '@/components/notifications-nav';
-import { DashboardProvider } from './page';
+import { DashboardProvider } from '../page';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
@@ -59,6 +60,7 @@ function Layout({ children }: { children: ReactNode }) {
           <div className="flex items-center gap-4">
             <NotificationsNav />
             <CartSheet />
+            <ThemeToggle />
             <UserNav />
           </div>
         </header>
