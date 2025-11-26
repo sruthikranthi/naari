@@ -21,7 +21,7 @@ import {
   Video,
   BookOpen,
 } from 'lucide-react';
-import type { KittyGroup as KittyGroupType } from '@/lib/mock-data';
+import type { KittyGroup as KittyGroupType, User as UserType } from '@/lib/mock-data';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import {
@@ -51,7 +51,6 @@ import { Controller } from 'react-hook-form';
 import { useCollection, useFirestore, useUser, useMemoFirebase } from '@/firebase';
 import { collection, addDoc, query, where } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
-import { users as mockUsers } from '@/lib/mock-data';
 
 
 const tools = [
@@ -89,6 +88,12 @@ export default function KittyGroupsPage() {
     [firestore, user]
   );
   const { data: kittyGroups, isLoading: areGroupsLoading } = useCollection<KittyGroupType>(kittyGroupsQuery);
+
+  const allUsersQuery = useMemoFirebase(
+    () => (firestore ? collection(firestore, 'users') : null),
+    [firestore]
+  );
+  const { data: allUsers, isLoading: areUsersLoading } = useCollection<UserType>(allUsersQuery);
 
   const { register, handleSubmit, formState: { errors }, reset, control } = useForm<KittyGroupFormValues>({
     resolver: zodResolver(kittyGroupSchema),
@@ -131,11 +136,18 @@ export default function KittyGroupsPage() {
   
   const handleToolClick = (toolId: string) => {
     if (toolId === 'winner-selection') {
-      const allMembers = mockUsers.map(u => u.name);
-      const winner = allMembers[Math.floor(Math.random() * allMembers.length)];
+      if (!allUsers || allUsers.length === 0) {
+        toast({
+          variant: 'destructive',
+          title: 'No users found',
+          description: 'Cannot select a winner without any users.',
+        });
+        return;
+      }
+      const winner = allUsers[Math.floor(Math.random() * allUsers.length)];
       toast({
         title: '🎉 And the Winner is...',
-        description: `${winner}! Congratulations!`,
+        description: `${winner.name}! Congratulations!`,
         duration: 5000,
       });
     } else {
@@ -146,7 +158,7 @@ export default function KittyGroupsPage() {
     }
   };
   
-  const isLoading = isUserLoading || areGroupsLoading;
+  const isLoading = isUserLoading || areGroupsLoading || areUsersLoading;
 
   return (
     <div>

@@ -40,6 +40,16 @@
           "items": {
             "type": "string"
           }
+        },
+        "followerIds": {
+            "type": "array",
+            "description": "List of user IDs who are following this user.",
+            "items": { "type": "string" }
+        },
+        "followingIds": {
+            "type": "array",
+            "description": "List of user IDs this user is following.",
+            "items": { "type": "string" }
         }
       },
       "required": [

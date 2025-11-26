@@ -99,7 +99,11 @@ service cloud.firestore {
       allow get: if isSignedIn();
       allow list: if isSignedIn(); // Allow listing for chat participant resolution
       allow create: if isOwner(userId) && request.resource.data.id == userId;
-      allow update: if isExistingOwner(userId) && isRelationalIdImmutable('id');
+      // Allow a user to update their own profile, but not their followers list.
+      allow update: if isExistingOwner(userId) 
+                    && isRelationalIdImmutable('id')
+                    && !(request.resource.data.keys().hasAll(['followerIds']))
+                    && request.resource.data.followerIds == resource.data.followerIds;
       allow delete: if isExistingOwner(userId);
     }
     
@@ -291,3 +295,5 @@ service cloud.firestore {
     }
   }
 }
+
+    

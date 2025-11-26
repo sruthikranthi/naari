@@ -1,4 +1,5 @@
 
+
 import { PlaceHolderImages } from './placeholder-images';
 
 const findImage = (id: string, hint: string) => {
@@ -18,6 +19,8 @@ export type User = {
   stories?: StoryItem[];
   kittyScore?: number;
   paymentStatus?: 'Paid' | 'Unpaid' | 'Overdue';
+  followerIds?: string[];
+  followingIds?: string[];
 };
 
 export type StoryItem = {
@@ -123,14 +126,6 @@ export type SelfCareActivity = {
   title: string;
   description: string;
 };
-
-export const users: User[] = [
-  { id: 'u1', name: 'Priya Sharma', avatar: findImage('user-1', 'woman portrait'), city: 'Mumbai', interests: ['Cooking', 'Yoga', 'Reading'], kittyScore: 95, paymentStatus: 'Paid' },
-  { id: 'u2', name: 'Anjali Singh', avatar: findImage('user-2', 'woman nature'), city: 'Delhi', interests: ['Gardening', 'Business', 'Movies'], kittyScore: 88, paymentStatus: 'Paid' },
-  { id: 'u3', name: 'Sneha Patel', avatar: findImage('user-3', 'woman professional'), city: 'Bangalore', interests: ['Technology', 'Startups', 'Travel'], kittyScore: 42, paymentStatus: 'Overdue' },
-  { id: 'u4', name: 'Meera Das', avatar: findImage('user-4', 'woman smiling'), city: 'Kolkata', interests: ['Art', 'Music', 'History'], kittyScore: 99, paymentStatus: 'Paid' },
-  { id: 'u5', name: 'Lakshmi Rao', avatar: findImage('user-5', 'senior woman'), city: 'Chennai', interests: ['Finance', 'Investment', 'Crafts'], kittyScore: 76, paymentStatus: 'Unpaid' },
-];
 
 export const selfCareActivities: SelfCareActivity[] = [
   {

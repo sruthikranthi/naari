@@ -13,9 +13,10 @@ import {
   CheckCircle,
   Zap,
   Loader,
+  UserPlus,
 } from 'lucide-react';
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, updateDoc, collection, query, where } from 'firebase/firestore';
+import { useUser, useFirestore, useCollection, useDoc, useMemoFirebase } from '@/firebase';
+import { doc, updateDoc, arrayUnion, arrayRemove, collection, query, where, limit } from 'firebase/firestore';
 
 import type { User, Post as PostType, Community } from '@/lib/mock-data';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -78,7 +79,7 @@ export default function ProfilePage() {
   const { data: userCommunities, isLoading: areCommunitiesLoading } = useCollection<Community>(communitiesQuery);
 
   // For demonstration, we'll fetch a few other users as "connections"
-  const connectionsQuery = useMemoFirebase(() => currentUser ? query(collection(firestore, 'users'), where('id', '!=', currentUser.uid), limit(4)) : null, [currentUser, firestore]);
+  const connectionsQuery = useMemoFirebase(() => (currentUser && user?.followingIds && user.followingIds.length > 0) ? query(collection(firestore, 'users'), where('id', 'in', user.followingIds)) : null, [currentUser, user]);
   const { data: userConnections, isLoading: areConnectionsLoading } = useCollection<User>(connectionsQuery);
 
 
@@ -159,6 +160,41 @@ export default function ProfilePage() {
           </div>
       )
   }
+  
+  const handleFollow = async (targetUserId: string) => {
+    if(!currentUser || !firestore) return;
+    
+    const currentUserRef = doc(firestore, 'users', currentUser.uid);
+    const targetUserRef = doc(firestore, 'users', targetUserId);
+
+    try {
+      // Add target to current user's following list
+      await updateDoc(currentUserRef, { followingIds: arrayUnion(targetUserId) });
+      // Add current user to target's followers list
+      await updateDoc(targetUserRef, { followerIds: arrayUnion(currentUser.uid) });
+      toast({ title: 'Followed!', description: `You are now following this user.`});
+    } catch(e) {
+      console.error(e);
+      toast({ variant: 'destructive', title: 'Error', description: 'Could not follow user.'});
+    }
+  }
+
+  const handleUnfollow = async (targetUserId: string) => {
+    if(!currentUser || !firestore) return;
+
+    const currentUserRef = doc(firestore, 'users', currentUser.uid);
+    const targetUserRef = doc(firestore, 'users', targetUserId);
+
+    try {
+      await updateDoc(currentUserRef, { followingIds: arrayRemove(targetUserId) });
+      await updateDoc(targetUserRef, { followerIds: arrayRemove(currentUser.uid) });
+      toast({ title: 'Unfollowed', description: `You have unfollowed this user.`});
+    } catch(e) {
+      console.error(e);
+      toast({ variant: 'destructive', title: 'Error', description: 'Could not unfollow user.'});
+    }
+  }
+
 
   return (
     <div className="space-y-6">
@@ -200,6 +236,10 @@ export default function ProfilePage() {
                 <MapPin className="mr-1.5 h-4 w-4" />
                 {user.city}
               </p>
+              <div className="mt-2 flex justify-center md:justify-start gap-4 text-sm">
+                <span className="font-semibold">{user.followerIds?.length || 0} Followers</span>
+                <span className="font-semibold">{user.followingIds?.length || 0} Following</span>
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -350,9 +390,9 @@ export default function ProfilePage() {
                   </div>
                   <div className="rounded-lg bg-secondary p-3 text-center">
                     <p className="text-2xl font-bold">
-                      {userConnections?.length || 0}
+                      {user.followingIds?.length || 0}
                     </p>
-                    <p className="text-sm text-muted-foreground">Connections</p>
+                    <p className="text-sm text-muted-foreground">Following</p>
                   </div>
                   <div className="rounded-lg bg-secondary p-3 text-center">
                     <p className="text-2xl font-bold">
@@ -396,6 +436,9 @@ export default function ProfilePage() {
                   </CardContent>
                 </Card>
               ))}
+               {(!userConnections || userConnections.length === 0) && (
+                    <p className="col-span-full py-10 text-center text-muted-foreground">Not following anyone yet.</p>
+                )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -431,6 +474,9 @@ export default function ProfilePage() {
                   </Button>
                 </div>
               ))}
+               {(!userCommunities || userCommunities.length === 0) && (
+                    <p className="py-10 text-center text-muted-foreground">Not a member of any communities yet.</p>
+                )}
             </CardContent>
           </Card>
         </TabsContent>

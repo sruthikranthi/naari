@@ -13,20 +13,33 @@ import { Logo } from '@/components/logo';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { CameraCapture } from '@/components/camera-capture';
 import { useToast } from '@/hooks/use-toast';
-import { useUser } from '@/firebase';
+import { useUser, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
+import type { User } from '@/lib/mock-data';
 
 export default function VerificationPage() {
   const [isVerificationOpen, setIsVerificationOpen] = useState(false);
   const [verificationStep, setVerificationStep] = useState<'capture' | 'verifying' | 'success'>('capture');
   const router = useRouter();
   const { toast } = useToast();
-  const { user, isUserLoading } = useUser();
+  const { user: authUser, isUserLoading: isAuthLoading } = useUser();
+  const firestore = useFirestore();
+
+  // Check if the user has a profile document
+  const userDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
+  const { data: userProfile, isLoading: isProfileLoading } = useDoc<User>(userDocRef);
+
+  const isLoading = isAuthLoading || isProfileLoading;
 
   useEffect(() => {
-    if (!isUserLoading && user) {
+    if (!isLoading && authUser) {
+      if (userProfile) {
+        // User is logged in and has a profile, go to dashboard
         router.push('/dashboard');
+      }
+      // If user is logged in but has no profile, they should stay here to be prompted to create one.
     }
-  }, [user, isUserLoading, router]);
+  }, [authUser, userProfile, isLoading, router]);
 
   const handleMediaCaptured = (dataUrl: string, type: 'image' | 'video') => {
     // In a real app, this media would be sent to a backend for analysis.
@@ -43,10 +56,9 @@ export default function VerificationPage() {
       return () => clearTimeout(timer);
     }
     if (verificationStep === 'success') {
-      // After success, redirect to dashboard
-      // In a real app, this would happen after anonymous user is created or logged in.
+      // After success, redirect to profile creation
       const timer = setTimeout(() => {
-        router.push('/dashboard');
+        router.push('/dashboard/profile/create');
       }, 1500);
       return () => clearTimeout(timer);
     }
@@ -170,7 +182,7 @@ export default function VerificationPage() {
               <div className="flex h-full w-full flex-col items-center justify-center gap-4 rounded-lg bg-green-50">
                 <CheckCircle className="h-12 w-12 text-green-600" />
                 <p className="font-semibold text-green-700">Verification Successful!</p>
-                <p className="text-sm text-green-600">Redirecting you to the dashboard...</p>
+                <p className="text-sm text-green-600">Redirecting you to create your profile...</p>
               </div>
             )}
           </div>
