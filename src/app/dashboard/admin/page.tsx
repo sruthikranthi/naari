@@ -62,13 +62,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import {
-  users as allUsers,
-  directory as allProfessionals,
-  communities,
-  kittyGroups,
-  type User,
-} from '@/lib/mock-data';
+import type { User, Community as CommunityType, KittyGroup } from '@/lib/mock-data';
+import type { Professional } from '@/lib/directory';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
@@ -81,22 +76,6 @@ type UserWithRole = User & { role: 'User' | 'Professional' | 'Creator'; status: 
 
 const SUPER_ADMIN_ID = 'ebixEzJ8UuYjIYTXrkOObW1obSw1';
 
-const initialUsers: UserWithRole[] = allUsers.map(u => ({
-    ...u,
-    role: u.id === 'u1' || u.id === 'u3' ? 'Creator' : (allProfessionals.some(p => p.id.includes(u.id)) ? 'Professional' : 'User'),
-    status: 'Active'
-}));
-
-initialUsers.push({
-    id: 'u-new',
-    name: 'New Professional',
-    avatar: 'https://picsum.photos/seed/new-prof/100/100',
-    city: 'Pune',
-    interests: ['Wellness'],
-    role: 'Professional',
-    status: 'Pending'
-});
-
 
 export default function AdminPanelPage() {
   const { user, isUserLoading } = useUser();
@@ -104,15 +83,27 @@ export default function AdminPanelPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
 
-  const [users, setUsers] = useState<UserWithRole[]>(initialUsers);
-  
-  const contestsQuery = useMemoFirebase(
-    () => (firestore && user ? collection(firestore, 'contests') : null),
-    [firestore, user]
-  );
-  const { data: contestsData, isLoading: areContestsLoading } = useCollection<Contest>(contestsQuery);
-  const [contests, setContests] = useState<Contest[]>([]);
+  // Firestore Data Hooks
+  const usersQuery = useMemoFirebase(() => (firestore ? collection(firestore, 'users') : null), [firestore]);
+  const { data: allUsers, isLoading: areUsersLoading } = useCollection<User>(usersQuery);
 
+  const professionalsQuery = useMemoFirebase(() => (firestore ? collection(firestore, 'directory') : null), [firestore]);
+  const { data: allProfessionals, isLoading: areProfLoading } = useCollection<Professional>(professionalsQuery);
+
+  const communitiesQuery = useMemoFirebase(() => (firestore ? collection(firestore, 'communities') : null), [firestore]);
+  const { data: communitiesData, isLoading: areCommLoading } = useCollection<CommunityType>(communitiesQuery);
+
+  const kittyGroupsQuery = useMemoFirebase(() => (firestore ? collection(firestore, 'kitty_groups') : null), [firestore]);
+  const { data: kittyGroupsData, isLoading: areKittyLoading } = useCollection<KittyGroup>(kittyGroupsQuery);
+
+  const contestsQuery = useMemoFirebase(() => (firestore && user ? collection(firestore, 'contests') : null), [firestore, user]);
+  const { data: contestsData, isLoading: areContestsLoading } = useCollection<Contest>(contestsQuery);
+
+
+  // Component State
+  const [users, setUsers] = useState<UserWithRole[]>([]);
+  const [contests, setContests] = useState<Contest[]>([]);
+  
   const [filterRole, setFilterRole] = useState('All');
   const [commissions, setCommissions] = useState({
     marketplace: 10,
@@ -124,6 +115,7 @@ export default function AdminPanelPage() {
 
   const isSuperAdmin = user?.uid === SUPER_ADMIN_ID;
 
+  // Effects
   useEffect(() => {
     if (!isUserLoading && !isSuperAdmin) {
       toast({
@@ -136,24 +128,35 @@ export default function AdminPanelPage() {
   }, [isUserLoading, isSuperAdmin, router, toast]);
 
   useEffect(() => {
+    if (allUsers && allProfessionals) {
+      const combinedUsers: UserWithRole[] = allUsers.map(u => ({
+          ...u,
+          role: u.id === 'u1' || u.id === 'u3' ? 'Creator' : (allProfessionals.some(p => p.id.includes(u.id)) ? 'Professional' : 'User'),
+          status: 'Active'
+      }));
+      setUsers(combinedUsers);
+    }
+  }, [allUsers, allProfessionals]);
+
+  useEffect(() => {
     if (contestsData) {
       setContests(contestsData);
     }
   }, [contestsData]);
 
+  // Memos for derived data
+  const isLoading = isUserLoading || areContestsLoading || areUsersLoading || areProfLoading || areCommLoading || areKittyLoading;
+
   const allContestsForTable = useMemo(() => {
-    const fromData = (contests || []).map(c => ({
+    if(!contestsData) return [];
+    return contestsData.map(c => ({
         id: c.id,
         name: c.title,
         nominees: c.nominees.length,
         status: c.status || 'Pending Approval',
         fee: c.nominationFee > 0 ? `₹${c.nominationFee}`: 'Free',
     }));
-    if (!fromData.some(c => c.name === 'Pune Baking Championship')) {
-        fromData.push({ id: 'prop1', name: 'Pune Baking Championship', nominees: 0, status: 'Pending Approval', fee: '₹200' });
-    }
-    return fromData;
-  }, [contests]);
+  }, [contestsData]);
 
 
   const filteredUsers = useMemo(() => {
@@ -162,6 +165,14 @@ export default function AdminPanelPage() {
     return users.filter(u => u.role === filterRole && u.status !== 'Pending');
   }, [users, filterRole]);
 
+  const stats = useMemo(() => ({
+      totalUsers: allUsers?.length || 0,
+      totalProfessionals: allProfessionals?.filter(p => p.verified).length || 0,
+      totalCreators: users.filter(u => u.role === 'Creator').length,
+      totalRevenue: '₹1,50,000'
+  }), [allUsers, allProfessionals, users]);
+
+  // Event Handlers
   const handleUserStatusChange = (userId: string, newStatus: UserWithRole['status']) => {
     setUsers(prev => prev.map(u => u.id === userId ? {...u, status: newStatus} : u));
     toast({
@@ -175,29 +186,6 @@ export default function AdminPanelPage() {
     if (!isNaN(numValue) && numValue >= 0 && numValue <= 100) {
       setCommissions(prev => ({...prev, [key]: numValue}));
     }
-  }
-
-  const getStatusVariant = (status: UserWithRole['status'] | string) => {
-    switch (status) {
-      case 'Active':
-      case 'Live':
-         return 'default';
-      case 'Inactive': 
-      case 'Pending Approval':
-        return 'secondary';
-      case 'Pending': 
-      case 'Community-run':
-        return 'outline';
-      case 'Overdue': return 'destructive';
-      case 'Ended': return 'destructive'
-    }
-  }
-
-  const stats = {
-      totalUsers: users.length,
-      totalProfessionals: users.filter(u => u.role === 'Professional' && u.status === 'Active').length,
-      totalCreators: users.filter(u => u.role === 'Creator').length,
-      totalRevenue: '₹1,50,000'
   }
 
   const handleBroadcast = () => {
@@ -242,13 +230,35 @@ export default function AdminPanelPage() {
         description: `The ${String(field)} has been updated.`
     })
   }
+
+  const getStatusVariant = (status: UserWithRole['status'] | string) => {
+    switch (status) {
+      case 'Active':
+      case 'Live':
+         return 'default';
+      case 'Inactive': 
+      case 'Pending Approval':
+        return 'secondary';
+      case 'Pending': 
+      case 'Community-run':
+        return 'outline';
+      case 'Overdue': return 'destructive';
+      case 'Ended': return 'destructive'
+    }
+  }
   
-  const isLoading = isUserLoading || areContestsLoading;
+  if (isLoading) {
+    return (
+      <div className="flex h-full min-h-[calc(100vh-10rem)] w-full items-center justify-center">
+        <Loader className="h-10 w-10 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   if (!isSuperAdmin) {
     return (
       <div className="flex h-full min-h-[calc(100vh-10rem)] w-full items-center justify-center">
-        <Loader className="h-10 w-10 animate-spin text-primary" />
+        <p>Access Denied.</p>
       </div>
     );
   }
@@ -269,7 +279,6 @@ export default function AdminPanelPage() {
           <TabsTrigger value="contests">Contests</TabsTrigger>
         </TabsList>
         
-        {/* Dashboard Tab */}
         <TabsContent value="dashboard" className="mt-6">
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
                 <Card>
@@ -329,7 +338,6 @@ export default function AdminPanelPage() {
             </Card>
         </TabsContent>
 
-        {/* Users Tab */}
         <TabsContent value="users" className="mt-6">
           <Card>
             <CardHeader>
@@ -352,49 +360,55 @@ export default function AdminPanelPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>User</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredUsers.map((user) => (
-                    <TableRow key={user.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <Avatar>
-                            <AvatarImage src={user.avatar} />
-                            <AvatarFallback>{user.name.split(' ').map(n=>n[0]).join('')}</AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-medium">{user.name}</p>
-                            <p className="text-xs text-muted-foreground">{user.city}</p>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>{user.role}</TableCell>
-                      <TableCell><Badge variant={getStatusVariant(user.status)}>{user.status}</Badge></TableCell>
-                      <TableCell className="text-right">
-                         <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon"><MoreVertical className="h-4 w-4" /></Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                {user.status === 'Pending' && <DropdownMenuItem onClick={() => handleUserStatusChange(user.id, 'Active')}><CheckCircle className="mr-2 h-4 w-4" />Approve</DropdownMenuItem>}
-                                {user.status === 'Active' && <DropdownMenuItem className="text-destructive" onClick={() => handleUserStatusChange(user.id, 'Inactive')}><XCircle className="mr-2 h-4 w-4" />Deactivate</DropdownMenuItem>}
-                                {user.status === 'Inactive' && <DropdownMenuItem onClick={() => handleUserStatusChange(user.id, 'Active')}><CheckCircle className="mr-2 h-4 w-4" />Re-activate</DropdownMenuItem>}
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
+              {areUsersLoading ? (
+                <div className="flex h-48 w-full items-center justify-center">
+                  <Loader className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>User</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-               {filteredUsers.length === 0 && (
+                  </TableHeader>
+                  <TableBody>
+                    {filteredUsers.map((user) => (
+                      <TableRow key={user.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <Avatar>
+                              <AvatarImage src={user.avatar} />
+                              <AvatarFallback>{user.name.split(' ').map(n=>n[0]).join('')}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="font-medium">{user.name}</p>
+                              <p className="text-xs text-muted-foreground">{user.city}</p>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>{user.role}</TableCell>
+                        <TableCell><Badge variant={getStatusVariant(user.status)}>{user.status}</Badge></TableCell>
+                        <TableCell className="text-right">
+                           <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon"><MoreVertical className="h-4 w-4" /></Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                  {user.status === 'Pending' && <DropdownMenuItem onClick={() => handleUserStatusChange(user.id, 'Active')}><CheckCircle className="mr-2 h-4 w-4" />Approve</DropdownMenuItem>}
+                                  {user.status === 'Active' && <DropdownMenuItem className="text-destructive" onClick={() => handleUserStatusChange(user.id, 'Inactive')}><XCircle className="mr-2 h-4 w-4" />Deactivate</DropdownMenuItem>}
+                                  {user.status === 'Inactive' && <DropdownMenuItem onClick={() => handleUserStatusChange(user.id, 'Active')}><CheckCircle className="mr-2 h-4 w-4" />Re-activate</DropdownMenuItem>}
+                              </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+               {filteredUsers.length === 0 && !areUsersLoading && (
                 <div className="py-12 text-center text-muted-foreground">
                   No users found for this filter.
                 </div>
@@ -403,7 +417,6 @@ export default function AdminPanelPage() {
           </Card>
         </TabsContent>
 
-        {/* Commissions Tab */}
         <TabsContent value="commissions" className="mt-6">
             <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
                 <Card>
@@ -453,12 +466,12 @@ export default function AdminPanelPage() {
             </div>
         </TabsContent>
 
-        {/* Content Tab */}
         <TabsContent value="content" className="mt-6">
              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                  <Card>
                      <CardHeader><CardTitle>Communities</CardTitle></CardHeader>
                      <CardContent>
+                       {areCommLoading ? <Loader className="mx-auto my-12 h-6 w-6 animate-spin text-primary" /> : (
                          <Table>
                              <TableHeader>
                                  <TableRow>
@@ -468,20 +481,22 @@ export default function AdminPanelPage() {
                                  </TableRow>
                              </TableHeader>
                              <TableBody>
-                                 {communities.map(c => (
+                                 {communitiesData?.map(c => (
                                      <TableRow key={c.id}>
                                          <TableCell>{c.name}</TableCell>
-                                         <TableCell>{c.memberCount.toLocaleString()}</TableCell>
+                                         <TableCell>{c.memberIds.length.toLocaleString()}</TableCell>
                                          <TableCell className="text-right"><Button variant="ghost" size="sm">Manage</Button></TableCell>
                                      </TableRow>
                                  ))}
                              </TableBody>
                          </Table>
+                       )}
                      </CardContent>
                  </Card>
                   <Card>
                      <CardHeader><CardTitle>Kitty Groups</CardTitle></CardHeader>
                      <CardContent>
+                       {areKittyLoading ? <Loader className="mx-auto my-12 h-6 w-6 animate-spin text-primary" /> : (
                          <Table>
                              <TableHeader>
                                  <TableRow>
@@ -491,21 +506,21 @@ export default function AdminPanelPage() {
                                  </TableRow>
                              </TableHeader>
                              <TableBody>
-                                 {kittyGroups.map(k => (
+                                 {kittyGroupsData?.map(k => (
                                      <TableRow key={k.id}>
                                          <TableCell>{k.name}</TableCell>
-                                         <TableCell>{k.members.toLocaleString()}</TableCell>
+                                         <TableCell>{k.memberIds.length.toLocaleString()}</TableCell>
                                           <TableCell className="text-right"><Button variant="ghost" size="sm">Manage</Button></TableCell>
                                      </TableRow>
                                  ))}
                              </TableBody>
                          </Table>
+                       )}
                      </CardContent>
                  </Card>
              </div>
         </TabsContent>
 
-        {/* Contests Tab */}
         <TabsContent value="contests" className="mt-6">
           <Card>
             <CardHeader>
@@ -513,7 +528,7 @@ export default function AdminPanelPage() {
               <CardDescription>Oversee all contests and awards on the platform.</CardDescription>
             </CardHeader>
             <CardContent>
-              {isLoading ? (
+              {areContestsLoading ? (
                  <div className="flex h-48 w-full items-center justify-center">
                     <Loader className="h-8 w-8 animate-spin text-primary" />
                 </div>
