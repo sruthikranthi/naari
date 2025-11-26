@@ -45,8 +45,8 @@ export default function SupportDirectoryPage() {
   const { user, isUserLoading } = useUser();
 
   const directoryQuery = useMemoFirebase(
-    () => (firestore ? collection(firestore, 'directory') : null),
-    [firestore]
+    () => (firestore && user ? collection(firestore, 'directory') : null),
+    [firestore, user]
   );
   const { data: professionals, isLoading: areProfessionalsLoading } = useCollection<Professional>(directoryQuery);
 
