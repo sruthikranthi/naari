@@ -1,0 +1,526 @@
+{
+  "entities": {
+    "UserProfile": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserProfile",
+      "type": "object",
+      "description": "Represents a user profile in the Sakhi Circle application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the UserProfile entity."
+        },
+        "aadhaarVerified": {
+          "type": "boolean",
+          "description": "Indicates if the user has been verified using Aadhaar (optional)."
+        },
+        "verificationStatus": {
+          "type": "string",
+          "description": "The user's verification status (e.g., pending, verified, rejected)."
+        },
+        "interests": {
+          "type": "array",
+          "description": "User's interests and hobbies.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "profession": {
+          "type": "string",
+          "description": "User's profession."
+        },
+        "location": {
+          "type": "string",
+          "description": "User's city-level location (for safety)."
+        },
+        "lookingToConnectFor": {
+          "type": "array",
+          "description": "User's reasons for connecting (friends, business, learning, etc.).",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "Post": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Post",
+      "type": "object",
+      "description": "Represents a post in the Sakhi Circle application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Post entity."
+        },
+        "authorId": {
+          "type": "string",
+          "description": "Reference to UserProfile. (Relationship: UserProfile 1:N Post)"
+        },
+        "content": {
+          "type": "string",
+          "description": "Content of the post (text, photo, short video URL)."
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "Timestamp of when the post was created.",
+          "format": "date-time"
+        },
+        "reactions": {
+          "type": "array",
+          "description": "List of reactions (likes, hearts, badges) to the post.",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "authorId",
+        "content",
+        "timestamp"
+      ]
+    },
+    "Chat": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Chat",
+      "type": "object",
+      "description": "Represents a chat between two or more users.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Chat entity."
+        },
+        "participants": {
+          "type": "array",
+          "description": "References to UserProfiles participating in the chat. (Relationship: UserProfile N:N Chat)",
+          "items": {
+            "type": "string"
+          }
+        },
+        "type": {
+          "type": "string",
+          "description": "Type of chat (1:1 or group)."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp of when the chat was created.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "participants",
+        "type",
+        "createdAt"
+      ]
+    },
+    "Message": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Message",
+      "type": "object",
+      "description": "Represents a message within a chat.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Message entity."
+        },
+        "chatId": {
+          "type": "string",
+          "description": "Reference to Chat. (Relationship: Chat 1:N Message)"
+        },
+        "senderId": {
+          "type": "string",
+          "description": "Reference to UserProfile who sent the message. (Relationship: UserProfile 1:N Message)"
+        },
+        "content": {
+          "type": "string",
+          "description": "Content of the message (text, image URL, video URL, voice note URL)."
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "Timestamp of when the message was sent.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "chatId",
+        "senderId",
+        "content",
+        "timestamp"
+      ]
+    },
+    "Community": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Community",
+      "type": "object",
+      "description": "Represents a community in the Sakhi Circle application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Community entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the community."
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the community."
+        },
+        "type": {
+          "type": "string",
+          "description": "Type of community (interest-based, life-stage, city-based)."
+        },
+        "leaderId": {
+          "type": "string",
+          "description": "Reference to UserProfile who is the leader of the community. (Relationship: UserProfile 1:N Community)"
+        },
+        "memberIds": {
+          "type": "array",
+          "description": "References to UserProfiles who are members of the community. (Relationship: UserProfile N:N Community)",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "description",
+        "type",
+        "leaderId"
+      ]
+    },
+    "KittyGroup": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "KittyGroup",
+      "type": "object",
+      "description": "Represents a digital kitty group.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the KittyGroup entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the kitty group."
+        },
+        "memberIds": {
+          "type": "array",
+          "description": "References to UserProfiles who are members of the kitty group. (Relationship: UserProfile N:N KittyGroup)",
+          "items": {
+            "type": "string"
+          }
+        },
+        "contributionAmount": {
+          "type": "number",
+          "description": "Monthly kitty contribution amount."
+        },
+        "nextWinnerSelectionDate": {
+          "type": "string",
+          "description": "Date of the next winner selection.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "memberIds",
+        "contributionAmount",
+        "nextWinnerSelectionDate"
+      ]
+    },
+    "MarketplaceListing": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "MarketplaceListing",
+      "type": "object",
+      "description": "Represents a listing in the women's business marketplace.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the MarketplaceListing entity."
+        },
+        "sellerId": {
+          "type": "string",
+          "description": "Reference to UserProfile who is selling the product/service. (Relationship: UserProfile 1:N MarketplaceListing)"
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the product/service."
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the product/service."
+        },
+        "price": {
+          "type": "number",
+          "description": "Price of the product/service."
+        },
+        "category": {
+          "type": "string",
+          "description": "Category of the product/service (food, handmade, fashion, etc.)."
+        }
+      },
+      "required": [
+        "id",
+        "sellerId",
+        "name",
+        "description",
+        "price",
+        "category"
+      ]
+    },
+    "Course": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Course",
+      "type": "object",
+      "description": "Represents a learning course in the Sakhi Circle application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Course entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the course."
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the course."
+        },
+        "instructorId": {
+          "type": "string",
+          "description": "Reference to UserProfile who is the instructor of the course. (Relationship: UserProfile 1:N Course)"
+        },
+        "enrolledUserIds": {
+          "type": "array",
+          "description": "References to UserProfiles who are enrolled in the course. (Relationship: UserProfile N:N Course)",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "description",
+        "instructorId"
+      ]
+    },
+    "Event": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Event",
+      "type": "object",
+      "description": "Represents an event in the Sakhi Circle application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Event entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the event."
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the event."
+        },
+        "organizerId": {
+          "type": "string",
+          "description": "Reference to UserProfile who is organizing the event. (Relationship: UserProfile 1:N Event)"
+        },
+        "attendeeIds": {
+          "type": "array",
+          "description": "References to UserProfiles who are attending the event. (Relationship: UserProfile N:N Event)",
+          "items": {
+            "type": "string"
+          }
+        },
+        "dateTime": {
+          "type": "string",
+          "description": "Date and time of the event.",
+          "format": "date-time"
+        },
+        "location": {
+          "type": "string",
+          "description": "Location of the event."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "description",
+        "organizerId",
+        "dateTime",
+        "location"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "UserProfile",
+          "schema": {
+            "$ref": "#/backend/entities/UserProfile"
+          },
+          "description": "Stores user profile information. The 'userId' parameter is used for path-based ownership, ensuring only the user can access their profile.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/posts/{postId}",
+        "definition": {
+          "entityName": "Post",
+          "schema": {
+            "$ref": "#/backend/entities/Post"
+          },
+          "description": "Stores posts created by a user. The 'userId' parameter represents the post's author. The 'postId' parameter is the unique ID of the post.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user (author of the post)."
+            },
+            {
+              "name": "postId",
+              "description": "The unique identifier for the post."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/chats/{chatId}",
+        "definition": {
+          "entityName": "Chat",
+          "schema": {
+            "$ref": "#/backend/entities/Chat"
+          },
+          "description": "Stores chat metadata, including a 'members' map for authorization. Includes denormalized 'members' map for authorization independence.",
+          "params": [
+            {
+              "name": "chatId",
+              "description": "The unique identifier for the chat."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/chats/{chatId}/messages/{messageId}",
+        "definition": {
+          "entityName": "Message",
+          "schema": {
+            "$ref": "#/backend/entities/Message"
+          },
+          "description": "Stores messages within a chat. Authorization is inherited from the parent chat document.",
+          "params": [
+            {
+              "name": "chatId",
+              "description": "The unique identifier for the chat."
+            },
+            {
+              "name": "messageId",
+              "description": "The unique identifier for the message."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/communities/{communityId}",
+        "definition": {
+          "entityName": "Community",
+          "schema": {
+            "$ref": "#/backend/entities/Community"
+          },
+          "description": "Stores community data, including a 'members' map for authorization. Includes denormalized 'memberIds' array for authorization independence.",
+          "params": [
+            {
+              "name": "communityId",
+              "description": "The unique identifier for the community."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/kitty_groups/{kittyGroupId}",
+        "definition": {
+          "entityName": "KittyGroup",
+          "schema": {
+            "$ref": "#/backend/entities/KittyGroup"
+          },
+          "description": "Stores kitty group data, including a 'members' map for authorization. Includes denormalized 'memberIds' array for authorization independence.",
+          "params": [
+            {
+              "name": "kittyGroupId",
+              "description": "The unique identifier for the kitty group."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/marketplace_listings/{listingId}",
+        "definition": {
+          "entityName": "MarketplaceListing",
+          "schema": {
+            "$ref": "#/backend/entities/MarketplaceListing"
+          },
+          "description": "Stores marketplace listing data. Includes denormalized 'sellerId' for authorization independence.",
+          "params": [
+            {
+              "name": "listingId",
+              "description": "The unique identifier for the marketplace listing."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/courses/{courseId}",
+        "definition": {
+          "entityName": "Course",
+          "schema": {
+            "$ref": "#/backend/entities/Course"
+          },
+          "description": "Stores course data. Includes denormalized 'instructorId' and 'enrolledUserIds' for authorization independence.",
+          "params": [
+            {
+              "name": "courseId",
+              "description": "The unique identifier for the course."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/events/{eventId}",
+        "definition": {
+          "entityName": "Event",
+          "schema": {
+            "$ref": "#/backend/entities/Event"
+          },
+          "description": "Stores event data. Includes denormalized 'organizerId' and 'attendeeIds' for authorization independence.",
+          "params": [
+            {
+              "name": "eventId",
+              "description": "The unique identifier for the event."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "This Firestore structure prioritizes security, scalability, and debuggability for the Sakhi Circle application. It strictly adheres to Authorization Independence by denormalizing authorization data, avoiding `get()` calls in security rules, and enabling atomic operations. Structural Segregation is used to maintain homogeneous security postures within collections, enhancing rule simplicity. Access Modeling employs consistent patterns, using path-based ownership for user-owned data and membership maps for collaborative resources. \n\n**Authorization Independence:**\n\n*   **UserProfile:** User profiles are stored under `/users/{userId}`. This provides inherent ownership and eliminates the need to check parent documents for authorization. The `userId` is implicitly the document owner.\n*   **Posts:** Posts are stored under `/users/{userId}/posts/{postId}` to represent the User 1:N Post relationship, making the authorization easy with path-based ownership. \n*   **Chats & Messages:** Chats are stored in `/chats/{chatId}` with a `members` map containing user IDs and roles. Messages are stored in `/chats/{chatId}/messages/{messageId}` and inherit authorization context from the parent `chatId`. The `chats` document includes the denormalized `members` map to avoid server-side `get()` calls in security rules.\n*   **Communities:** Communities are stored in `/communities/{communityId}` with a `members` map. The leader is stored inside the document. This enables membership-based authorization. \n*   **Kitty Groups:** Kitty Groups are stored in `/kitty_groups/{kittyGroupId}` with a `members` map to define group members. This membership map is leveraged for authorization. \n*   **Marketplace Listings:** Listings are stored under `/marketplace_listings/{listingId}` with a denormalized `sellerId` field. This allows rules to directly verify the seller.\n*   **Courses:** Courses are stored in `/courses/{courseId}` with denormalized `enrolledUserIds` and `instructorId` fields. Instructor and enrolled users can be quickly verified in rules.\n*   **Events:** Events are stored in `/events/{eventId}` with denormalized `attendeeIds` and `organizerId` fields. Organizer and attendees can be quickly verified in rules.\n\n**QAPs (Rules are not Filters):**\n\n*   **List Operations:** The data structure supports secure list operations. For example, listing posts for a specific user is done by querying `/users/{userId}/posts`. Listing communities where a user is a member is done by querying `/communities` filtering on the `members` map. Segregation of data based on ownership and clear membership maps enables efficient and secure filtering.\n\n**Invariants:**\n\n*   **Ownership:** The structure clearly defines ownership, either through path-based structures (`/users/{userId}/posts`) or denormalized fields (`sellerId` in `/marketplace_listings`).\n*   **Timestamps:** Timestamps can be enforced in rules. Using serverTimestamp() is highly encouraged.\n*   **Denormalized Data:** The design explicitly defines which data is denormalized (e.g., `members` maps, `sellerId`, `instructorId`) to maintain consistency and avoid server-side reads during authorization."
+  }
+}

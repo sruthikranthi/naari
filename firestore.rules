@@ -1,0 +1,275 @@
+/**
+ * This ruleset enforces a security model for the Sakhi Circle application,
+ * balancing user-owned data with collaborative, shared resources.
+ *
+ * Core Philosophy:
+ * The security model is built on two primary patterns: strict user-ownership for
+ * personal data and membership-based access for shared data. All operations
+ * require a user to be authenticated, providing a baseline level of security.
+ *
+ * Data Structure:
+ * - User-specific data, such as profiles (`UserProfile`) and their posts (`Post`),
+ *   is nested under the `/users/{userId}` path. This structure naturally maps
+ *   ownership and simplifies security rules.
+ * - Collaborative resources like chats, communities, and kitty groups are stored in
+ *   top-level collections. Authorization for these resources is managed by
+ *   denormalizing member lists (e.g., a `participants` or `memberIds` array)
+ *   directly onto the documents.
+ * - Publicly discoverable content like marketplace listings, courses, and events
+ *   are also in top-level collections, allowing for public reads but restricting
+ *   writes to the designated owner (e.g., `sellerId`, `instructorId`).
+ *
+ * Key Security Decisions:
+ * - User Enumeration is Disabled: Listing the top-level `/users` collection is
+ *   explicitly forbidden to protect user privacy.
+ * - Default to Signed-In Users: Public read access is generally granted only to
+ *   authenticated users (`isSignedIn()`) rather than being fully open (`if true;`),
+ *   ensuring a logged-in context for all data interaction.
+ * - Immutable Ownership: Critical relational IDs (e.g., `authorId`, `sellerId`, `userId`)
+ *   are enforced as immutable upon document creation to maintain data integrity.
+ * - Secure Collaboration: For shared documents like chats and private groups,
+ *   management of the member list (updates/deletes) is disabled in the rules. This
+ *   is a deliberate security choice that assumes such sensitive operations should
+ *   be handled by trusted server-side code (e.g., Cloud Functions) rather than
+ *   exposed directly to clients.
+ *
+ * Denormalization for Authorization:
+ * This ruleset relies heavily on denormalization to ensure fast and secure
+ * authorization checks without costly `get()` or impossible `exists()` calls. For
+ * example, a `/chats/{chatId}` document contains a `participants` array, so a rule
+ * can instantly check if a user is a member without reading any other document.
+ * This is crucial for securing list operations on subcollections like `/messages`.
+ *
+ * Structural Segregation:
+ * The separation of private user data (`/users/{userId}`) from shared, top-level
+ * collections (`/chats`, `/communities`) provides a clear and secure boundary. This
+ * prevents complex rules that would otherwise have to check flags or fields to
+ * differentiate between private and public data within a single collection.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // -------------------------------------------------------------------------
+    // Helper Functions
+    // -------------------------------------------------------------------------
+
+    /**
+     * Verifies that a user is authenticated.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * Checks if the currently authenticated user is the owner of a document
+     * identified by the provided userId.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /**
+     * A stricter ownership check for updates and deletes that also ensures the
+     * document being modified actually exists.
+     */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
+    }
+
+    /**
+     * Verifies if the authenticated user's UID is present in a specified
+     * array field (e.g., 'participants', 'memberIds') on a document.
+     * Used for shared resource access.
+     */
+    function isMember(docData, key) {
+      return isSignedIn() && request.auth.uid in docData[key];
+    }
+
+    /**
+     * Validates that the user is creating a document with an ownership field
+     * (e.g., authorId, sellerId) correctly set to their own UID.
+     */
+    function isSelfAssignedAsOwner(key) {
+      return request.resource.data[key] == request.auth.uid;
+    }
+    
+    /**
+     * Enforces immutability on a critical relational ID field during an update.
+     * Prevents re-assigning ownership of a document.
+     */
+    function isRelationalIdImmutable(key) {
+      return request.resource.data[key] == resource.data[key];
+    }
+
+    // -------------------------------------------------------------------------
+    // User Data (/users)
+    // -------------------------------------------------------------------------
+
+    /**
+     * @description A user can create, update, and delete their own profile. Other authenticated users can read profiles. Listing all users is disabled.
+     * @path /users/{userId}
+     * @allow (get) An authenticated user `user_abc` reading the profile of `user_xyz`.
+     * @allow (create) A new user `user_abc` creating their own profile at `/users/user_abc`.
+     * @deny (list) Any user attempting to list all documents in the `/users` collection.
+     * @deny (update) User `user_abc` trying to modify the profile of `user_xyz`.
+     * @principle Restricts access to a user's own data tree and prevents user enumeration.
+     */
+    match /users/{userId} {
+      allow get: if isSignedIn();
+      allow list: if false;
+      allow create: if isOwner(userId) && isSelfAssignedAsOwner('id');
+      allow update: if isExistingOwner(userId) && isRelationalIdImmutable('id');
+      allow delete: if isExistingOwner(userId);
+
+      /**
+       * @description A user can manage their own posts. Other authenticated users can read them.
+       * @path /users/{userId}/posts/{postId}
+       * @allow (create) User `user_abc` creating a new post under their own path `/users/user_abc/posts/new_post`.
+       * @allow (list) User `user_xyz` listing all posts for user `user_abc`.
+       * @deny (update) User `user_xyz` trying to edit a post owned by `user_abc`.
+       * @principle Enforces document ownership for writes while allowing reads within a user's data tree.
+       */
+      match /posts/{postId} {
+        allow get, list: if isSignedIn();
+        allow create: if isOwner(userId) && isSelfAssignedAsOwner('authorId');
+        allow update: if isExistingOwner(userId) && isRelationalIdImmutable('authorId');
+        allow delete: if isExistingOwner(userId);
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // Chats & Messages (/chats)
+    // -------------------------------------------------------------------------
+
+    /**
+     * @description Chat documents are only accessible to their participants. Managing the participant list is disabled for clients.
+     * @path /chats/{chatId}
+     * @allow (get) User `user_abc` reading a chat document where `user_abc` is in the `participants` array.
+     * @allow (create) User `user_abc` creating a new chat document where they include themself in the `participants` array.
+     * @deny (list) Any user attempting to list all chats. This query must be performed by the client.
+     * @deny (update) Any user trying to add or remove members from the `participants` array.
+     * @principle Enforces access control based on a denormalized list of members (Closed Collaborators pattern).
+     */
+    match /chats/{chatId} {
+      allow get: if isMember(resource.data, 'participants');
+      allow list: if false;
+      allow create: if isMember(request.resource.data, 'participants');
+      allow update: if false; // Membership changes should be handled by a backend function for security.
+      allow delete: if false;
+      
+      /**
+       * @description Messages can be read by chat participants and created/deleted by the sender.
+       * @path /chats/{chatId}/messages/{messageId}
+       * @allow (create) User `user_abc`, a participant in `chat_123`, sending a message where `senderId` is `user_abc`.
+       * @allow (list) User `user_xyz`, a participant in `chat_123`, listing all messages in that chat.
+       * @deny (get) User `user_pending` who is not in the parent chat's participant list trying to read a message.
+       * @deny (delete) User `user_abc` trying to delete a message sent by `user_xyz`.
+       * @principle Inherits authorization from the parent document and validates sender identity for writes.
+       */
+      match /messages/{messageId} {
+        allow get, list: if isMember(get(/databases/$(database)/documents/chats/$(chatId)).data, 'participants');
+        allow create: if isMember(get(/databases/$(database)/documents/chats/$(chatId)).data, 'participants') && isSelfAssignedAsOwner('senderId') && request.resource.data.chatId == chatId;
+        allow update: if isExistingOwner(resource.data.senderId) && isRelationalIdImmutable('senderId') && isRelationalIdImmutable('chatId');
+        allow delete: if isExistingOwner(resource.data.senderId);
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // Communities (/communities)
+    // -------------------------------------------------------------------------
+
+    /**
+     * @description Communities are publicly discoverable. Anyone can create one, making themself the leader. Only the leader can manage it.
+     * @path /communities/{communityId}
+     * @allow (list) Any authenticated user listing all available communities.
+     * @allow (create) User `user_abc` creating a new community and setting `leaderId` to `user_abc`.
+     * @deny (update) A regular member `user_xyz` trying to change the community description. Only the leader can.
+     * @principle Allows public discovery while centralizing write control to a single owner/leader.
+     */
+    match /communities/{communityId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn() && isSelfAssignedAsOwner('leaderId');
+      allow update: if isOwner(resource.data.leaderId) && resource != null;
+      allow delete: if isOwner(resource.data.leaderId) && resource != null;
+    }
+
+    // -------------------------------------------------------------------------
+    // Kitty Groups (/kitty_groups)
+    // -------------------------------------------------------------------------
+
+    /**
+     * @description Kitty Groups are private and only accessible to their members. Listing all groups is disabled for privacy.
+     * @path /kitty_groups/{kittyGroupId}
+     * @allow (get) User `user_abc` reading a group document where they are in the `memberIds` array.
+     * @allow (create) User `user_abc` creating a new group where they are included in the initial `memberIds`.
+     * @deny (list) Any user attempting to discover all kitty groups.
+     * @deny (update) Any member trying to modify the group. This must be handled by a backend function.
+     * @principle Enforces strict membership-based access for highly sensitive collaborative data.
+     */
+    match /kitty_groups/{kittyGroupId} {
+      allow get: if isMember(resource.data, 'memberIds');
+      allow list: if false;
+      allow create: if isSignedIn() && isMember(request.resource.data, 'memberIds');
+      allow update: if false; // Membership and state changes should be handled by a backend function.
+      allow delete: if false;
+    }
+
+    // -------------------------------------------------------------------------
+    // Marketplace (/marketplace_listings)
+    // -------------------------------------------------------------------------
+    
+    /**
+     * @description Marketplace listings are publicly readable by any authenticated user. Only the seller can create, update, or delete their own listings.
+     * @path /marketplace_listings/{listingId}
+     * @allow (list) Any authenticated user browsing all marketplace listings.
+     * @allow (create) User `user_seller` creating a new listing with `sellerId` set to `user_seller`.
+     * @deny (update) User `user_buyer` attempting to change the price on a listing owned by `user_seller`.
+     * @principle Implements a "Public Read with Owner-Only Writes" pattern, ideal for public catalogs.
+     */
+    match /marketplace_listings/{listingId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn() && isSelfAssignedAsOwner('sellerId');
+      allow update: if isExistingOwner(resource.data.sellerId) && isRelationalIdImmutable('sellerId');
+      allow delete: if isExistingOwner(resource.data.sellerId);
+    }
+    
+    // -------------------------------------------------------------------------
+    // Courses (/courses)
+    // -------------------------------------------------------------------------
+
+    /**
+     * @description Courses are publicly discoverable. Anyone can create one, making themself the instructor. Only the instructor can modify or delete it.
+     * @path /courses/{courseId}
+     * @allow (get) Any authenticated user viewing the details of a course.
+     * @allow (create) User `user_teacher` creating a new course with `instructorId` set to `user_teacher`.
+     * @deny (delete) An enrolled student `user_student` trying to delete the course.
+     * @principle Allows public discovery while centralizing write control to a single owner (the instructor).
+     */
+    match /courses/{courseId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn() && isSelfAssignedAsOwner('instructorId');
+      allow update: if isOwner(resource.data.instructorId) && resource != null;
+      allow delete: if isOwner(resource.data.instructorId) && resource != null;
+    }
+
+    // -------------------------------------------------------------------------
+    // Events (/events)
+    // -------------------------------------------------------------------------
+
+    /**
+     * @description Events are publicly discoverable. Anyone can create one, making themself the organizer. Only the organizer can modify or delete it.
+     * @path /events/{eventId}
+     * @allow (list) Any authenticated user browsing all upcoming events.
+     * @allow (create) User `user_host` creating a new event with `organizerId` set to `user_host`.
+     * @deny (update) An attendee `user_guest` trying to change the event's location.
+     * @principle Allows public discovery while centralizing write control to a single owner (the organizer).
+     */
+    match /events/{eventId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn() && isSelfAssignedAsOwner('organizerId');
+      allow update: if isOwner(resource.data.organizerId) && resource != null;
+      allow delete: if isOwner(resource.data.organizerId) && resource != null;
+    }
+  }
+}
