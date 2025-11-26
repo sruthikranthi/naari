@@ -51,14 +51,26 @@ export type Community = {
   bannerImage: string;
 };
 
+export type Review = {
+    id: string;
+    author: string;
+    rating: number;
+    title: string;
+    comment: string;
+    date: string;
+};
+
 export type Product = {
-  id:string;
+  id: string;
   name: string;
   seller: User;
   price: number;
-  image: string;
+  description: string;
+  images: string[];
   rating: number;
   reviewCount: number;
+  reviews: Review[];
+  category: string;
 };
 
 export type Course = {
@@ -178,16 +190,98 @@ export const posts: Post[] = [
   }
 ];
 
-export const products: Product[] = [
-  { id: 'prod1', name: 'Handmade Scented Candles', seller: users[4], price: 499, image: 'https://picsum.photos/seed/product1/400/300', rating: 4.8, reviewCount: 150 },
-  { id: 'prod2', name: 'Gourmet Chocolate Box', seller: users[1], price: 899, image: 'https://picsum.photos/seed/product2/400/300', rating: 4.9, reviewCount: 210 },
-  { id: 'prod3', name: 'Embroidered Kurti', seller: users[3], price: 1299, image: 'https://picsum.photos/seed/product3/400/300', rating: 4.7, reviewCount: 95 },
-  { id: 'prod4', name: 'Terracotta Wall Art', seller: users[0], price: 750, image: 'https://picsum.photos/seed/product4/400/300', rating: 4.8, reviewCount: 88 },
-  { id: 'prod5', name: 'Organic Rose Water Toner', seller: users[4], price: 350, image: 'https://picsum.photos/seed/product5/400/300', rating: 4.9, reviewCount: 302 },
-  { id: 'prod6', name: 'Custom Calligraphy Service', seller: users[3], price: 1500, image: 'https://picsum.photos/seed/product6/400/300', rating: 5.0, reviewCount: 45 },
+const sampleReviews: Review[] = [
+    { id: 'r1', author: 'Anjali S.', rating: 5, title: 'Absolutely beautiful!', comment: 'The quality is amazing and it looks even better in person. Highly recommend!', date: 'July 15, 2024' },
+    { id: 'r2', author: 'Meera D.', rating: 4, title: 'Very nice product.', comment: 'Good value for money. The packaging was also very nice and secure.', date: 'July 10, 2024'},
+    { id: 'r3', author: 'Priya S.', rating: 5, title: 'Loved it!', comment: 'Will definitely buy from this seller again. So talented!', date: 'July 5, 2024'}
 ];
 
-export const kittyGroups = [
+export const products: Product[] = [
+  { 
+    id: 'prod1', 
+    name: 'Handmade Scented Candles', 
+    seller: users[4], 
+    price: 499,
+    description: "Relax and unwind with our beautiful, handcrafted scented candles. Made with natural soy wax and premium fragrance oils, these candles come in a variety of soothing scents like Lavender, Vanilla, and Jasmine. Each candle is hand-poured into an elegant glass jar, perfect for any home decor. Burn time is approximately 40 hours.",
+    images: ['https://picsum.photos/seed/product1/600/400', 'https://picsum.photos/seed/candle-detail1/600/400', 'https://picsum.photos/seed/candle-detail2/600/400'],
+    rating: 4.8,
+    reviewCount: 150,
+    reviews: sampleReviews.slice(0,2),
+    category: 'Home Decor'
+  },
+  { 
+    id: 'prod2', 
+    name: 'Gourmet Chocolate Box', 
+    seller: users[1], 
+    price: 899,
+    description: "Indulge in a box of our finest gourmet chocolates, made with love. This assorted box includes a variety of flavors like dark chocolate sea salt, milk chocolate almond, and white chocolate raspberry. Perfect for gifting or treating yourself. Contains 12 handcrafted chocolates.",
+    images: ['https://picsum.photos/seed/product2/600/400', 'https://picsum.photos/seed/choco-detail1/600/400', 'https://picsum.photos/seed/choco-detail2/600/400'],
+    rating: 4.9, 
+    reviewCount: 210,
+    reviews: sampleReviews,
+    category: 'Food'
+  },
+  { 
+    id: 'prod3', 
+    name: 'Embroidered Kurti', 
+    seller: users[3], 
+    price: 1299,
+    description: "A beautifully designed cotton kurti with intricate embroidery. This comfortable and stylish piece is perfect for both casual and semi-formal occasions. Available in multiple sizes. Fabric: 100% Cotton. Care: Hand wash recommended.",
+    images: ['https://picsum.photos/seed/product3/600/400', 'https://picsum.photos/seed/kurti-detail1/600/400', 'https://picsum.photos/seed/kurti-detail2/600/400'],
+    rating: 4.7, 
+    reviewCount: 95,
+    reviews: sampleReviews.slice(1,3),
+    category: 'Fashion'
+  },
+  { 
+    id: 'prod4', 
+    name: 'Terracotta Wall Art', 
+    seller: users[0], 
+    price: 750,
+    description: "Add a touch of traditional elegance to your home with this handcrafted terracotta wall art. This piece is inspired by folk art and is hand-painted by our talented artist, Priya. Dimensions: 12-inch diameter.",
+    images: ['https://picsum.photos/seed/product4/600/400', 'https://picsum.photos/seed/art-detail1/600/400'],
+    rating: 4.8, 
+    reviewCount: 88,
+    reviews: [sampleReviews[0]],
+    category: 'Home Decor'
+  },
+  { 
+    id: 'prod5', 
+    name: 'Organic Rose Water Toner', 
+    seller: users[4], 
+    price: 350,
+    description: "Refresh and hydrate your skin with our pure, organic rose water toner. Steam-distilled from fresh rose petals, this toner helps balance skin pH, tighten pores, and provides a youthful glow. Free from alcohol and parabens. Size: 100ml.",
+    images: ['https://picsum.photos/seed/product5/600/400', 'https://picsum.photos/seed/toner-detail1/600/400'],
+    rating: 4.9, 
+    reviewCount: 302,
+    reviews: sampleReviews,
+    category: 'Beauty'
+  },
+  { 
+    id: 'prod6', 
+    name: 'Custom Calligraphy Service', 
+    seller: users[3], 
+    price: 1500,
+    description: "Personalize your wedding invitations, letters, or special announcements with our elegant calligraphy services. Price is for a set of 25 invitations. Please contact us for custom quotes and designs. We offer various scripts and ink colors.",
+    images: ['https://picsum.photos/seed/product6/600/400', 'https://picsum.photos/seed/calligraphy-detail1/600/400'],
+    rating: 5.0, 
+    reviewCount: 45,
+    reviews: [],
+    category: 'Services'
+  },
+];
+
+
+export type KittyGroup = {
+  id: string;
+  name: string;
+  members: number;
+  nextTurn: string;
+  contribution: number;
+  nextDate: string;
+};
+
+export const kittyGroups: KittyGroup[] = [
   {
     id: 'k1',
     name: "Sakhi's Monthly Meet",
