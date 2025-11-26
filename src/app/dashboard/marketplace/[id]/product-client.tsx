@@ -33,6 +33,7 @@ import { type Product as ProductType } from '@/lib/mock-data';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
+import { Badge } from '@/components/ui/badge';
 
 type ProductClientProps = {
   product: ProductType;
