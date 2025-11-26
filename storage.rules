@@ -1,0 +1,34 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Helper function to check if a user is signed in
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // By default, deny all reads and writes
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+
+    // Allow authenticated users to read any file.
+    // This is a common pattern for profile pictures, post images, etc.
+    // that are meant to be publicly viewable within the app.
+    match /{allPaths=**} {
+      allow read: if isSignedIn();
+    }
+    
+    // User-specific files (e.g., profile pictures, private uploads)
+    // Users can only write to their own folder.
+    match /users/{userId}/{allPaths=**} {
+      allow write: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    // You can add more specific rules for other paths here, for example:
+    // match /shared-media/{mediaId} {
+    //   allow read, write: if isSignedIn();
+    // }
+  }
+}
