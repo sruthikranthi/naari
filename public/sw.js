@@ -1,4 +1,4 @@
-// Service Worker for offline support
+// Service Worker for offline support and push notifications
 const CACHE_NAME = 'sakhi-circle-v1';
 const RUNTIME_CACHE = 'sakhi-circle-runtime';
 

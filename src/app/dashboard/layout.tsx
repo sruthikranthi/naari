@@ -14,6 +14,7 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/logo';
 import { UserNav } from '@/components/user-nav';
 import { MainNav } from '@/components/main-nav';
@@ -21,6 +22,7 @@ import { CartProvider } from '@/context/cart-context';
 import { CartSheet } from '@/components/cart-sheet';
 import { NotificationsNav } from '@/components/notifications-nav';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { SearchModal } from '@/components/search-modal';
 import type { Post } from '@/lib/mock-data';
 
 // Create Dashboard Context
@@ -68,6 +70,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 }
 
 function Layout({ children }: { children: ReactNode }) {
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+
   return (
     <SidebarProvider>
       <Sidebar>
@@ -99,8 +103,19 @@ function Layout({ children }: { children: ReactNode }) {
                 placeholder="Search..."
                 className="w-full rounded-lg bg-background pl-8 md:w-[200px] lg:w-[320px]"
                 aria-label="Search"
+                onFocus={() => setIsSearchOpen(true)}
+                readOnly
               />
             </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="md:hidden"
+              onClick={() => setIsSearchOpen(true)}
+              aria-label="Open search"
+            >
+              <Search className="h-5 w-5" />
+            </Button>
           </div>
           <div className="flex items-center gap-4">
             <NotificationsNav />
@@ -112,6 +127,7 @@ function Layout({ children }: { children: ReactNode }) {
         <main id="main-content" className="flex-1 overflow-y-auto p-4 md:p-6" role="main">
           {children}
         </main>
+        <SearchModal open={isSearchOpen} onOpenChange={setIsSearchOpen} />
       </SidebarInset>
     </SidebarProvider>
   )
