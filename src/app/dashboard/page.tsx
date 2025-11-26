@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { collection, query, orderBy } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { CreatePost } from '@/components/create-post';
 import { PostCard } from '@/components/post-card';
 import { Stories } from '@/components/stories';
@@ -14,12 +14,15 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 function PageContent() {
     const firestore = useFirestore();
-    const postsQuery = useMemoFirebase(
-      () => firestore ? query(collection(firestore, 'posts'), orderBy('timestamp', 'desc')) : null,
-      [firestore]
-    );
-    const { data: posts, isLoading } = useCollection(postsQuery);
+    const { user, isUserLoading } = useUser();
 
+    const postsQuery = useMemoFirebase(
+      () => (firestore && user) ? query(collection(firestore, 'posts'), orderBy('timestamp', 'desc')) : null,
+      [firestore, user]
+    );
+    const { data: posts, isLoading: arePostsLoading } = useCollection(postsQuery);
+
+    const isLoading = isUserLoading || arePostsLoading;
     const anonymousPosts = posts?.filter(p => p.isAnonymous) || [];
 
     return (
