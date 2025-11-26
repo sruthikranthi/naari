@@ -80,7 +80,7 @@ export default function ProfilePage() {
 
   // For demonstration, we'll fetch a few other users as "connections"
   const connectionsQuery = useMemoFirebase(() => (currentUser && user?.followingIds && user.followingIds.length > 0) ? query(collection(firestore, 'users'), where('id', 'in', user.followingIds)) : null, [currentUser, user]);
-  const { data: userConnections, isLoading: areConnectionsLoading } = useCollection<User>(connectionsQuery);
+  const { data: userConnections, isLoading: areConnectionsLoading } = useCollection<User>(userConnections ? connectionsQuery : null);
 
 
   const { register, handleSubmit, formState: { errors }, reset } = useForm<ProfileFormValues>({
@@ -133,10 +133,26 @@ export default function ProfilePage() {
   
   const isLoading = isUserLoading || isUserProfileLoading || arePostsLoading || areCommunitiesLoading || areConnectionsLoading;
 
-  if (isLoading) {
+  if (isLoading || !user) {
       return (
           <div className="space-y-6">
-              <Card><Skeleton className="h-64 w-full" /></Card>
+              <Card>
+                <div className="relative h-48 w-full bg-muted md:h-64">
+                    <Skeleton className="h-full w-full" />
+                </div>
+                <CardContent className="relative p-6 pt-0">
+                    <div className="flex flex-col items-center gap-4 md:flex-row md:items-end">
+                        <div className="-mt-20 shrink-0 md:-mt-24">
+                           <Skeleton className="h-32 w-32 rounded-full md:h-40 md:w-40 border-4 border-card" />
+                        </div>
+                        <div className="flex-1 space-y-2 text-center md:ml-6 md:text-left">
+                            <Skeleton className="h-9 w-48" />
+                            <Skeleton className="h-5 w-32" />
+                            <Skeleton className="h-5 w-40" />
+                        </div>
+                    </div>
+                </CardContent>
+              </Card>
               <Tabs defaultValue="activity">
                   <TabsList className="grid w-full grid-cols-4">
                       <TabsTrigger value="activity">Activity</TabsTrigger>
@@ -152,15 +168,6 @@ export default function ProfilePage() {
       )
   }
 
-  if (!user) {
-      return (
-          <div className="text-center py-20">
-              <Loader className="mx-auto h-12 w-12 animate-spin text-primary" />
-              <p className="mt-4">Loading your profile...</p>
-          </div>
-      )
-  }
-  
   const handleFollow = async (targetUserId: string) => {
     if(!currentUser || !firestore) return;
     
@@ -484,5 +491,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-
-    

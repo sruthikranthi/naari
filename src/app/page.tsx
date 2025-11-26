@@ -32,13 +32,12 @@ export default function VerificationPage() {
   const isLoading = isAuthLoading || isProfileLoading;
 
   useEffect(() => {
-    if (!isLoading && authUser) {
-      if (userProfile) {
-        // User is logged in and has a profile, go to dashboard
-        router.push('/dashboard');
-      }
-      // If user is logged in but has no profile, they should stay here to be prompted to create one.
+    // Only redirect if loading is complete AND the user is logged in AND a profile document exists.
+    if (!isLoading && authUser && userProfile) {
+      router.push('/dashboard');
     }
+    // If authUser exists but userProfile is null/undefined after loading,
+    // it means they need to create a profile, so we stay on this page.
   }, [authUser, userProfile, isLoading, router]);
 
   const handleMediaCaptured = (dataUrl: string, type: 'image' | 'video') => {
