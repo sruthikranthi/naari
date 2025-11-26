@@ -205,7 +205,7 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
       >
         <div className="px-4 py-2 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-full shadow-lg">
           <p className="text-xs text-gray-600 dark:text-gray-300 font-medium">
-            India's First Women-Only Social Platform
+            India&apos;s First Women-Only Social Platform
           </p>
         </div>
       </motion.div>
