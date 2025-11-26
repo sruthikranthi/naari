@@ -45,7 +45,8 @@ function ProductDetailPageContent() {
     
     if (error) {
         console.error("Error fetching product:", error);
-        return <p>Error loading product.</p>;
+        // This could be a more user-friendly error component
+        return <p>Error loading product. It may have been removed or you may not have permission to view it.</p>;
     }
 
     if (!product) {

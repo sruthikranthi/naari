@@ -248,7 +248,7 @@ export function ProductClient({ product }: ProductClientProps) {
             <Separator />
             
             <div className="space-y-6">
-                {product.reviews && product.reviews.map(review => (
+                {product.reviews && product.reviews.length > 0 ? product.reviews.map(review => (
                 <div key={review.id} className="flex gap-4">
                     <Avatar>
                         <AvatarFallback>{review.author[0]}</AvatarFallback>
@@ -273,7 +273,9 @@ export function ProductClient({ product }: ProductClientProps) {
                         <p className="text-sm text-muted-foreground mt-1">{review.comment}</p>
                     </div>
                 </div>
-                ))}
+                )) : (
+                  <p className="text-center text-sm text-muted-foreground py-8">No reviews for this product yet. Be the first to leave one!</p>
+                )}
             </div>
             {product.reviews?.length > 0 && <Button variant="outline" className="w-full">Load More Reviews</Button>}
         </CardContent>
