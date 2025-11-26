@@ -16,8 +16,7 @@ import {
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { useMemoFirebase } from '@/firebase';
-
-export type WithId<T> = T & { id: string };
+import type { WithId } from './use-collection';
 
 export interface UsePaginatedCollectionResult<T> {
   data: WithId<T>[];
