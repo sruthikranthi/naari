@@ -2,7 +2,7 @@
 'use client';
 import { useState } from 'react';
 import Image from 'next/image';
-import { Clock, User, BarChart2, BookCheck } from 'lucide-react';
+import { Clock, User, BarChart2, BookCheck, Plus } from 'lucide-react';
 import { courses as allCourses } from '@/lib/mock-data';
 import type { Course } from '@/lib/mock-data';
 import { PageHeader } from '@/components/page-header';
@@ -22,18 +22,42 @@ import {
 } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Progress } from '@/components/ui/progress';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 
 const categories = [
-  'All',
   'Business',
   'Beauty',
   'Health & Wellness',
   'Crafts',
+  'Technology',
+  'Finance'
 ];
 
+const courseSchema = z.object({
+  title: z.string().min(5, 'Title must be at least 5 characters.'),
+  instructor: z.string().min(3, 'Instructor name is required.'),
+  duration: z.string().min(2, 'Duration is required.'),
+  category: z.string().nonempty('Please select a category.'),
+  level: z.string().nonempty('Please select a level.'),
+});
+
+type CourseFormValues = z.infer<typeof courseSchema>;
+
 export default function LearningPage() {
+  const [courses, setCourses] = useState<Course[]>(allCourses);
   const [enrolledCourses, setEnrolledCourses] = useState<Course[]>([]);
   const { toast } = useToast();
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+
+  const { control, register, handleSubmit, formState: { errors }, reset } = useForm<CourseFormValues>({
+      resolver: zodResolver(courseSchema),
+  });
 
   const handleEnroll = (course: Course) => {
     if (enrolledCourses.find(c => c.id === course.id)) return;
@@ -44,21 +68,118 @@ export default function LearningPage() {
     });
   };
 
+  const handleCreateCourse = (data: CourseFormValues) => {
+    const newCourse: Course = {
+        id: `c${Date.now()}`,
+        title: data.title,
+        category: data.category as Course['category'],
+        instructor: data.instructor,
+        duration: data.duration,
+        level: data.level as Course['level'],
+        image: `https://picsum.photos/seed/newCourse${courses.length + 1}/600/400`,
+    };
+    setCourses([newCourse, ...courses]);
+    toast({
+        title: 'Course Created!',
+        description: `"${data.title}" has been added to the discoverable courses.`
+    });
+    reset();
+    setIsCreateDialogOpen(false);
+  }
+
   return (
     <div>
-      <PageHeader
-        title="Learning Zone"
-        description="Empower yourself with new skills and knowledge."
-      />
+      <div className="flex items-center justify-between">
+        <PageHeader
+          title="Learning Zone"
+          description="Empower yourself with new skills and knowledge."
+        />
+        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogTrigger asChild>
+                <Button><Plus className="mr-2 h-4 w-4" /> Create Course</Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Create a New Course</DialogTitle>
+                    <DialogDescription>Fill in the details below to add a new course to the Learning Zone.</DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleSubmit(handleCreateCourse)} className="space-y-4">
+                    <div>
+                        <Label htmlFor="title">Course Title</Label>
+                        <Input id="title" {...register("title")} />
+                        {errors.title && <p className="text-destructive text-xs mt-1">{errors.title.message}</p>}
+                    </div>
+                     <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <Label htmlFor="instructor">Instructor</Label>
+                            <Input id="instructor" {...register("instructor")} />
+                            {errors.instructor && <p className="text-destructive text-xs mt-1">{errors.instructor.message}</p>}
+                        </div>
+                         <div>
+                            <Label htmlFor="duration">Duration</Label>
+                            <Input id="duration" placeholder="e.g. 4 Weeks" {...register("duration")} />
+                            {errors.duration && <p className="text-destructive text-xs mt-1">{errors.duration.message}</p>}
+                        </div>
+                     </div>
+                     <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <Label htmlFor="category">Category</Label>
+                            <Controller
+                                name="category"
+                                control={control}
+                                render={({ field }) => (
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                        <SelectTrigger><SelectValue placeholder="Select Category" /></SelectTrigger>
+                                        <SelectContent>
+                                            {categories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                )}
+                            />
+                            {errors.category && <p className="text-destructive text-xs mt-1">{errors.category.message}</p>}
+                        </div>
+                         <div>
+                            <Label htmlFor="level">Level</Label>
+                             <Controller
+                                name="level"
+                                control={control}
+                                render={({ field }) => (
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                        <SelectTrigger><SelectValue placeholder="Select Level" /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="Beginner">Beginner</SelectItem>
+                                            <SelectItem value="Intermediate">Intermediate</SelectItem>
+                                            <SelectItem value="Advanced">Advanced</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                )}
+                            />
+                            {errors.level && <p className="text-destructive text-xs mt-1">{errors.level.message}</p>}
+                        </div>
+                     </div>
+                    <div>
+                        <Label htmlFor="image">Course Image</Label>
+                        <Input id="image" type="file" accept="image/*" />
+                        <p className="text-xs text-muted-foreground mt-1">For demonstration purposes only.</p>
+                    </div>
 
-      <Tabs defaultValue="discover" className="w-full">
+                    <DialogFooter className="pt-4">
+                        <DialogClose asChild><Button type="button" variant="ghost">Cancel</Button></DialogClose>
+                        <Button type="submit">Create Course</Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+      </div>
+
+      <Tabs defaultValue="discover" className="w-full mt-6">
          <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="discover">Discover Courses</TabsTrigger>
             <TabsTrigger value="my-learning">My Learning ({enrolledCourses.length})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="discover" className="mt-6">
-            <DiscoverCourses onEnroll={handleEnroll} enrolledIds={enrolledCourses.map(c => c.id)} />
+            <DiscoverCourses courses={courses} onEnroll={handleEnroll} enrolledIds={enrolledCourses.map(c => c.id)} />
         </TabsContent>
 
         <TabsContent value="my-learning" className="mt-6">
@@ -80,18 +201,20 @@ export default function LearningPage() {
   );
 }
 
-function DiscoverCourses({ onEnroll, enrolledIds }: { onEnroll: (course: Course) => void; enrolledIds: string[] }) {
+function DiscoverCourses({ courses, onEnroll, enrolledIds }: { courses: Course[], onEnroll: (course: Course) => void; enrolledIds: string[] }) {
   const [activeCategory, setActiveCategory] = useState('All');
 
   const filteredCourses =
     activeCategory === 'All'
-      ? allCourses
-      : allCourses.filter((course) => course.category === activeCategory);
+      ? courses
+      : courses.filter((course) => course.category === activeCategory);
   
+  const allCategories = ['All', ...categories]
+
   return (
     <Tabs defaultValue="All" onValueChange={setActiveCategory} className="w-full">
-        <TabsList className="mb-6 grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5">
-          {categories.map((category) => (
+        <TabsList className="mb-6 grid w-full grid-cols-3 sm:grid-cols-4 md:grid-cols-7">
+          {allCategories.map((category) => (
             <TabsTrigger key={category} value={category}>
               {category}
             </TabsTrigger>
@@ -190,7 +313,7 @@ function EnrolledCourseCard({ course }: { course: Course }) {
         </div>
       </CardContent>
       <CardFooter className="p-4 pt-0">
-        <Button variant="secondary" className="w-full">
+        <Button variant="default" className="w-full">
             <BookCheck className="mr-2 h-4 w-4" />
             Continue Learning
         </Button>
@@ -199,3 +322,4 @@ function EnrolledCourseCard({ course }: { course: Course }) {
   );
 }
 
+    

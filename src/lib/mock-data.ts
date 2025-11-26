@@ -78,7 +78,7 @@ export type Product = {
 export type Course = {
   id: string;
   title: string;
-  category: 'Business' | 'Beauty' | 'Health & Wellness' | 'Crafts';
+  category: 'Business' | 'Beauty' | 'Health & Wellness' | 'Crafts' | 'Technology' | 'Finance';
   instructor: string;
   duration: string;
   image: string;
@@ -438,3 +438,5 @@ export const selfCareActivities: SelfCareActivity[] = [
 
 export { directory };
 export type { Professional };
+
+    
