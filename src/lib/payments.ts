@@ -3,8 +3,14 @@
  * Supports Stripe and PayPal
  */
 
-import { collection, addDoc, query, where, getDocs, orderBy, limit, updateDoc, doc, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/firebase/config';
+import { collection, addDoc, query, where, getDocs, orderBy, limit, updateDoc, doc, serverTimestamp, Firestore } from 'firebase/firestore';
+import { initializeFirebase } from '@/firebase';
+
+// Get Firestore instance
+function getDb(): Firestore {
+  const { firestore } = initializeFirebase();
+  return firestore;
+}
 
 export interface Payment {
   id: string;
@@ -38,6 +44,7 @@ export interface Refund {
 export async function createPayment(
   payment: Omit<Payment, 'id' | 'createdAt' | 'updatedAt'>
 ): Promise<string> {
+  const db = getDb();
   const paymentsRef = collection(db, 'payments');
   const docRef = await addDoc(paymentsRef, {
     ...payment,
@@ -55,6 +62,7 @@ export async function updatePaymentStatus(
   status: Payment['status'],
   metadata?: Record<string, any>
 ) {
+  const db = getDb();
   const paymentRef = doc(db, 'payments', paymentId);
   await updateDoc(paymentRef, {
     status,
@@ -70,6 +78,7 @@ export async function getUserPaymentHistory(
   userId: string,
   limitCount: number = 50
 ): Promise<Payment[]> {
+  const db = getDb();
   const paymentsRef = collection(db, 'payments');
   const q = query(
     paymentsRef,
@@ -89,6 +98,7 @@ export async function getUserPaymentHistory(
  * Get payment by ID
  */
 export async function getPayment(paymentId: string): Promise<Payment | null> {
+  const db = getDb();
   const paymentRef = doc(db, 'payments', paymentId);
   const paymentDoc = await getDocs(query(collection(db, 'payments'), where('__name__', '==', paymentId)));
   
@@ -109,6 +119,7 @@ export async function createRefund(
   reason: string,
   refundId?: string
 ): Promise<string> {
+  const db = getDb();
   // Create refund record
   const refundsRef = collection(db, 'refunds');
   const refundDoc = await addDoc(refundsRef, {
@@ -133,6 +144,7 @@ export async function updateRefundStatus(
   refundId: string,
   status: Refund['status']
 ) {
+  const db = getDb();
   const refundRef = doc(db, 'refunds', refundId);
   await updateDoc(refundRef, {
     status,
@@ -143,6 +155,7 @@ export async function updateRefundStatus(
  * Get refunds for a payment
  */
 export async function getRefundsForPayment(paymentId: string): Promise<Refund[]> {
+  const db = getDb();
   const refundsRef = collection(db, 'refunds');
   const q = query(
     refundsRef,

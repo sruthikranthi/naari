@@ -3,9 +3,15 @@
  * Global search across posts, users, communities
  */
 
-import { collection, query, where, getDocs, orderBy, limit, startAfter } from 'firebase/firestore';
-import { db } from '@/firebase/config';
+import { collection, query, where, getDocs, orderBy, limit, startAfter, Firestore } from 'firebase/firestore';
+import { initializeFirebase } from '@/firebase';
 import type { Post, User } from '@/lib/mock-data';
+
+// Get Firestore instance
+function getDb(): Firestore {
+  const { firestore } = initializeFirebase();
+  return firestore;
+}
 
 export interface SearchResult {
   type: 'post' | 'user' | 'community';
@@ -30,6 +36,7 @@ export async function searchPosts(
   filters?: SearchFilters,
   lastDoc?: any
 ): Promise<{ results: SearchResult[]; lastDoc: any }> {
+  const db = getDb();
   const postsRef = collection(db, 'posts');
   let q = query(postsRef, orderBy('timestamp', 'desc'), limit(20));
 
@@ -78,6 +85,7 @@ export async function searchUsers(
   filters?: SearchFilters,
   lastDoc?: any
 ): Promise<{ results: SearchResult[]; lastDoc: any }> {
+  const db = getDb();
   const usersRef = collection(db, 'users');
   let q = query(usersRef, limit(20));
 
@@ -125,6 +133,7 @@ export async function searchCommunities(
   filters?: SearchFilters,
   lastDoc?: any
 ): Promise<{ results: SearchResult[]; lastDoc: any }> {
+  const db = getDb();
   const communitiesRef = collection(db, 'communities');
   let q = query(communitiesRef, orderBy('createdAt', 'desc'), limit(20));
 

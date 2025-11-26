@@ -3,8 +3,14 @@
  * User engagement metrics, content performance tracking
  */
 
-import { collection, query, where, getDocs, orderBy, limit, Timestamp } from 'firebase/firestore';
-import { db } from '@/firebase/config';
+import { collection, query, where, getDocs, orderBy, limit, Timestamp, Firestore } from 'firebase/firestore';
+import { initializeFirebase } from '@/firebase';
+
+// Get Firestore instance
+function getDb(): Firestore {
+  const { firestore } = initializeFirebase();
+  return firestore;
+}
 
 export interface UserEngagementMetrics {
   userId: string;
@@ -47,6 +53,7 @@ export interface AdminDashboardMetrics {
  * Get user engagement metrics
  */
 export async function getUserEngagementMetrics(userId: string): Promise<UserEngagementMetrics> {
+  const db = getDb();
   // Get user's posts
   const postsRef = collection(db, 'posts');
   const postsQuery = query(postsRef, where('author.id', '==', userId));
@@ -92,6 +99,7 @@ export async function getUserEngagementMetrics(userId: string): Promise<UserEnga
  * Get content performance for a post
  */
 export async function getContentPerformance(postId: string): Promise<ContentPerformance | null> {
+  const db = getDb();
   const postRef = collection(db, 'posts');
   const postDoc = await getDocs(query(postRef, where('__name__', '==', postId)));
   
@@ -122,6 +130,7 @@ export async function getContentPerformance(postId: string): Promise<ContentPerf
  * Get top performing posts
  */
 export async function getTopPerformingPosts(limitCount: number = 10): Promise<ContentPerformance[]> {
+  const db = getDb();
   const postsRef = collection(db, 'posts');
   const postsQuery = query(
     postsRef,
@@ -160,6 +169,7 @@ export async function getTopPerformingPosts(limitCount: number = 10): Promise<Co
  * Get admin dashboard metrics
  */
 export async function getAdminDashboardMetrics(): Promise<AdminDashboardMetrics> {
+  const db = getDb();
   // Get total users
   const usersRef = collection(db, 'users');
   const usersSnapshot = await getDocs(usersRef);

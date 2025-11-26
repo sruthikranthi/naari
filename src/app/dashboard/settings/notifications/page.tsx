@@ -89,7 +89,7 @@ export default function NotificationSettingsPage() {
     
     try {
       await updateNotificationPreferences(user.uid, {
-        types: { [type]: value },
+        types: { ...preferences.types, [type]: value },
       });
     } catch (error) {
       console.error('Error updating type preference:', error);

@@ -3,8 +3,14 @@
  * Real-time notifications with Firestore
  */
 
-import { collection, query, where, orderBy, onSnapshot, addDoc, updateDoc, doc, serverTimestamp, getDocs, limit } from 'firebase/firestore';
-import { db } from '@/firebase/config';
+import { collection, query, where, orderBy, onSnapshot, addDoc, updateDoc, doc, serverTimestamp, getDocs, limit, Firestore } from 'firebase/firestore';
+import { initializeFirebase } from '@/firebase';
+
+// Get Firestore instance
+function getDb(): Firestore {
+  const { firestore } = initializeFirebase();
+  return firestore;
+}
 
 export interface Notification {
   id: string;
@@ -37,6 +43,7 @@ export interface NotificationPreferences {
  * Create a notification
  */
 export async function createNotification(notification: Omit<Notification, 'id' | 'read' | 'createdAt'>) {
+  const db = getDb();
   const notificationsRef = collection(db, 'notifications');
   await addDoc(notificationsRef, {
     ...notification,
@@ -49,6 +56,7 @@ export async function createNotification(notification: Omit<Notification, 'id' |
  * Mark notification as read
  */
 export async function markNotificationAsRead(notificationId: string) {
+  const db = getDb();
   const notificationRef = doc(db, 'notifications', notificationId);
   await updateDoc(notificationRef, {
     read: true,
@@ -59,6 +67,7 @@ export async function markNotificationAsRead(notificationId: string) {
  * Mark all notifications as read
  */
 export async function markAllNotificationsAsRead(userId: string) {
+  const db = getDb();
   const notificationsRef = collection(db, 'notifications');
   const q = query(
     notificationsRef,
@@ -81,6 +90,7 @@ export function subscribeToNotifications(
   userId: string,
   callback: (notifications: Notification[]) => void
 ) {
+  const db = getDb();
   const notificationsRef = collection(db, 'notifications');
   const q = query(
     notificationsRef,
@@ -105,6 +115,7 @@ export function subscribeToUnreadCount(
   userId: string,
   callback: (count: number) => void
 ) {
+  const db = getDb();
   const notificationsRef = collection(db, 'notifications');
   const q = query(
     notificationsRef,
@@ -121,6 +132,7 @@ export function subscribeToUnreadCount(
  * Get notification preferences
  */
 export async function getNotificationPreferences(userId: string): Promise<NotificationPreferences | null> {
+  const db = getDb();
   const preferencesRef = collection(db, 'notification_preferences');
   const q = query(preferencesRef, where('userId', '==', userId), limit(1));
   const snapshot = await getDocs(q);
@@ -153,6 +165,7 @@ export async function updateNotificationPreferences(
   userId: string,
   preferences: Partial<NotificationPreferences>
 ) {
+  const db = getDb();
   const preferencesRef = collection(db, 'notification_preferences');
   const q = query(preferencesRef, where('userId', '==', userId), limit(1));
   const snapshot = await getDocs(q);
