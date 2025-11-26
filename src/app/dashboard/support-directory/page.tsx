@@ -144,6 +144,7 @@ export default function SupportDirectoryPage() {
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-lg">
+            {/* eslint-disable-next-line react-hooks/refs -- handleSubmit from react-hook-form is designed to be used this way */}
             <form onSubmit={handleSubmit(onAddProfessional)}>
               <DialogHeader>
                 <DialogTitle>Add a New Professional</DialogTitle>

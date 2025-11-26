@@ -119,7 +119,7 @@ function PageContent() {
               {!isLoading && allPostsFeed.length === 0 && (
                 <div className="py-20 text-center text-muted-foreground">
                     <h3 className="text-lg font-semibold">Be the first to post!</h3>
-                    <p>Share what's on your mind with the community.</p>
+                    <p>Share what&apos;s on your mind with the community.</p>
                 </div>
               )}
             </TabsContent>

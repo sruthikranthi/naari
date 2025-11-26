@@ -337,8 +337,8 @@ function CourseCard({ course, onEnroll, isEnrolled }: { course: Course; onEnroll
 
 
 function EnrolledCourseCard({ course }: { course: Course }) {
-  // Mock progress
-  const progress = Math.floor(Math.random() * (70 - 20 + 1)) + 20;
+  // Mock progress - use useState with lazy initializer to avoid impure function in render
+  const progress = useState(() => Math.floor(Math.random() * (70 - 20 + 1)) + 20)[0];
 
   return (
     <Card className="flex flex-col overflow-hidden">
