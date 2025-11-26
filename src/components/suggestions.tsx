@@ -1,9 +1,11 @@
+
 import Link from 'next/link';
 import { users, communities } from '@/lib/mock-data';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Plus } from 'lucide-react';
+import Image from 'next/image';
 
 export function Suggestions() {
   const suggestedUsers = users.slice(2, 5);
@@ -21,7 +23,7 @@ export function Suggestions() {
               <div className="flex items-center gap-3">
                 <Avatar className="h-10 w-10">
                   <AvatarImage
-                    src={`https://picsum.photos/seed/${user.id}/100/100`}
+                    src={user.avatar}
                     alt={user.name}
                     data-ai-hint="woman portrait"
                   />
@@ -55,8 +57,8 @@ export function Suggestions() {
           {suggestedCommunities.map((community) => (
             <div key={community.id} className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 overflow-hidden rounded-md">
-                        <img src={community.image} alt={community.name} className="h-full w-full object-cover" />
+                    <div className="h-10 w-10 relative overflow-hidden rounded-md">
+                        <Image src={community.image} alt={community.name} fill className="object-cover" />
                     </div>
                     <div>
                         <p className="font-semibold">{community.name}</p>

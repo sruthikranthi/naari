@@ -317,7 +317,7 @@ export default function AdminPanelPage() {
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <Avatar>
-                            <AvatarImage src={`https://picsum.photos/seed/${user.id}/100/100`} />
+                            <AvatarImage src={user.avatar} />
                             <AvatarFallback>{user.name.split(' ').map(n=>n[0]).join('')}</AvatarFallback>
                           </Avatar>
                           <div>

@@ -44,7 +44,7 @@ export function Stories() {
                   <button className="relative flex h-16 w-16 items-center justify-center rounded-full bg-secondary">
                     <Avatar className="h-[60px] w-[60px] border-2 border-card">
                       <AvatarImage
-                        src="https://picsum.photos/seed/user1/100/100"
+                        src={users[0].avatar}
                         alt={users[0].name}
                         data-ai-hint="woman portrait"
                       />
@@ -81,7 +81,7 @@ export function Stories() {
                   <div className="rounded-full bg-card p-0.5">
                     <Avatar className="h-[60px] w-[60px]">
                       <AvatarImage
-                        src={`https://picsum.photos/seed/${user.id}/100/100`}
+                        src={user.avatar}
                         alt={user.name}
                         data-ai-hint={
                           index % 2 === 0 ? 'man portrait' : 'woman portrait'

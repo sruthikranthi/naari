@@ -16,6 +16,7 @@ import {
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 export function PostCard({ post }: { post: Post }) {
   const { toast } = useToast();
@@ -24,8 +25,8 @@ export function PostCard({ post }: { post: Post }) {
 
   const authorName = post.isAnonymous ? 'Anonymous Sakhi' : post.author.name;
   const authorAvatar = post.isAnonymous
-    ? 'https://picsum.photos/seed/anonymous/100/100'
-    : `https://picsum.photos/seed/${post.author.id}/100/100`;
+    ? (PlaceHolderImages.find(p => p.id === 'user-5')?.imageUrl || 'https://picsum.photos/seed/anonymous/100/100')
+    : post.author.avatar;
   
   const totalVotes = post.pollOptions?.reduce((acc, option) => acc + option.votes, 0) || 0;
 

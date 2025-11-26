@@ -259,7 +259,7 @@ export default function ProfessionalHubPage() {
                       >
                         <Avatar>
                           <AvatarImage
-                            src={`https://picsum.photos/seed/${req.user.id}/100/100`}
+                            src={req.user.avatar}
                           />
                           <AvatarFallback>
                             {req.user.name
@@ -317,7 +317,7 @@ export default function ProfessionalHubPage() {
                                         <TableCell>
                                             <div className="flex items-center gap-3">
                                                 <Avatar>
-                                                    <AvatarImage src={`https://picsum.photos/seed/${client.user.id}/100/100`} alt={client.user.name} />
+                                                    <AvatarImage src={client.user.avatar} alt={client.user.name} />
                                                     <AvatarFallback>{client.user.name.split(' ').map(n=>n[0]).join('')}</AvatarFallback>
                                                 </Avatar>
                                                 <div>

@@ -114,7 +114,7 @@ export function StoryViewer({ users, initialUser, onClose }: StoryViewerProps) {
           <div className="flex items-center gap-3 mt-3">
              <Avatar className="h-9 w-9">
                   <AvatarImage
-                    src={`https://picsum.photos/seed/${currentUser.id}/100/100`}
+                    src={currentUser.avatar}
                     alt={currentUser.name}
                   />
                   <AvatarFallback>

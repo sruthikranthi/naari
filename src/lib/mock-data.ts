@@ -1,6 +1,15 @@
 
 import { directory } from './directory';
 import type { Professional } from './directory';
+import { PlaceHolderImages } from './placeholder-images';
+
+const findImage = (id: string, hint: string) => {
+  const img = PlaceHolderImages.find(p => p.id === id);
+  if (img) return img.imageUrl;
+  // Fallback to a picsum URL if not found in the JSON, which shouldn't happen
+  return `https://picsum.photos/seed/${id}/400/300`;
+};
+
 
 export type User = {
   id: string;
@@ -95,20 +104,20 @@ export type SelfCareActivity = {
 
 
 export const users: User[] = [
-  { id: 'u1', name: 'Priya Sharma', avatar: '/assets/user-1.jpg', city: 'Mumbai', interests: ['Cooking', 'Yoga', 'Reading'], stories: [
+  { id: 'u1', name: 'Priya Sharma', avatar: findImage('user-1', 'woman portrait'), city: 'Mumbai', interests: ['Cooking', 'Yoga', 'Reading'], stories: [
       { id: 's1-1', type: 'image', url: 'https://picsum.photos/seed/story1/1080/1920', duration: 5 },
       { id: 's1-2', type: 'image', url: 'https://picsum.photos/seed/story2/1080/1920', duration: 5 },
   ], kittyScore: 95, paymentStatus: 'Paid' },
-  { id: 'u2', name: 'Anjali Singh', avatar: '/assets/user-2.jpg', city: 'Delhi', interests: ['Gardening', 'Business', 'Movies'], stories: [
+  { id: 'u2', name: 'Anjali Singh', avatar: findImage('user-2', 'woman nature'), city: 'Delhi', interests: ['Gardening', 'Business', 'Movies'], stories: [
       { id: 's2-1', type: 'image', url: 'https://picsum.photos/seed/story3/1080/1920', duration: 5 },
   ], kittyScore: 88, paymentStatus: 'Paid' },
-  { id: 'u3', name: 'Sneha Patel', avatar: '/assets/user-3.jpg', city: 'Bangalore', interests: ['Technology', 'Startups', 'Travel'], stories: [
+  { id: 'u3', name: 'Sneha Patel', avatar: findImage('user-3', 'woman professional'), city: 'Bangalore', interests: ['Technology', 'Startups', 'Travel'], stories: [
       { id: 's3-1', type: 'image', url: 'https://picsum.photos/seed/story4/1080/1920', duration: 5 },
       { id: 's3-2', type: 'image', url: 'https://picsum.photos/seed/story5/1080/1920', duration: 5 },
       { id: 's3-3', type: 'image', url: 'https://picsum.photos/seed/story6/1080/1920', duration: 5 },
   ], kittyScore: 42, paymentStatus: 'Overdue' },
-  { id: 'u4', name: 'Meera Das', avatar: '/assets/user-4.jpg', city: 'Kolkata', interests: ['Art', 'Music', 'History'], kittyScore: 99, paymentStatus: 'Paid' },
-  { id: 'u5', name: 'Lakshmi Rao', avatar: '/assets/user-5.jpg', city: 'Chennai', interests: ['Finance', 'Investment', 'Crafts'], stories: [
+  { id: 'u4', name: 'Meera Das', avatar: findImage('user-4', 'woman smiling'), city: 'Kolkata', interests: ['Art', 'Music', 'History'], kittyScore: 99, paymentStatus: 'Paid' },
+  { id: 'u5', name: 'Lakshmi Rao', avatar: findImage('user-5', 'senior woman'), city: 'Chennai', interests: ['Finance', 'Investment', 'Crafts'], stories: [
       { id: 's5-1', type: 'image', url: 'https://picsum.photos/seed/story7/1080/1920', duration: 5 },
   ], kittyScore: 76, paymentStatus: 'Unpaid' },
 ];
@@ -119,32 +128,32 @@ export const communities: Community[] = [
     name: 'Hyderabad Ladies',
     description: 'A space for all women in Hyderabad to connect, share, and grow together.',
     memberCount: 1200,
-    image: 'https://picsum.photos/seed/commArt/400/300',
-    bannerImage: 'https://picsum.photos/seed/comm1/1200/400'
+    image: findImage('community-art', 'art supplies'),
+    bannerImage: findImage('community-banner-1', 'cooking class')
   },
   {
     id: 'comm2',
     name: 'Parenting Circle',
     description: 'Join our circle of moms to share the joys and challenges of motherhood.',
     memberCount: 850,
-    image: 'https://picsum.photos/seed/commRead/400/300',
-    bannerImage: 'https://picsum.photos/seed/comm4/1200/400'
+    image: findImage('community-reading', 'reading book'),
+    bannerImage: findImage('community-banner-4', 'mother child')
   },
   {
     id: 'comm3',
     name: 'Women in Business',
     description: 'A network for female entrepreneurs to collaborate and support each other.',
     memberCount: 2500,
-    image: 'https://picsum.photos/seed/commGarden/400/300',
-    bannerImage: 'https://picsum.photos/seed/comm3/1200/400'
+    image: findImage('community-gardening', 'gardening plants'),
+    bannerImage: findImage('community-banner-3', 'women business')
   },
   {
     id: 'comm4',
     name: 'Fitness & Yoga',
     description: 'Your daily dose of motivation for a healthy body and mind.',
     memberCount: 5300,
-    image: 'https://picsum.photos/seed/commTravel/400/300',
-    bannerImage: 'https://picsum.photos/seed/comm2/1200/400'
+    image: findImage('community-travel', 'travel map'),
+    bannerImage: findImage('community-banner-2', 'yoga women')
   },
 ];
 
@@ -157,7 +166,7 @@ export const posts: Post[] = [
     likes: 45,
     comments: 12,
     isAnonymous: false,
-    image: 'https://picsum.photos/seed/post1/600/400'
+    image: findImage('product-2', 'indian food')
   },
   {
     id: 'p2',
@@ -199,7 +208,7 @@ export const posts: Post[] = [
     likes: 210,
     comments: 56,
     isAnonymous: false,
-    image: 'https://picsum.photos/seed/post2/600/400'
+    image: findImage('post-image-1', 'coffee flatlay')
   }
 ];
 
@@ -217,7 +226,7 @@ export const products: Product[] = [
     price: 499,
     description: 'Relax and unwind with our beautiful, handcrafted scented candles. Made with natural soy wax and premium fragrance oils, these candles come in a variety of soothing scents like Lavender, Vanilla, and Jasmine. Each candle is hand-poured into an elegant glass jar, perfect for any home decor. Burn time is approximately 40 hours.',
     images: [
-      'https://picsum.photos/seed/product1/600/400',
+      findImage('product-1', 'handmade jewelry'),
       'https://picsum.photos/seed/candle-detail1/600/400',
       'https://picsum.photos/seed/candle-detail2/600/400',
     ],
@@ -233,7 +242,7 @@ export const products: Product[] = [
     price: 899,
     description: 'Indulge in a box of our finest gourmet chocolates, made with love. This assorted box includes a variety of flavors like dark chocolate sea salt, milk chocolate almond, and white chocolate raspberry. Perfect for gifting or treating yourself. Contains 12 handcrafted chocolates.',
     images: [
-      'https://picsum.photos/seed/product2/600/400',
+      findImage('product-2', 'indian food'),
       'https://picsum.photos/seed/choco-detail1/600/400',
       'https://picsum.photos/seed/choco-detail2/600/400',
     ],
@@ -249,7 +258,7 @@ export const products: Product[] = [
     price: 1299,
     description: 'A beautifully designed cotton kurti with intricate embroidery. This comfortable and stylish piece is perfect for both casual and semi-formal occasions. Available in multiple sizes. Fabric: 100% Cotton. Care: Hand wash recommended.',
     images: [
-      'https://picsum.photos/seed/product3/600/400',
+      findImage('product-3', 'fashion dress'),
       'https://picsum.photos/seed/kurti-detail1/600/400',
       'https://picsum.photos/seed/kurti-detail2/600/400',
     ],
@@ -265,7 +274,7 @@ export const products: Product[] = [
     price: 750,
     description: 'Add a touch of traditional elegance to your home with this handcrafted terracotta wall art. This piece is inspired by folk art and is hand-painted by our talented artist, Priya. Dimensions: 12-inch diameter.',
     images: [
-      'https://picsum.photos/seed/product4/600/400',
+      findImage('product-4', 'painting art'),
       'https://picsum.photos/seed/art-detail1/600/400',
     ],
     rating: 4.8,
@@ -280,7 +289,7 @@ export const products: Product[] = [
     price: 350,
     description: 'Refresh and hydrate your skin with our pure, organic rose water toner. Steam-distilled from fresh rose petals, this toner helps balance skin pH, tighten pores, and provides a youthful glow. Free from alcohol and parabens. Size: 100ml.',
     images: [
-      'https://picsum.photos/seed/product5/600/400',
+      findImage('product-5', 'skincare product'),
       'https://picsum.photos/seed/toner-detail1/600/400',
     ],
     rating: 4.9,
@@ -373,7 +382,7 @@ export const courses: Course[] = [
     category: 'Business',
     instructor: 'Sneha Patel',
     duration: '4 Weeks',
-    image: 'https://picsum.photos/seed/course-business1/600/400',
+    image: findImage('course-business1', 'small business'),
     level: 'Beginner',
     price: 499,
   },
@@ -383,7 +392,7 @@ export const courses: Course[] = [
     category: 'Business',
     instructor: 'Lakshmi Rao',
     duration: '6 Weeks',
-    image: 'https://picsum.photos/seed/course-business2/600/400',
+    image: findImage('course-business2', 'digital marketing'),
     level: 'Intermediate',
     price: 999,
   },
@@ -393,7 +402,7 @@ export const courses: Course[] = [
     category: 'Beauty',
     instructor: 'Anjali Singh',
     duration: '5 Sessions',
-    image: 'https://picsum.photos/seed/course-beauty1/600/400',
+    image: findImage('course-beauty1', 'makeup tutorial'),
     level: 'Beginner',
     price: 0,
   },
@@ -403,7 +412,7 @@ export const courses: Course[] = [
     category: 'Health & Wellness',
     instructor: 'Priya Sharma',
     duration: '4 Weeks',
-    image: 'https://picsum.photos/seed/course-wellness1/600/400',
+    image: findImage('course-wellness1', 'meditation'),
     level: 'Beginner',
     price: 299,
   },
@@ -413,7 +422,7 @@ export const courses: Course[] = [
     category: 'Crafts',
     instructor: 'Meera Das',
     duration: '8 Weeks',
-    image: 'https://picsum.photos/seed/course-crafts1/600/400',
+    image: findImage('course-crafts1', 'sewing'),
     level: 'Advanced',
     price: 1499,
   },
@@ -423,7 +432,7 @@ export const courses: Course[] = [
     category: 'Health & Wellness',
     instructor: 'Dr. Rina Verma',
     duration: '6 Sessions',
-    image: 'https://picsum.photos/seed/course-wellness2/600/400',
+    image: findImage('course-wellness2', 'nutrition'),
     level: 'Intermediate',
     price: 0,
   },

@@ -130,7 +130,7 @@ export function CreatePost({ onPostCreated }: { onPostCreated?: (post: Post) => 
         <div className="flex gap-4">
           <Avatar>
             <AvatarImage
-              src="https://picsum.photos/seed/user1/100/100"
+              src={user.avatar}
               alt={user.name}
               data-ai-hint="woman portrait"
             />

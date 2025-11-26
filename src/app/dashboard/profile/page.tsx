@@ -1,3 +1,4 @@
+
 'use client';
 import Image from 'next/image';
 import { useState } from 'react';
@@ -123,7 +124,7 @@ export default function ProfilePage() {
             <div className="-mt-20 shrink-0 md:-mt-24">
               <Avatar className="h-32 w-32 border-4 border-card md:h-40 md:w-40">
                 <AvatarImage
-                  src="https://picsum.photos/seed/user1/200/200"
+                  src={user.avatar}
                   alt={user.name}
                   data-ai-hint="woman portrait"
                 />
@@ -323,7 +324,7 @@ export default function ProfilePage() {
                   <CardContent className="flex items-center gap-4 p-4">
                     <Avatar>
                       <AvatarImage
-                        src={`https://picsum.photos/seed/${connection.id}/100/100`}
+                        src={connection.avatar}
                         alt={connection.name}
                         data-ai-hint="woman portrait"
                       />

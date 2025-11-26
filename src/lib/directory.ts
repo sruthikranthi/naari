@@ -1,4 +1,12 @@
 
+import { PlaceHolderImages } from './placeholder-images';
+
+const findImage = (id: string, hint: string) => {
+  const img = PlaceHolderImages.find(p => p.id === id);
+  if (img) return img.imageUrl;
+  return `https://picsum.photos/seed/${id}/100/100`;
+};
+
 export type Professional = {
   id: string;
   name: string;
@@ -13,7 +21,7 @@ export const directory: Professional[] = [
   {
     id: 'prof1',
     name: 'Dr. Ananya Gupta',
-    avatar: 'https://picsum.photos/seed/prof1/100/100',
+    avatar: findImage('user-3', 'woman professional'),
     specialties: ['Anxiety', 'Depression', 'Stress Management'],
     description: 'A compassionate psychologist with over 10 years of experience helping women navigate life\'s challenges. Her approach is rooted in CBT and mindfulness.',
     verified: true,

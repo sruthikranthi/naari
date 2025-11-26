@@ -1,4 +1,12 @@
 
+import { PlaceHolderImages } from './placeholder-images';
+
+const findImage = (id: string, hint: string) => {
+    const img = PlaceHolderImages.find(p => p.id === id);
+    if (img) return img.imageUrl;
+    return `https://picsum.photos/seed/${id}/600/400`;
+};
+
 export type Nominee = {
   id: string;
   name: string;
@@ -190,5 +198,3 @@ export const allContestsData: Contest[] = [
     nominees: [],
   },
 ];
-
-    
