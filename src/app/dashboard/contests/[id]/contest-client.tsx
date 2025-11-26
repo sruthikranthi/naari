@@ -34,6 +34,7 @@ import { Label } from '@/components/ui/label';
 import { useDashboard } from '../../layout';
 import type { Post } from '@/lib/mock-data';
 import { useUser } from '@/firebase';
+import { serverTimestamp } from 'firebase/firestore';
 
 type ContestClientProps = {
   contest: Contest;
@@ -99,10 +100,9 @@ export function ContestClient({ contest }: ContestClientProps) {
           id: currentUser.uid,
           name: currentUser.displayName || 'A Sakhi',
           avatar: currentUser.photoURL || `https://picsum.photos/seed/${currentUser.uid}/100/100`,
-          city: 'Unknown'
         },
         content: `I'm supporting ${nomineeName} in the "${contest.title}" contest! Show them some love! #SakhiContest`,
-        timestamp: 'Just now',
+        timestamp: serverTimestamp(),
         likes: 0,
         comments: 0,
         isAnonymous: false,
@@ -395,5 +395,3 @@ export function ContestClient({ contest }: ContestClientProps) {
     </div>
   );
 }
-
-    

@@ -146,10 +146,9 @@ export default function ContestsPage() {
           id: user.uid,
           name: user.displayName || 'A Sakhi',
           avatar: user.photoURL || `https://picsum.photos/seed/${user.uid}/100/100`,
-          city: 'Unknown'
         },
         content: `Check out the "${contestTitle}" contest! So many inspiring women to support. #SakhiContests`,
-        timestamp: 'Just now',
+        timestamp: serverTimestamp(),
         likes: 0,
         comments: 0,
         isAnonymous: false,
@@ -384,5 +383,3 @@ export default function ContestsPage() {
     </div>
   );
 }
-
-    
