@@ -107,8 +107,8 @@ export default function AdminPanelPage() {
   const [users, setUsers] = useState<UserWithRole[]>(initialUsers);
   
   const contestsQuery = useMemoFirebase(
-    () => (firestore ? collection(firestore, 'contests') : null),
-    [firestore]
+    () => (firestore && user ? collection(firestore, 'contests') : null),
+    [firestore, user]
   );
   const { data: contestsData, isLoading: areContestsLoading } = useCollection<Contest>(contestsQuery);
   const [contests, setContests] = useState<Contest[]>([]);
@@ -242,8 +242,10 @@ export default function AdminPanelPage() {
         description: `The ${String(field)} has been updated.`
     })
   }
+  
+  const isLoading = isUserLoading || areContestsLoading;
 
-  if (isUserLoading || !isSuperAdmin) {
+  if (!isSuperAdmin) {
     return (
       <div className="flex h-full min-h-[calc(100vh-10rem)] w-full items-center justify-center">
         <Loader className="h-10 w-10 animate-spin text-primary" />
@@ -511,7 +513,7 @@ export default function AdminPanelPage() {
               <CardDescription>Oversee all contests and awards on the platform.</CardDescription>
             </CardHeader>
             <CardContent>
-              {areContestsLoading ? (
+              {isLoading ? (
                  <div className="flex h-48 w-full items-center justify-center">
                     <Loader className="h-8 w-8 animate-spin text-primary" />
                 </div>
@@ -749,7 +751,5 @@ function ContestDetailItem({ icon: Icon, label, value, onEdit }: { icon: React.E
         </div>
     );
 }
-
-      
 
     
