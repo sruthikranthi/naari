@@ -86,15 +86,16 @@ export default function AdminPanelPage() {
   });
 
   const filteredUsers = useMemo(() => {
-    if(filterRole === 'All') return users;
-    return users.filter(u => u.role === filterRole);
+    if (filterRole === 'All') return users;
+    if (filterRole === 'Pending') return users.filter(u => u.status === 'Pending');
+    return users.filter(u => u.role === filterRole && u.status !== 'Pending');
   }, [users, filterRole]);
 
-  const handleUserStatusChange = (userId: string, status: UserWithRole['status']) => {
-    setUsers(prev => prev.map(u => u.id === userId ? {...u, status} : u));
+  const handleUserStatusChange = (userId: string, newStatus: UserWithRole['status']) => {
+    setUsers(prev => prev.map(u => u.id === userId ? {...u, status: newStatus} : u));
     toast({
         title: 'User Updated',
-        description: `User has been set to ${status}.`
+        description: `User status has been changed to ${newStatus}.`
     });
   }
 
@@ -115,7 +116,7 @@ export default function AdminPanelPage() {
 
   const stats = {
       totalUsers: users.length,
-      totalProfessionals: users.filter(u => u.role === 'Professional').length,
+      totalProfessionals: users.filter(u => u.role === 'Professional' && u.status === 'Active').length,
       totalCreators: users.filter(u => u.role === 'Creator').length,
       totalRevenue: '₹1,50,000'
   }
@@ -197,7 +198,7 @@ export default function AdminPanelPage() {
                     <SelectItem value="User">User</SelectItem>
                     <SelectItem value="Professional">Professional</SelectItem>
                     <SelectItem value="Creator">Creator</SelectItem>
-                    <SelectItem value="Pending">Pending</SelectItem>
+                    <SelectItem value="Pending">Pending Approval</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -245,6 +246,11 @@ export default function AdminPanelPage() {
                   ))}
                 </TableBody>
               </Table>
+               {filteredUsers.length === 0 && (
+                <div className="py-12 text-center text-muted-foreground">
+                  No users found for this filter.
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -292,6 +298,11 @@ export default function AdminPanelPage() {
                     </CardContent>
                 </Card>
             </div>
+             <div className="mt-6 flex justify-end">
+                <Button onClick={() => toast({ title: "Commissions Updated!", description: "The new commission rates have been saved." })}>
+                    Save Commission Rates
+                </Button>
+            </div>
         </TabsContent>
 
         {/* Content Tab */}
@@ -305,6 +316,7 @@ export default function AdminPanelPage() {
                                  <TableRow>
                                      <TableHead>Name</TableHead>
                                      <TableHead>Members</TableHead>
+                                      <TableHead className="text-right">Actions</TableHead>
                                  </TableRow>
                              </TableHeader>
                              <TableBody>
@@ -312,6 +324,7 @@ export default function AdminPanelPage() {
                                      <TableRow key={c.id}>
                                          <TableCell>{c.name}</TableCell>
                                          <TableCell>{c.memberCount.toLocaleString()}</TableCell>
+                                         <TableCell className="text-right"><Button variant="ghost" size="sm">Manage</Button></TableCell>
                                      </TableRow>
                                  ))}
                              </TableBody>
@@ -326,6 +339,7 @@ export default function AdminPanelPage() {
                                  <TableRow>
                                      <TableHead>Name</TableHead>
                                      <TableHead>Members</TableHead>
+                                      <TableHead className="text-right">Actions</TableHead>
                                  </TableRow>
                              </TableHeader>
                              <TableBody>
@@ -333,6 +347,7 @@ export default function AdminPanelPage() {
                                      <TableRow key={k.id}>
                                          <TableCell>{k.name}</TableCell>
                                          <TableCell>{k.members.toLocaleString()}</TableCell>
+                                          <TableCell className="text-right"><Button variant="ghost" size="sm">Manage</Button></TableCell>
                                      </TableRow>
                                  ))}
                              </TableBody>
