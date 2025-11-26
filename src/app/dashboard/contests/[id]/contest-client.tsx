@@ -31,9 +31,9 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { useDashboard } from '../../page';
-import { users as allUsers } from '@/lib/mock-data';
+import { useDashboard } from '../../layout';
 import type { Post } from '@/lib/mock-data';
+import { useUser } from '@/firebase';
 
 type ContestClientProps = {
   contest: Contest;
@@ -42,6 +42,7 @@ type ContestClientProps = {
 export function ContestClient({ contest }: ContestClientProps) {
   const { toast } = useToast();
   const { addPost } = useDashboard();
+  const { user: currentUser } = useUser();
   const [searchTerm, setSearchTerm] = useState('');
   const [nominees, setNominees] = useState<Nominee[]>(contest.nominees);
   const [isNominationOpen, setIsNominationOpen] = useState(false);
@@ -79,6 +80,11 @@ export function ContestClient({ contest }: ContestClientProps) {
   }
   
   const handleShare = (nomineeId: string, nomineeName: string) => {
+     if (!currentUser) {
+        toast({ variant: 'destructive', title: 'Please log in to share.' });
+        return;
+     }
+
      setNominees(
       nominees.map((n) =>
         n.id === nomineeId
@@ -89,7 +95,12 @@ export function ContestClient({ contest }: ContestClientProps) {
     
     const newPost: Post = {
         id: `post-${Date.now()}`,
-        author: allUsers[0],
+        author: {
+          id: currentUser.uid,
+          name: currentUser.displayName || 'A Sakhi',
+          avatar: currentUser.photoURL || `https://picsum.photos/seed/${currentUser.uid}/100/100`,
+          city: 'Unknown'
+        },
         content: `I'm supporting ${nomineeName} in the "${contest.title}" contest! Show them some love! #SakhiContest`,
         timestamp: 'Just now',
         likes: 0,

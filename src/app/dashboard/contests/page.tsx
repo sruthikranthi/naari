@@ -52,7 +52,6 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { useState, useMemo } from 'react';
 import { useDashboard } from '../layout';
-import { users } from '@/lib/mock-data';
 import type { Post } from '@/lib/mock-data';
 import { useCollection, useFirestore, useUser, useMemoFirebase } from '@/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
@@ -137,9 +136,18 @@ export default function ContestsPage() {
   };
   
   const handleShareContest = (contestTitle: string) => {
+    if (!user) {
+        toast({ variant: 'destructive', title: 'Please log in to share.' });
+        return;
+    }
     const newPost: Post = {
         id: `post-${Date.now()}`,
-        author: users[0],
+        author: {
+          id: user.uid,
+          name: user.displayName || 'A Sakhi',
+          avatar: user.photoURL || `https://picsum.photos/seed/${user.uid}/100/100`,
+          city: 'Unknown'
+        },
         content: `Check out the "${contestTitle}" contest! So many inspiring women to support. #SakhiContests`,
         timestamp: 'Just now',
         likes: 0,
@@ -376,3 +384,5 @@ export default function ContestsPage() {
     </div>
   );
 }
+
+    
