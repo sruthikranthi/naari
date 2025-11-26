@@ -83,12 +83,6 @@ export function StoryViewer({ users, initialUser, onClose }: StoryViewerProps) {
       handlePrevUser();
     }
   }, [currentStoryIndex, handlePrevUser]);
-    if (currentUserIndex > 0) {
-      setCurrentUserIndex((prev) => prev - 1);
-      const prevUser = users[currentUserIndex - 1];
-      setCurrentStoryIndex((prevUser.stories?.length || 1) - 1);
-    }
-  };
 
   const handleNavigation = (e: React.MouseEvent<HTMLDivElement>) => {
     const clickX = e.clientX;
