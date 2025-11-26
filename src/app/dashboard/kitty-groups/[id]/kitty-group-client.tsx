@@ -47,7 +47,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import type { User as UserType } from '@/lib/mock-data';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { CameraCapture } from '@/components/camera-capture';
 
@@ -141,6 +141,9 @@ export function KittyGroupClient({ group, groupMembers, upcomingEvent, currentUs
   
   const sendReaction = (reaction: string) => {
       setActiveReaction(reaction);
+      toast({
+        title: `You sent a ${reaction}!`,
+      });
       setTimeout(() => {
         setActiveReaction(null);
       }, 500); // Corresponds to animation duration
@@ -216,14 +219,14 @@ export function KittyGroupClient({ group, groupMembers, upcomingEvent, currentUs
           </Card>
         </div>
         <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-5">
-          <Card className={isLive ? 'lg:col-span-3' : 'lg:col-span-2'}>
+          <Card className={cn('lg:col-span-3', isLive && 'flex flex-col')}>
               {isLive ? (
-                  <div>
-                      <div className="relative aspect-video w-full bg-black">
-                          <video src="https://placehold.co/1920x1080.mp4" autoPlay muted loop className="h-full w-full object-cover" />
+                  <div className='flex flex-col h-full'>
+                      <div className="relative w-full bg-black flex-1">
+                          <CameraCapture onMediaCaptured={() => {}} />
                            <div className="absolute top-2 left-2 flex items-center gap-2 rounded-full bg-destructive px-3 py-1 text-white text-sm"><div className="h-2 w-2 rounded-full bg-white animate-pulse"></div>LIVE</div>
                       </div>
-                      <CardContent className="p-4 flex justify-center gap-2">
+                      <CardContent className="p-4 flex justify-center gap-2 mt-auto">
                         <Button
                             variant="ghost"
                             size="icon"

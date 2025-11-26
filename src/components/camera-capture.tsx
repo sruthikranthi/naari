@@ -8,9 +8,10 @@ import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 
 interface CameraCaptureProps {
   onMediaCaptured: (dataUrl: string, type: 'image' | 'video') => void;
+  showControls?: boolean;
 }
 
-export function CameraCapture({ onMediaCaptured }: CameraCaptureProps) {
+export function CameraCapture({ onMediaCaptured, showControls = true }: CameraCaptureProps) {
   const { toast } = useToast();
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -115,40 +116,42 @@ export function CameraCapture({ onMediaCaptured }: CameraCaptureProps) {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="relative">
+    <div className="space-y-4 h-full flex flex-col">
+      <div className="relative flex-1">
         <video
           ref={videoRef}
-          className="w-full aspect-video rounded-md bg-secondary object-cover"
+          className="w-full h-full aspect-video rounded-md bg-secondary object-cover"
           autoPlay
           muted={!isAudioEnabled}
           playsInline
         />
         {isRecording && <div className="absolute top-2 left-2 flex items-center gap-2 rounded-full bg-destructive px-3 py-1 text-white text-sm"><Circle className="h-2 w-2 fill-current" />REC</div>}
       </div>
-      <div className="flex justify-center gap-4">
-        <Button onClick={toggleAudio} variant="outline" size="icon">
-          {isAudioEnabled ? <Mic /> : <MicOff />}
-          <span className="sr-only">Toggle Audio</span>
-        </Button>
-        {!isRecording && (
-          <Button onClick={takePhoto} variant="outline" size="icon" className="h-12 w-12 rounded-full">
-            <Camera />
-            <span className="sr-only">Take Photo</span>
+      {showControls && (
+        <div className="flex justify-center gap-4">
+          <Button onClick={toggleAudio} variant="outline" size="icon">
+            {isAudioEnabled ? <Mic /> : <MicOff />}
+            <span className="sr-only">Toggle Audio</span>
           </Button>
-        )}
-        {isRecording ? (
-          <Button onClick={stopRecording} variant="destructive" size="icon" className="h-12 w-12 rounded-full">
-            <Square />
-            <span className="sr-only">Stop Recording</span>
-          </Button>
-        ) : (
-          <Button onClick={startRecording} variant="destructive" size="icon" className="h-12 w-12 rounded-full">
-            <Video />
-            <span className="sr-only">Start Recording</span>
-          </Button>
-        )}
-      </div>
+          {!isRecording && (
+            <Button onClick={takePhoto} variant="outline" size="icon" className="h-12 w-12 rounded-full">
+              <Camera />
+              <span className="sr-only">Take Photo</span>
+            </Button>
+          )}
+          {isRecording ? (
+            <Button onClick={stopRecording} variant="destructive" size="icon" className="h-12 w-12 rounded-full">
+              <Square />
+              <span className="sr-only">Stop Recording</span>
+            </Button>
+          ) : (
+            <Button onClick={startRecording} variant="destructive" size="icon" className="h-12 w-12 rounded-full">
+              <Video />
+              <span className="sr-only">Start Recording</span>
+            </Button>
+          )}
+        </div>
+      )}
       <canvas ref={canvasRef} className="hidden" />
     </div>
   );
