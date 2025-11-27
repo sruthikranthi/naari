@@ -83,12 +83,20 @@ export function UserNav() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <Link href="/dashboard/profile">
-            <DropdownMenuItem>Profile</DropdownMenuItem>
-          </Link>
-          <Link href="/dashboard/settings">
-            <DropdownMenuItem>Settings</DropdownMenuItem>
-          </Link>
+          <DropdownMenuItem 
+            onClick={() => {
+              router.push('/dashboard/profile');
+            }}
+          >
+            Profile
+          </DropdownMenuItem>
+          <DropdownMenuItem 
+            onClick={() => {
+              router.push('/dashboard/settings');
+            }}
+          >
+            Settings
+          </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleLogout}>Log out</DropdownMenuItem>
