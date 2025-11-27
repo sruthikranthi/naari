@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useRef } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, setDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
@@ -52,6 +52,7 @@ export default function MobileNumberPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const router = useRouter();
+  const pathname = usePathname();
   const { toast } = useToast();
   const [countryCode, setCountryCode] = useState('+91');
   const [mobileNumber, setMobileNumber] = useState('');
@@ -65,18 +66,28 @@ export default function MobileNumberPage() {
   const userDocRef = useMemoFirebase(() => (firestore && user) ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<User>(userDocRef);
 
+  const [hasRedirected, setHasRedirected] = useState(false);
+  const redirectingRef = useRef(false);
+
   useEffect(() => {
-    // If user is not logged in, redirect to login
-    if (!isUserLoading && !user) {
+    // Prevent multiple redirects using ref to avoid re-renders
+    if (redirectingRef.current || hasRedirected) return;
+
+    // If user is not logged in, redirect to login (only if not already on login page)
+    if (!isUserLoading && !user && pathname !== '/login') {
+      redirectingRef.current = true;
+      setHasRedirected(true);
       router.push('/login');
       return;
     }
 
-    // If user profile exists and has mobile number, redirect to dashboard
-    if (!isProfileLoading && userProfile && userProfile.mobileNumber) {
+    // If user profile exists and has mobile number, redirect to dashboard (only if not already there)
+    if (!isProfileLoading && userProfile && userProfile.mobileNumber && pathname !== '/dashboard') {
+      redirectingRef.current = true;
+      setHasRedirected(true);
       router.push('/dashboard');
     }
-  }, [user, isUserLoading, userProfile, isProfileLoading, router]);
+  }, [user, isUserLoading, userProfile, isProfileLoading, router, hasRedirected, pathname]);
 
   const validateMobileNumber = (number: string): boolean => {
     // Remove any spaces, dashes, or special characters
@@ -202,8 +213,8 @@ export default function MobileNumberPage() {
     }
   };
 
-  // Show loading state while checking user
-  if (isUserLoading || isProfileLoading) {
+  // Show loading state while checking user - prevent layout shifts
+  if (isUserLoading || isProfileLoading || hasRedirected) {
     return (
       <div className="flex min-h-screen w-full flex-col items-center justify-center bg-gradient-to-br from-pink-50 via-purple-50 to-rose-50 dark:from-pink-950/20 dark:via-purple-950/20 dark:to-rose-950/20 p-4">
         <div className="absolute top-8 left-8">
@@ -239,11 +250,11 @@ export default function MobileNumberPage() {
   }
 
   return (
-    <div className="flex min-h-screen w-full flex-col items-center justify-center bg-gradient-to-br from-pink-50 via-purple-50 to-rose-50 dark:from-pink-950/20 dark:via-purple-950/20 dark:to-rose-950/20 p-4">
+    <div className="flex min-h-screen w-full flex-col items-center justify-center bg-gradient-to-br from-pink-50 via-purple-50 to-rose-50 dark:from-pink-950/20 dark:via-purple-950/20 dark:to-rose-950/20 p-4" style={{ willChange: 'auto' }}>
       <div className="absolute top-8 left-8">
         <Logo />
       </div>
-      <Card className="w-full max-w-md shadow-lg">
+      <Card className="w-full max-w-md shadow-lg" style={{ willChange: 'auto' }}>
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-pink-100 dark:bg-pink-900/30">
             <Phone className="h-8 w-8 text-pink-600 dark:text-pink-400" />

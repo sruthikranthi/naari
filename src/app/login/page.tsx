@@ -1,8 +1,8 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useRef } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { signInWithEmailAndPassword, sendEmailVerification, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { doc } from 'firebase/firestore';
@@ -30,6 +30,7 @@ export default function LoginPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const router = useRouter();
+  const pathname = usePathname();
   const { toast } = useToast();
   const [email, setEmail] = useState('admin@sakhi.com');
   const [password, setPassword] = useState('password');
@@ -42,18 +43,25 @@ export default function LoginPage() {
   // Check user profile for mobile number
   const userDocRef = useMemoFirebase(() => (firestore && user) ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<User>(userDocRef);
+  const [hasRedirected, setHasRedirected] = useState(false);
+  const redirectingRef = useRef(false);
 
   useEffect(() => {
+    // Prevent multiple redirects using ref to avoid re-renders
+    if (redirectingRef.current || hasRedirected) return;
+    
     if (!isUserLoading && !isProfileLoading && user) {
-      // If user has mobile number, go to dashboard
-      if (userProfile && userProfile.mobileNumber) {
+      redirectingRef.current = true;
+      setHasRedirected(true);
+      // If user has mobile number, go to dashboard (only if not already there)
+      if (userProfile && userProfile.mobileNumber && pathname !== '/dashboard') {
         router.push('/dashboard');
-      } else {
-        // Otherwise, go to mobile number collection
+      } else if ((!userProfile || !userProfile.mobileNumber) && pathname !== '/mobile-number') {
+        // Otherwise, go to mobile number collection (only if not already there)
         router.push('/mobile-number');
       }
     }
-  }, [user, isUserLoading, userProfile, isProfileLoading, router]);
+  }, [user, isUserLoading, userProfile, isProfileLoading, router, hasRedirected, pathname]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -152,12 +160,31 @@ export default function LoginPage() {
   };
 
   const handleGoogleSignIn = async () => {
+    if (!auth) {
+      setError('Authentication service is not available. Please refresh the page.');
+      toast({
+        variant: 'destructive',
+        title: 'Authentication Error',
+        description: 'Authentication service is not available. Please refresh the page.',
+      });
+      return;
+    }
+
     setIsGoogleLoading(true);
     setError(null);
     
     try {
       const provider = new GoogleAuthProvider();
+      // Add additional scopes if needed
+      provider.addScope('profile');
+      provider.addScope('email');
+      
       const userCredential = await signInWithPopup(auth, provider);
+      
+      // Verify the user was actually authenticated
+      if (!userCredential || !userCredential.user) {
+        throw new Error('Authentication failed. No user returned.');
+      }
       
       toast({
         title: 'Login Successful!',
@@ -165,20 +192,37 @@ export default function LoginPage() {
       });
       
       // The useEffect will handle the redirect based on mobile number
+      // Reset redirect flag to allow redirect after successful login
+      setHasRedirected(false);
     } catch (error: any) {
+      console.error('Google sign-in error:', error);
       let errorMessage = 'Failed to sign in with Google. Please try again.';
+      let errorHint = '';
+      
       if (error.code === 'auth/popup-closed-by-user') {
-        errorMessage = 'Sign-in popup was closed. Please try again.';
+        errorMessage = 'Sign-in popup was closed.';
+        errorHint = 'Please try again and complete the sign-in process.';
       } else if (error.code === 'auth/popup-blocked') {
-        errorMessage = 'Popup was blocked. Please allow popups and try again.';
+        errorMessage = 'Popup was blocked by your browser.';
+        errorHint = 'Please allow popups for this site and try again.';
       } else if (error.code === 'auth/cancelled-popup-request') {
-        errorMessage = 'Sign-in was cancelled. Please try again.';
+        errorMessage = 'Sign-in was cancelled.';
+        errorHint = 'Please try again.';
+      } else if (error.code === 'auth/unauthorized-domain') {
+        errorMessage = 'This domain is not authorized for Google sign-in.';
+        errorHint = 'Please contact support.';
+      } else if (error.code === 'auth/operation-not-allowed') {
+        errorMessage = 'Google sign-in is not enabled.';
+        errorHint = 'Please contact support or use email sign-in.';
+      } else if (error.message) {
+        errorMessage = error.message;
       }
+      
       setError(errorMessage);
       toast({
         variant: 'destructive',
         title: 'Google Sign-In Failed',
-        description: errorMessage,
+        description: errorHint || errorMessage,
       });
     } finally {
       setIsGoogleLoading(false);
@@ -186,11 +230,11 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen w-full flex-col items-center justify-center bg-secondary/50 p-4">
+    <div className="flex min-h-screen w-full flex-col items-center justify-center bg-secondary/50 p-4" style={{ willChange: 'auto', minHeight: '100vh' }}>
       <div className="absolute top-8 left-8">
         <Logo />
       </div>
-      <Card className="w-full max-w-sm">
+      <Card className="w-full max-w-sm" style={{ willChange: 'auto' }}>
         <CardHeader>
           <CardTitle className="text-2xl">Welcome to Sakhi Circle</CardTitle>
           <CardDescription>
