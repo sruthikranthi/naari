@@ -33,13 +33,24 @@ export function CameraCapture({ onMediaCaptured, showControls = true }: CameraCa
       });
       setStream(newStream);
       setHasCameraPermission(true);
+      
+      // Set the stream to video element and ensure it plays
       if (videoRef.current) {
         videoRef.current.srcObject = newStream;
-        // Wait for video to be ready
+        
+        // Ensure video plays immediately
+        const playPromise = videoRef.current.play();
+        if (playPromise !== undefined) {
+          playPromise.catch((err) => {
+            console.error('Error playing video:', err);
+          });
+        }
+        
+        // Also handle when metadata is loaded
         videoRef.current.onloadedmetadata = () => {
           if (videoRef.current) {
             videoRef.current.play().catch((err) => {
-              console.error('Error playing video:', err);
+              console.error('Error playing video after metadata loaded:', err);
             });
           }
         };
@@ -58,10 +69,30 @@ export function CameraCapture({ onMediaCaptured, showControls = true }: CameraCa
   useEffect(() => {
     getCameraPermission();
     return () => {
-      stream?.getTracks().forEach((track) => track.stop());
+      // Clean up stream when component unmounts or dependencies change
+      if (stream) {
+        stream.getTracks().forEach((track) => track.stop());
+      }
+      // Also clear video srcObject
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+      }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAudioEnabled]);
+
+  // Ensure video plays when stream changes
+  useEffect(() => {
+    if (videoRef.current && stream) {
+      videoRef.current.srcObject = stream;
+      const playPromise = videoRef.current.play();
+      if (playPromise !== undefined) {
+        playPromise.catch((err) => {
+          console.error('Error playing video stream:', err);
+        });
+      }
+    }
+  }, [stream]);
 
   const takePhoto = () => {
     if (videoRef.current && canvasRef.current) {
@@ -137,14 +168,35 @@ export function CameraCapture({ onMediaCaptured, showControls = true }: CameraCa
           muted={!isAudioEnabled}
           playsInline
           style={{ transform: 'scaleX(-1)' }} // Mirror the video for better UX
+          onLoadedMetadata={(e) => {
+            // Ensure video plays when metadata is loaded
+            const video = e.currentTarget;
+            video.play().catch((err) => {
+              console.error('Error playing video on metadata load:', err);
+            });
+          }}
+          onCanPlay={(e) => {
+            // Ensure video plays when it can play
+            const video = e.currentTarget;
+            if (video.paused) {
+              video.play().catch((err) => {
+                console.error('Error playing video on canplay:', err);
+              });
+            }
+          }}
         />
         {!stream && hasCameraPermission && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black text-white">
+          <div className="absolute inset-0 flex items-center justify-center bg-black text-white z-10">
             <p>Starting camera...</p>
           </div>
         )}
+        {stream && videoRef.current && videoRef.current.readyState < 2 && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-white z-10">
+            <p>Loading camera feed...</p>
+          </div>
+        )}
         {isRecording && (
-          <div className="absolute top-2 left-2 flex items-center gap-2 rounded-full bg-destructive px-3 py-1 text-white text-sm">
+          <div className="absolute top-2 left-2 flex items-center gap-2 rounded-full bg-destructive px-3 py-1 text-white text-sm z-10">
             <Circle className="h-2 w-2 fill-current animate-pulse" />
             REC
           </div>
