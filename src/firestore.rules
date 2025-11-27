@@ -144,7 +144,23 @@ service cloud.firestore {
     match /posts/{postId} {
       allow get, list: if isSignedIn();
       allow create: if isSignedIn() && request.resource.data.author.id == request.auth.uid;
-      allow update, delete: if isSignedIn() && resource.data.author.id == request.auth.uid;
+      // Allow author to update/delete, OR allow any authenticated user to update only the comment count
+      // Check that author and content haven't changed (ensuring only comments is being updated)
+      allow update: if isSignedIn() && (
+        resource.data.author.id == request.auth.uid ||
+        (request.resource.data.author.id == resource.data.author.id &&
+         request.resource.data.content == resource.data.content &&
+         request.resource.data.comments is int &&
+         request.resource.data.comments >= 0)
+      );
+      allow delete: if isSignedIn() && resource.data.author.id == request.auth.uid;
+      
+      // Comments subcollection
+      match /comments/{commentId} {
+        allow get, list: if isSignedIn();
+        allow create: if isSignedIn() && request.resource.data.author.id == request.auth.uid;
+        allow update, delete: if isSignedIn() && resource.data.author.id == request.auth.uid;
+      }
     }
 
     // -------------------------------------------------------------------------

@@ -20,6 +20,7 @@ import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Timestamp } from 'firebase/firestore';
 import { formatDistanceToNow } from 'date-fns';
 import { motion } from 'framer-motion';
+import { CommentsDialog } from '@/components/comments-dialog';
 
 type PostFromFirestore = Omit<Post, 'timestamp'> & {
   timestamp: Timestamp | null;
@@ -37,6 +38,8 @@ export function PostCard({ post }: { post: PostFromFirestore }) {
   const { toast } = useToast();
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(post.likes);
+  const [isCommentsOpen, setIsCommentsOpen] = useState(false);
+  const [commentCount, setCommentCount] = useState(post.comments);
 
   const authorName = post.isAnonymous ? 'Anonymous Sakhi' : post.author.name;
   const authorAvatar = post.isAnonymous
@@ -56,12 +59,11 @@ export function PostCard({ post }: { post: PostFromFirestore }) {
   };
   
   const handleComment = () => {
-    console.log('Comment button clicked for post:', post.id);
-    // In a real app, this would open a comment modal or navigate to a post detail page
-    toast({
-        title: "Comment section coming soon!",
-        description: "You'll be able to comment on posts shortly.",
-    })
+    setIsCommentsOpen(true);
+  }
+
+  const handleCommentAdded = () => {
+    setCommentCount(commentCount + 1);
   }
   
   const handleShare = () => {
@@ -193,7 +195,7 @@ export function PostCard({ post }: { post: PostFromFirestore }) {
             aria-label={`Comment on post by ${authorName}. ${post.comments} comments`}
           >
             <MessageCircle className="size-4" aria-hidden="true" />
-            <span>{post.comments} Comments</span>
+            <span>{commentCount} Comments</span>
           </Button>
         </motion.div>
         <motion.div
@@ -212,6 +214,13 @@ export function PostCard({ post }: { post: PostFromFirestore }) {
           </Button>
         </motion.div>
       </CardFooter>
+      <CommentsDialog
+        postId={post.id}
+        isOpen={isCommentsOpen}
+        onOpenChange={setIsCommentsOpen}
+        currentCommentCount={commentCount}
+        onCommentAdded={handleCommentAdded}
+      />
     </Card>
     </motion.div>
   );
