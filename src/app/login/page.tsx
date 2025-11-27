@@ -45,22 +45,45 @@ export default function LoginPage() {
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<User>(userDocRef);
   const [hasRedirected, setHasRedirected] = useState(false);
   const redirectingRef = useRef(false);
+  const lastCheckedRef = useRef<string | null>(null);
+  const redirectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
+    // Clear any pending redirect timeout
+    if (redirectTimeoutRef.current) {
+      clearTimeout(redirectTimeoutRef.current);
+      redirectTimeoutRef.current = null;
+    }
+
     // Prevent multiple redirects using ref to avoid re-renders
     if (redirectingRef.current || hasRedirected) return;
     
-    if (!isUserLoading && !isProfileLoading && user) {
-      redirectingRef.current = true;
-      setHasRedirected(true);
-      // If user has mobile number, go to dashboard (only if not already there)
-      if (userProfile && userProfile.mobileNumber && pathname !== '/dashboard') {
-        router.push('/dashboard');
-      } else if ((!userProfile || !userProfile.mobileNumber) && pathname !== '/mobile-number') {
-        // Otherwise, go to mobile number collection (only if not already there)
-        router.push('/mobile-number');
+    // Create a stable key for the current state to prevent rapid re-checks
+    const stateKey = `${isUserLoading}-${isProfileLoading}-${user?.uid || 'no-user'}-${userProfile?.mobileNumber || 'no-mobile'}`;
+    if (lastCheckedRef.current === stateKey) return;
+    lastCheckedRef.current = stateKey;
+    
+    // Debounce redirect to prevent rapid re-renders
+    redirectTimeoutRef.current = setTimeout(() => {
+      if (!isUserLoading && !isProfileLoading && user) {
+        redirectingRef.current = true;
+        setHasRedirected(true);
+        // If user has mobile number, go to dashboard (only if not already there)
+        if (userProfile && userProfile.mobileNumber && pathname !== '/dashboard') {
+          router.replace('/dashboard');
+        } else if ((!userProfile || !userProfile.mobileNumber) && pathname !== '/mobile-number') {
+          // Otherwise, go to mobile number collection (only if not already there)
+          router.replace('/mobile-number');
+        }
       }
-    }
+    }, 100); // 100ms debounce
+
+    return () => {
+      if (redirectTimeoutRef.current) {
+        clearTimeout(redirectTimeoutRef.current);
+        redirectTimeoutRef.current = null;
+      }
+    };
   }, [user, isUserLoading, userProfile, isProfileLoading, router, hasRedirected, pathname]);
 
   const handleLogin = async (e: React.FormEvent) => {

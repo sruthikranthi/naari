@@ -68,25 +68,50 @@ export default function MobileNumberPage() {
 
   const [hasRedirected, setHasRedirected] = useState(false);
   const redirectingRef = useRef(false);
+  const lastCheckedRef = useRef<string | null>(null);
+  const redirectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
+    // Clear any pending redirect timeout
+    if (redirectTimeoutRef.current) {
+      clearTimeout(redirectTimeoutRef.current);
+      redirectTimeoutRef.current = null;
+    }
+
     // Prevent multiple redirects using ref to avoid re-renders
     if (redirectingRef.current || hasRedirected) return;
 
-    // If user is not logged in, redirect to login (only if not already on login page)
-    if (!isUserLoading && !user && pathname !== '/login') {
-      redirectingRef.current = true;
-      setHasRedirected(true);
-      router.push('/login');
-      return;
-    }
+    // Create a stable key for the current state to prevent rapid re-checks
+    const stateKey = `${isUserLoading}-${isProfileLoading}-${user?.uid || 'no-user'}-${userProfile?.mobileNumber || 'no-mobile'}`;
+    if (lastCheckedRef.current === stateKey) return;
+    lastCheckedRef.current = stateKey;
 
-    // If user profile exists and has mobile number, redirect to dashboard (only if not already there)
-    if (!isProfileLoading && userProfile && userProfile.mobileNumber && pathname !== '/dashboard') {
-      redirectingRef.current = true;
-      setHasRedirected(true);
-      router.push('/dashboard');
-    }
+    // Debounce redirect to prevent rapid re-renders
+    redirectTimeoutRef.current = setTimeout(() => {
+      // If user is not logged in, redirect to login (only if not already on login page)
+      if (!isUserLoading && !user && pathname !== '/login') {
+        redirectingRef.current = true;
+        setHasRedirected(true);
+        // Use replace instead of push to avoid adding to history
+        router.replace('/login');
+        return;
+      }
+
+      // If user profile exists and has mobile number, redirect to dashboard (only if not already there)
+      if (!isProfileLoading && userProfile && userProfile.mobileNumber && pathname !== '/dashboard') {
+        redirectingRef.current = true;
+        setHasRedirected(true);
+        // Use replace instead of push to avoid adding to history
+        router.replace('/dashboard');
+      }
+    }, 100); // 100ms debounce
+
+    return () => {
+      if (redirectTimeoutRef.current) {
+        clearTimeout(redirectTimeoutRef.current);
+        redirectTimeoutRef.current = null;
+      }
+    };
   }, [user, isUserLoading, userProfile, isProfileLoading, router, hasRedirected, pathname]);
 
   const validateMobileNumber = (number: string): boolean => {
@@ -214,9 +239,12 @@ export default function MobileNumberPage() {
   };
 
   // Show loading state while checking user - prevent layout shifts
-  if (isUserLoading || isProfileLoading || hasRedirected) {
+  // Only show loading if we're actually loading, not if we're redirecting
+  const isActuallyLoading = (isUserLoading || isProfileLoading) && !hasRedirected;
+  
+  if (isActuallyLoading) {
     return (
-      <div className="flex min-h-screen w-full flex-col items-center justify-center bg-gradient-to-br from-pink-50 via-purple-50 to-rose-50 dark:from-pink-950/20 dark:via-purple-950/20 dark:to-rose-950/20 p-4">
+      <div className="flex min-h-screen w-full flex-col items-center justify-center bg-gradient-to-br from-pink-50 via-purple-50 to-rose-50 dark:from-pink-950/20 dark:via-purple-950/20 dark:to-rose-950/20 p-4" style={{ position: 'fixed', inset: 0, zIndex: 50 }}>
         <div className="absolute top-8 left-8">
           <Logo />
         </div>
@@ -244,17 +272,17 @@ export default function MobileNumberPage() {
     );
   }
 
-  // If user is not logged in, don't render (redirect will happen)
-  if (!user) {
+  // If user is not logged in or redirecting, don't render (redirect will happen)
+  if (!user || hasRedirected) {
     return null;
   }
 
   return (
-    <div className="flex min-h-screen w-full flex-col items-center justify-center bg-gradient-to-br from-pink-50 via-purple-50 to-rose-50 dark:from-pink-950/20 dark:via-purple-950/20 dark:to-rose-950/20 p-4" style={{ willChange: 'auto' }}>
+    <div className="flex min-h-screen w-full flex-col items-center justify-center bg-gradient-to-br from-pink-50 via-purple-50 to-rose-50 dark:from-pink-950/20 dark:via-purple-950/20 dark:to-rose-950/20 p-4" style={{ minHeight: '100vh', position: 'relative' }}>
       <div className="absolute top-8 left-8">
         <Logo />
       </div>
-      <Card className="w-full max-w-md shadow-lg" style={{ willChange: 'auto' }}>
+      <Card className="w-full max-w-md shadow-lg" style={{ position: 'relative', zIndex: 1 }}>
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-pink-100 dark:bg-pink-900/30">
             <Phone className="h-8 w-8 text-pink-600 dark:text-pink-400" />

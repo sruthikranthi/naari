@@ -2,6 +2,29 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Prevent layout shifts and blinking */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  overflow-x: hidden;
+  /* Prevent layout shifts */
+  min-height: 100vh;
+  position: relative;
+}
+
+/* Prevent flash of unstyled content */
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Stabilize animations */
+[class*="animate-"] {
+  will-change: auto;
+}
+
 @layer base {
   :root {
     --background: 329 58% 94%;
