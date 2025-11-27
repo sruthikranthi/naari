@@ -59,7 +59,6 @@ function VerificationPage() {
   const [verificationStep, setVerificationStep] =
     useState<'capture' | 'verifying' | 'success'>('capture');
   const [hasAgreedToPolicies, setHasAgreedToPolicies] = useState(false);
-  const [shouldRenderVerification, setShouldRenderVerification] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
   const { user: authUser, isUserLoading: isAuthLoading } = useUser();
@@ -80,20 +79,13 @@ function VerificationPage() {
 
   useEffect(() => {
     if (isLoading) return;
-
     if (!authUser) {
-      setShouldRenderVerification(false);
       router.replace('/login');
       return;
     }
-
     if (hasCompletedVerification) {
-      setShouldRenderVerification(false);
       router.replace('/dashboard');
-      return;
     }
-
-    setShouldRenderVerification(true);
   }, [authUser, hasCompletedVerification, isLoading, router]);
 
   const completeVerification = useCallback(async () => {
@@ -187,14 +179,12 @@ function VerificationPage() {
     setTimeout(() => setVerificationStep('capture'), 300);
   };
 
-  if (!shouldRenderVerification) {
+  if (isLoading || !authUser) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-secondary/50 p-4">
         <div className="flex flex-col items-center gap-3 text-center">
           <Loader className="h-10 w-10 animate-spin text-primary" />
-          <p className="text-sm text-muted-foreground">
-            Preparing your experience...
-          </p>
+          <p className="text-sm text-muted-foreground">Preparing your experience...</p>
         </div>
       </div>
     );
