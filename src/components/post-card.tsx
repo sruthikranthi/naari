@@ -121,13 +121,16 @@ export function PostCard({ post }: { post: PostFromFirestore }) {
           </div>
         )}
         {post.video && (
-          <div className="relative aspect-video overflow-hidden rounded-lg border">
+          <div className="relative aspect-video overflow-hidden rounded-lg border bg-black">
             <video
               src={post.video}
               controls
               className="w-full h-full object-contain"
               preload="metadata"
+              playsInline
             >
+              <source src={post.video} type="video/mp4" />
+              <source src={post.video} type="video/webm" />
               Your browser does not support the video tag.
             </video>
           </div>

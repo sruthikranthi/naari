@@ -78,6 +78,7 @@ export function CreatePost() {
 
       // Upload media to Firebase Storage if present
       if (mediaFile && mediaType) {
+        // Media from file input - upload to Storage
         try {
           const timestamp = Date.now();
           const fileExtension = mediaFile.name.split('.').pop() || (mediaType === 'image' ? 'jpg' : 'mp4');
@@ -96,10 +97,30 @@ export function CreatePost() {
           setIsUploading(false);
           return;
         }
-      } else if (mediaPreview && mediaType === 'image') {
-        // For images from camera capture (data URLs), we can use them directly
-        // or upload them. For now, using data URL for images is acceptable
-        mediaUrl = mediaPreview;
+      } else if (mediaPreview && mediaType) {
+        // Media from camera capture (blob URLs) - need to convert and upload
+        try {
+          // Fetch the blob from the blob URL
+          const response = await fetch(mediaPreview);
+          const blob = await response.blob();
+          
+          const timestamp = Date.now();
+          const fileExtension = mediaType === 'image' ? 'jpg' : 'webm';
+          const fileName = `${user.uid}/${timestamp}.${fileExtension}`;
+          const storageRef = ref(storage, `posts/${fileName}`);
+          
+          await uploadBytes(storageRef, blob);
+          mediaUrl = await getDownloadURL(storageRef);
+        } catch (uploadError) {
+          console.error('Error uploading captured media:', uploadError);
+          toast({
+            variant: 'destructive',
+            title: 'Upload Failed',
+            description: 'Could not upload media. Please try again.',
+          });
+          setIsUploading(false);
+          return;
+        }
       }
 
       // Sanitize poll options
