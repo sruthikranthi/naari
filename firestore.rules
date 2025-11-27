@@ -155,9 +155,9 @@ service cloud.firestore {
       
       // Comments subcollection
       match /comments/{commentId} {
-        allow get, list: if isSignedIn();
-        allow create: if isSignedIn() && request.resource.data.author.id == request.auth.uid;
-        allow update, delete: if isSignedIn() && resource.data.author.id == request.auth.uid;
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.author.id == request.auth.uid;
+      allow update, delete: if isSignedIn() && resource.data.author.id == request.auth.uid;
       }
     }
 

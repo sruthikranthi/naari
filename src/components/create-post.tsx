@@ -98,11 +98,24 @@ export function CreatePost() {
           return;
         }
       } else if (mediaPreview && mediaType) {
-        // Media from camera capture (blob URLs) - need to convert and upload
+        // Media from camera capture (blob URLs or data URLs) - need to convert and upload
         try {
-          // Fetch the blob from the blob URL
-          const response = await fetch(mediaPreview);
-          const blob = await response.blob();
+          let blob: Blob;
+          
+          if (mediaPreview.startsWith('data:')) {
+            // Data URL (from camera photo capture)
+            const response = await fetch(mediaPreview);
+            blob = await response.blob();
+          } else if (mediaPreview.startsWith('blob:')) {
+            // Blob URL (from camera video capture or file selection)
+            const response = await fetch(mediaPreview);
+            if (!response.ok) {
+              throw new Error(`Failed to fetch blob: ${response.statusText}`);
+            }
+            blob = await response.blob();
+          } else {
+            throw new Error('Invalid media preview URL');
+          }
           
           const timestamp = Date.now();
           const fileExtension = mediaType === 'image' ? 'jpg' : 'webm';
@@ -111,12 +124,13 @@ export function CreatePost() {
           
           await uploadBytes(storageRef, blob);
           mediaUrl = await getDownloadURL(storageRef);
-        } catch (uploadError) {
+        } catch (uploadError: any) {
           console.error('Error uploading captured media:', uploadError);
+          const errorMessage = uploadError.message || 'Could not upload media. Please try again.';
           toast({
             variant: 'destructive',
             title: 'Upload Failed',
-            description: 'Could not upload media. Please try again.',
+            description: errorMessage,
           });
           setIsUploading(false);
           return;

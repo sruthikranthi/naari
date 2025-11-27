@@ -24,13 +24,25 @@ export function CameraCapture({ onMediaCaptured, showControls = true }: CameraCa
   const getCameraPermission = useCallback(async () => {
     try {
       const newStream = await navigator.mediaDevices.getUserMedia({
-        video: true,
+        video: {
+          facingMode: 'user', // Use front camera
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
         audio: isAudioEnabled,
       });
       setStream(newStream);
       setHasCameraPermission(true);
       if (videoRef.current) {
         videoRef.current.srcObject = newStream;
+        // Wait for video to be ready
+        videoRef.current.onloadedmetadata = () => {
+          if (videoRef.current) {
+            videoRef.current.play().catch((err) => {
+              console.error('Error playing video:', err);
+            });
+          }
+        };
       }
     } catch (error) {
       console.error('Error accessing camera:', error);
@@ -117,15 +129,26 @@ export function CameraCapture({ onMediaCaptured, showControls = true }: CameraCa
 
   return (
     <div className="space-y-4 h-full flex flex-col">
-      <div className="relative flex-1">
+      <div className="relative flex-1 min-h-[400px] bg-black rounded-md overflow-hidden">
         <video
           ref={videoRef}
-          className="w-full h-full aspect-video rounded-md bg-secondary object-cover"
+          className="w-full h-full object-cover"
           autoPlay
           muted={!isAudioEnabled}
           playsInline
+          style={{ transform: 'scaleX(-1)' }} // Mirror the video for better UX
         />
-        {isRecording && <div className="absolute top-2 left-2 flex items-center gap-2 rounded-full bg-destructive px-3 py-1 text-white text-sm"><Circle className="h-2 w-2 fill-current" />REC</div>}
+        {!stream && hasCameraPermission && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black text-white">
+            <p>Starting camera...</p>
+          </div>
+        )}
+        {isRecording && (
+          <div className="absolute top-2 left-2 flex items-center gap-2 rounded-full bg-destructive px-3 py-1 text-white text-sm">
+            <Circle className="h-2 w-2 fill-current animate-pulse" />
+            REC
+          </div>
+        )}
       </div>
       {showControls && (
         <div className="flex justify-center gap-4">
