@@ -11,7 +11,6 @@ import {
 } from '@/firebase';
 import {
   signInWithEmailAndPassword,
-  sendEmailVerification,
 } from 'firebase/auth';
 import { doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
@@ -26,9 +25,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Logo } from '@/components/logo';
-import { Loader, Mail } from 'lucide-react';
+import { Loader } from 'lucide-react';
 import { sanitizeText, isValidEmail, validationSchemas } from '@/lib/validation';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import type { User } from '@/lib/mock-data';
 
 export default function LoginPage() {
@@ -45,9 +43,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState('password');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [emailNotVerified, setEmailNotVerified] = useState(false);
-  const [isResendingVerification, setIsResendingVerification] = useState(false);
-  // Google sign-in removed; only email/password flow remains.
 
   // Prevents multiple navigations (uses ref so effect doesn't re-run redirect)
   const redirectedRef = useRef(false);
@@ -90,7 +85,6 @@ export default function LoginPage() {
     async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    setEmailNotVerified(false);
 
     const sanitizedEmail = sanitizeText(email);
     const sanitizedPassword = password.trim();
@@ -106,27 +100,18 @@ export default function LoginPage() {
 
       setIsLoading(true);
     try {
-        const userCredential = await signInWithEmailAndPassword(
+        await signInWithEmailAndPassword(
           auth,
           sanitizedEmail,
           sanitizedPassword
         );
       
-      if (!userCredential.user.emailVerified) {
-        setEmailNotVerified(true);
-        toast({
-          variant: 'destructive',
-          title: 'Email Not Verified',
-          description: 'Please verify your email address before accessing the dashboard.',
-        });
-      } else {
         toast({
           title: 'Login Successful!',
-            description: 'Redirecting...',
+          description: 'Redirecting...',
         });
-          // Redirect is handled by effect when profile is ready
-          redirectedRef.current = false; // allow redirect once profile loads
-      }
+        // Redirect is handled by effect when profile is ready
+        redirectedRef.current = false; // allow redirect once profile loads
       } catch (err: any) {
       let errorMessage = 'Please check your credentials and try again.';
         let errorHint = '';
@@ -168,26 +153,6 @@ export default function LoginPage() {
     [auth, email, password, toast]
   );
 
-  const handleResendVerification = useCallback(async () => {
-    if (!auth.currentUser) return;
-    setIsResendingVerification(true);
-    try {
-      await sendEmailVerification(auth.currentUser);
-      toast({
-        title: 'Verification Email Sent',
-        description: 'Please check your inbox and click the verification link.',
-      });
-    } catch (err: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Failed to Send Verification Email',
-        description: err?.message || 'Please try again later.',
-      });
-    } finally {
-      setIsResendingVerification(false);
-    }
-  }, [auth, toast]);
-
   // ---------- UI ----------
   return (
     <div className="flex min-h-screen w-full flex-col items-center justify-center bg-secondary/50 p-4">
@@ -204,33 +169,6 @@ export default function LoginPage() {
         <CardContent className="grid gap-4">
           <form onSubmit={handleLogin}>
             <div className="grid gap-4">
-            {emailNotVerified && (
-              <Alert variant="destructive">
-                <Mail className="h-4 w-4" />
-                <AlertTitle>Email Verification Required</AlertTitle>
-                <AlertDescription className="mt-2">
-                  Your email address has not been verified. Please check your inbox and click the verification link.
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="mt-2 w-full"
-                    onClick={handleResendVerification}
-                    disabled={isResendingVerification}
-                  >
-                    {isResendingVerification ? (
-                      <>
-                        <Loader className="mr-2 h-4 w-4 animate-spin" />
-                        Sending...
-                      </>
-                    ) : (
-                      'Resend Verification Email'
-                    )}
-                  </Button>
-                </AlertDescription>
-              </Alert>
-            )}
-
             <div className="grid gap-2">
               <Label htmlFor="email">Email</Label>
               <Input
