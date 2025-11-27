@@ -11,8 +11,9 @@ import {
 } from '@/firebase';
 import {
   signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
 } from 'firebase/auth';
-import { doc } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -43,6 +44,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('password');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isSignUp, setIsSignUp] = useState(false);
 
   // Prevents multiple navigations (uses ref so effect doesn't re-run redirect)
   const redirectedRef = useRef(false);
@@ -81,7 +83,7 @@ export default function LoginPage() {
   }, [isAuthReady, isProfileReady, user, userProfile, router, pathname]);
 
   // ---------- Handlers ----------
-  const handleLogin = useCallback(
+  const handleAuth = useCallback(
     async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -100,20 +102,50 @@ export default function LoginPage() {
 
       setIsLoading(true);
     try {
-        await signInWithEmailAndPassword(
-          auth,
-          sanitizedEmail,
-          sanitizedPassword
-        );
+        if (isSignUp) {
+          // Sign up flow
+          const userCredential = await createUserWithEmailAndPassword(
+            auth,
+            sanitizedEmail,
+            sanitizedPassword
+          );
+          
+          // Create user profile in Firestore
+          if (firestore && userCredential.user) {
+            const userDocRef = doc(firestore, 'users', userCredential.user.uid);
+            await setDoc(userDocRef, {
+              id: userCredential.user.uid,
+              name: userCredential.user.displayName || userCredential.user.email?.split('@')[0] || 'User',
+              avatar: userCredential.user.photoURL || `https://picsum.photos/seed/${userCredential.user.uid}/100/100`,
+              email: userCredential.user.email,
+              followerIds: [],
+              followingIds: [],
+            });
+          }
+
+          toast({
+            title: 'Account Created!',
+            description: 'Welcome to Naarimani! Redirecting...',
+          });
+        } else {
+          // Sign in flow
+          await signInWithEmailAndPassword(
+            auth,
+            sanitizedEmail,
+            sanitizedPassword
+          );
       
-        toast({
-          title: 'Login Successful!',
-          description: 'Redirecting...',
-        });
+          toast({
+            title: 'Login Successful!',
+            description: 'Redirecting...',
+          });
+        }
         // Redirect is handled by effect when profile is ready
         redirectedRef.current = false; // allow redirect once profile loads
       } catch (err: any) {
-      let errorMessage = 'Please check your credentials and try again.';
+      let errorMessage = isSignUp 
+        ? 'Failed to create account. Please try again.' 
+        : 'Please check your credentials and try again.';
         let errorHint = '';
 
         switch (err.code) {
@@ -123,6 +155,14 @@ export default function LoginPage() {
             break;
           case 'auth/wrong-password':
         errorMessage = 'Incorrect password. Please try again.';
+            break;
+          case 'auth/email-already-in-use':
+            errorMessage = 'This email is already registered.';
+            errorHint = 'Please sign in instead or use a different email.';
+            break;
+          case 'auth/weak-password':
+            errorMessage = 'Password is too weak.';
+            errorHint = 'Please use a stronger password (at least 6 characters).';
             break;
           case 'auth/too-many-requests':
             errorMessage = 'Too many failed attempts. Try again later.';
@@ -143,14 +183,14 @@ export default function LoginPage() {
       setError(errorMessage);
       toast({
         variant: 'destructive',
-        title: 'Login Failed',
+        title: isSignUp ? 'Sign Up Failed' : 'Login Failed',
           description: errorHint || errorMessage,
       });
     } finally {
       setIsLoading(false);
     }
     },
-    [auth, email, password, toast]
+    [auth, email, password, toast, isSignUp, firestore]
   );
 
   // ---------- UI ----------
@@ -163,11 +203,15 @@ export default function LoginPage() {
       <Card className="w-full max-w-sm">
         <CardHeader>
           <CardTitle className="text-2xl">Welcome to Naarimani</CardTitle>
-          <CardDescription>Sign in to access your safe space and connect with the community.</CardDescription>
+          <CardDescription>
+            {isSignUp 
+              ? 'Create an account to join your safe space and connect with the community.'
+              : 'Sign in to access your safe space and connect with the community.'}
+          </CardDescription>
         </CardHeader>
 
         <CardContent className="grid gap-4">
-          <form onSubmit={handleLogin}>
+          <form onSubmit={handleAuth}>
             <div className="grid gap-4">
             <div className="grid gap-2">
               <Label htmlFor="email">Email</Label>
@@ -208,9 +252,24 @@ export default function LoginPage() {
 
             <Button className="w-full mt-4" type="submit" disabled={isLoading}>
               {isLoading && <Loader className="mr-2 h-4 w-4 animate-spin" />}
-              Sign In
+              {isSignUp ? 'Sign Up' : 'Sign In'}
             </Button>
           </form>
+
+          <div className="text-center text-sm">
+            <button
+              type="button"
+              onClick={() => {
+                setIsSignUp(!isSignUp);
+                setError(null);
+              }}
+              className="text-primary hover:underline"
+            >
+              {isSignUp 
+                ? 'Already have an account? Sign in' 
+                : "Don't have an account? Sign up"}
+            </button>
+          </div>
         </CardContent>
       </Card>
     </div>
