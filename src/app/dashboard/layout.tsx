@@ -92,10 +92,13 @@ function Layout({ children }: { children: ReactNode }) {
       return;
     }
 
-    // If user is logged in but doesn't have mobile number, redirect to mobile number page
-    if (!isProfileLoading && user && userProfile && !userProfile.mobileNumber) {
-      router.push('/mobile-number');
-      return;
+    // If user is logged in but profile doesn't exist or doesn't have mobile number, redirect to mobile number page
+    // Note: userProfile will be null if document doesn't exist, which is fine - we'll redirect to create it
+    if (!isProfileLoading && user) {
+      if (!userProfile || !userProfile.mobileNumber) {
+        router.push('/mobile-number');
+        return;
+      }
     }
   }, [user, isUserLoading, userProfile, isProfileLoading, router]);
 
@@ -111,8 +114,13 @@ function Layout({ children }: { children: ReactNode }) {
     );
   }
 
-  // Don't render dashboard if user is not logged in or doesn't have mobile number
-  if (!user || (userProfile && !userProfile.mobileNumber)) {
+  // Don't render dashboard if user is not logged in
+  if (!user) {
+    return null;
+  }
+
+  // If profile doesn't exist or doesn't have mobile number, don't render (redirect will happen)
+  if (!isProfileLoading && (!userProfile || !userProfile.mobileNumber)) {
     return null;
   }
 

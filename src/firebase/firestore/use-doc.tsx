@@ -76,6 +76,18 @@ export function useDoc<T = any>(
         setIsLoading(false);
       },
       (error: FirestoreError) => {
+        // If it's a permission error for a user's own profile, it might be because the document doesn't exist yet
+        // In this case, we'll treat it as if the document doesn't exist (null) rather than an error
+        // This is especially common for new users who haven't created their profile yet
+        if (error.code === 'permission-denied' && memoizedDocRef.path.startsWith('users/')) {
+          // For user profiles, permission denied might mean the document doesn't exist
+          // Set data to null and don't treat it as an error
+          setData(null);
+          setError(null);
+          setIsLoading(false);
+          return;
+        }
+
         const contextualError = new FirestorePermissionError({
           operation: 'get',
           path: memoizedDocRef.path,
