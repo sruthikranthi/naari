@@ -1,7 +1,7 @@
 
 'use client';
 import Link from 'next/link';
-import { useCollection, useFirestore, useUser, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirestore, useUser, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, limit, query, doc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Button } from './ui/button';
@@ -16,6 +16,13 @@ export function Suggestions() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
+
+  // Fetch current user's profile to check following status
+  const currentUserDocRef = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return doc(firestore, 'users', user.uid);
+  }, [firestore, user]);
+  const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc<User>(currentUserDocRef);
 
   const usersQuery = useMemoFirebase(
     () => (firestore && user ? query(collection(firestore, 'users'), limit(3)) : null),
@@ -67,7 +74,7 @@ export function Suggestions() {
   );
   const { data: suggestedCommunities, isLoading: areCommunitiesLoading } = useCollection<Community>(communitiesQuery);
 
-  const isLoading = isUserLoading || areUsersLoading || areCommunitiesLoading;
+  const isLoading = isUserLoading || isProfileLoading || areUsersLoading || areCommunitiesLoading;
 
   return (
     <div className="space-y-6">
@@ -89,7 +96,7 @@ export function Suggestions() {
             </div>
           ))}
           {!isLoading && suggestedUsers?.filter(u => u.id !== user?.uid).map((suggestedUser) => {
-            const isFollowing = user?.followingIds?.includes(suggestedUser.id);
+            const isFollowing = currentUserProfile?.followingIds?.includes(suggestedUser.id) || false;
             return (
               <div key={suggestedUser.id} className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
