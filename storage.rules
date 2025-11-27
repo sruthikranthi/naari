@@ -26,6 +26,11 @@ service firebase.storage {
       allow write: if isSignedIn() && request.auth.uid == userId;
     }
 
+    // Posts media - users can upload to their own posts folder
+    match /posts/{userId}/{allPaths=**} {
+      allow write: if isSignedIn() && request.auth.uid == userId;
+    }
+
     // You can add more specific rules for other paths here, for example:
     // match /shared-media/{mediaId} {
     //   allow read, write: if isSignedIn();
