@@ -22,6 +22,7 @@ type PostFromFirestore = {
   };
   content: string;
   image?: string;
+  video?: string;
   timestamp: Timestamp | null;
   likes: number;
   comments: number;
@@ -78,8 +79,8 @@ function PageContent() {
     const { user, isUserLoading } = useUser();
 
     const postsQuery = useMemoFirebase(
-      () => (firestore && user) ? query(collection(firestore, 'posts'), orderBy('timestamp', 'desc')) : null,
-      [firestore, user]
+      () => firestore ? query(collection(firestore, 'posts'), orderBy('timestamp', 'desc')) : null,
+      [firestore]
     );
     const { data: posts, isLoading: arePostsLoading } = useCollection<PostFromFirestore>(postsQuery);
 
