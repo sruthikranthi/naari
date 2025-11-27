@@ -48,7 +48,7 @@ export default function CreateProfilePage() {
 
     try {
       const userDocRef = doc(firestore, 'users', user.uid);
-      await setDoc(userDocRef, userProfile);
+      await setDoc(userDocRef, userProfile, { merge: true });
       toast({
         title: 'Profile Created!',
         description: 'Welcome to Naarimani!',

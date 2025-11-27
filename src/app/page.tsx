@@ -59,6 +59,7 @@ function VerificationPage() {
   const [verificationStep, setVerificationStep] =
     useState<'capture' | 'verifying' | 'success'>('capture');
   const [hasAgreedToPolicies, setHasAgreedToPolicies] = useState(false);
+  const [shouldRenderVerification, setShouldRenderVerification] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
   const { user: authUser, isUserLoading: isAuthLoading } = useUser();
@@ -73,18 +74,27 @@ function VerificationPage() {
     useDoc<User>(userDocRef);
 
   const isLoading = isAuthLoading || isProfileLoading;
-
-  const shouldSkipVerification = useMemo(() => {
-    if (!authUser || !userProfile) return false;
-    const videoStatus: any = (userProfile as any)?.videoVerification;
-    return videoStatus?.status === 'approved';
-  }, [authUser, userProfile]);
+  const hasCompletedVerification = Boolean(
+    userProfile?.videoVerification?.status === 'approved'
+  );
 
   useEffect(() => {
-    if (!isLoading && authUser && shouldSkipVerification) {
-      router.replace('/dashboard');
+    if (isLoading) return;
+
+    if (!authUser) {
+      setShouldRenderVerification(false);
+      router.replace('/login');
+      return;
     }
-  }, [authUser, isLoading, router, shouldSkipVerification]);
+
+    if (hasCompletedVerification) {
+      setShouldRenderVerification(false);
+      router.replace('/dashboard');
+      return;
+    }
+
+    setShouldRenderVerification(true);
+  }, [authUser, hasCompletedVerification, isLoading, router]);
 
   const completeVerification = useCallback(async () => {
     if (!authUser || !firestore) return;
@@ -94,7 +104,7 @@ function VerificationPage() {
       userProfile ||
       ({
         id: authUser.uid,
-        name: authUser.displayName || authUser.email?.split('@')[0] || 'Sakhi Member',
+        name: authUser.displayName || authUser.email?.split('@')[0] || 'Naarimani Member',
         avatar:
           authUser.photoURL || `https://picsum.photos/seed/${authUser.uid}/100/100`,
         followerIds: [],
@@ -176,6 +186,19 @@ function VerificationPage() {
     setIsVerificationOpen(false);
     setTimeout(() => setVerificationStep('capture'), 300);
   };
+
+  if (!shouldRenderVerification) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-secondary/50 p-4">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <Loader className="h-10 w-10 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">
+            Preparing your experience...
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   const FeatureList = [
     {
