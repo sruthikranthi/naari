@@ -23,13 +23,17 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
 
   // Check localStorage only after component mounts (client-side only)
   useEffect(() => {
-    setIsMounted(true);
-    if (typeof window !== 'undefined') {
-      const hasSkipped = localStorage.getItem(SPLASH_SKIP_KEY) === 'true';
-      if (hasSkipped) {
-        setShouldShow(false);
+    // Defer state updates to avoid synchronous setState in effect
+    const timer = setTimeout(() => {
+      setIsMounted(true);
+      if (typeof window !== 'undefined') {
+        const hasSkipped = localStorage.getItem(SPLASH_SKIP_KEY) === 'true';
+        if (hasSkipped) {
+          setShouldShow(false);
+        }
       }
-    }
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   // Handle skip completion after initial render

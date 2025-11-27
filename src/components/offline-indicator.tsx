@@ -16,11 +16,14 @@ export function OfflineIndicator() {
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    setIsMounted(true);
-    // Set initial online status after mount
-    if (typeof window !== 'undefined') {
-      setIsOnline(navigator.onLine);
-    }
+    // Defer state updates to avoid synchronous setState in effect
+    const timer = setTimeout(() => {
+      setIsMounted(true);
+      // Set initial online status after mount
+      if (typeof window !== 'undefined') {
+        setIsOnline(navigator.onLine);
+      }
+    }, 0);
 
     const handleOnline = () => {
       setIsOnline(true);
@@ -40,6 +43,7 @@ export function OfflineIndicator() {
     }
 
     return () => {
+      clearTimeout(timer);
       if (typeof window !== 'undefined') {
         window.removeEventListener('online', handleOnline);
         window.removeEventListener('offline', handleOffline);
