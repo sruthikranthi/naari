@@ -48,18 +48,28 @@ export function useDoc<T = any>(
   const [error, setError] = useState<FirestoreError | Error | null>(null);
   const unsubscribeRef = useRef<(() => void) | null>(null);
   const currentRefPath = useRef<string | null>(null);
+  const isSettingUpRef = useRef<boolean>(false);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const retryCountRef = useRef<number>(0);
 
   useEffect(() => {
+    // Clear any pending timeout
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+
     // Clean up any existing subscription first
     if (unsubscribeRef.current) {
       try {
         unsubscribeRef.current();
       } catch (e) {
         // Ignore errors during cleanup
-        console.warn('Error cleaning up Firestore subscription:', e);
       }
       unsubscribeRef.current = null;
     }
+
+    isSettingUpRef.current = false;
 
     if (!memoizedDocRef) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- Need to reset state when ref becomes null
@@ -69,22 +79,33 @@ export function useDoc<T = any>(
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setError(null);
       currentRefPath.current = null;
+      retryCountRef.current = 0;
       return;
     }
 
     // Check if this is the same document reference to avoid unnecessary re-subscriptions
     const refPath = memoizedDocRef.path;
-    if (currentRefPath.current === refPath && unsubscribeRef.current) {
-      // Same document, don't re-subscribe
+    if (currentRefPath.current === refPath && unsubscribeRef.current && !isSettingUpRef.current) {
+      // Same document and already subscribed, don't re-subscribe
+      return;
+    }
+
+    // If we're already setting up a subscription, don't start another one
+    if (isSettingUpRef.current) {
       return;
     }
 
     currentRefPath.current = refPath;
+    isSettingUpRef.current = true;
 
-    // Add a small delay to prevent rapid subscription setup/teardown
-    const timeoutId = setTimeout(() => {
+    // Add a longer delay to prevent rapid subscription setup/teardown
+    // Increase delay based on retry count (exponential backoff)
+    const delay = Math.min(200 + (retryCountRef.current * 100), 1000);
+    
+    timeoutRef.current = setTimeout(() => {
       // Double-check the ref hasn't changed during the timeout
-      if (currentRefPath.current !== refPath) {
+      if (currentRefPath.current !== refPath || !isSettingUpRef.current) {
+        isSettingUpRef.current = false;
         return;
       }
 
@@ -102,6 +123,10 @@ export function useDoc<T = any>(
               return;
             }
 
+            // Reset retry count on success
+            retryCountRef.current = 0;
+            isSettingUpRef.current = false;
+
             if (snapshot.exists()) {
               setData({ ...(snapshot.data() as T), id: snapshot.id });
             } else {
@@ -117,6 +142,8 @@ export function useDoc<T = any>(
               return;
             }
 
+            isSettingUpRef.current = false;
+
             // If it's a permission error for a user's own profile, it might be because the document doesn't exist yet
             // In this case, we'll treat it as if the document doesn't exist (null) rather than an error
             // This is especially common for new users who haven't created their profile yet
@@ -126,16 +153,24 @@ export function useDoc<T = any>(
               setData(null);
               setError(null);
               setIsLoading(false);
+              retryCountRef.current = 0; // Reset retry count
               return;
             }
 
-            // Handle Firestore internal errors gracefully
-            if (error.message?.includes('INTERNAL ASSERTION FAILED') || error.message?.includes('Unexpected state')) {
-              console.warn('Firestore internal error, will retry:', error);
-              // Don't set error state for internal errors, just log and retry
+            // Handle Firestore internal errors gracefully - don't retry immediately
+            if (error.message?.includes('INTERNAL ASSERTION FAILED') || 
+                error.message?.includes('Unexpected state') ||
+                error.code === 'unavailable' ||
+                error.code === 'deadline-exceeded') {
+              console.warn('Firestore error, will not retry immediately:', error.code);
               setIsLoading(false);
+              // Don't increment retry count for these errors, just stop trying
+              retryCountRef.current = 0;
               return;
             }
+
+            // For other errors, increment retry count but don't retry automatically
+            retryCountRef.current = Math.min(retryCountRef.current + 1, 5);
 
             const contextualError = new FirestorePermissionError({
               operation: 'get',
@@ -146,8 +181,10 @@ export function useDoc<T = any>(
             setData(null)
             setIsLoading(false)
 
-            // trigger global error propagation
-            errorEmitter.emit('permission-error', contextualError);
+            // Only emit permission errors, not other errors
+            if (error.code === 'permission-denied') {
+              errorEmitter.emit('permission-error', contextualError);
+            }
           }
         );
 
@@ -156,20 +193,25 @@ export function useDoc<T = any>(
         console.error('Error setting up Firestore subscription:', e);
         setIsLoading(false);
         setError(e as Error);
+        isSettingUpRef.current = false;
+        retryCountRef.current = Math.min(retryCountRef.current + 1, 5);
       }
-    }, 50); // 50ms delay to prevent rapid subscription changes
+    }, delay);
 
     return () => {
-      clearTimeout(timeoutId);
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
       if (unsubscribeRef.current) {
         try {
           unsubscribeRef.current();
         } catch (e) {
           // Ignore errors during cleanup
-          console.warn('Error cleaning up Firestore subscription:', e);
         }
         unsubscribeRef.current = null;
       }
+      isSettingUpRef.current = false;
       // Only clear currentRefPath if this is still the active subscription
       if (currentRefPath.current === refPath) {
         currentRefPath.current = null;

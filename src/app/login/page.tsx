@@ -41,7 +41,13 @@ export default function LoginPage() {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   // Check user profile for mobile number
-  const userDocRef = useMemoFirebase(() => (firestore && user) ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
+  // Only create doc ref if user exists and we're not redirecting
+  const userDocRef = useMemoFirebase(() => {
+    if (!firestore || !user || hasRedirected) {
+      return null;
+    }
+    return doc(firestore, 'users', user.uid);
+  }, [firestore, user, hasRedirected]);
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<User>(userDocRef);
   const [hasRedirected, setHasRedirected] = useState(false);
   const redirectingRef = useRef(false);

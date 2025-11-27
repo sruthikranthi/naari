@@ -63,7 +63,13 @@ export default function MobileNumberPage() {
   const [showHelp, setShowHelp] = useState(false);
 
   // Fetch user profile to check if mobile number already exists
-  const userDocRef = useMemoFirebase(() => (firestore && user) ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
+  // Only create doc ref if user exists and we're not redirecting
+  const userDocRef = useMemoFirebase(() => {
+    if (!firestore || !user || hasRedirected) {
+      return null;
+    }
+    return doc(firestore, 'users', user.uid);
+  }, [firestore, user, hasRedirected]);
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<User>(userDocRef);
 
   const [hasRedirected, setHasRedirected] = useState(false);
