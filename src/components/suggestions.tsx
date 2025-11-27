@@ -2,7 +2,7 @@
 'use client';
 import Link from 'next/link';
 import { useCollection, useFirestore, useUser, useMemoFirebase } from '@/firebase';
-import { collection, limit, query } from 'firebase/firestore';
+import { collection, limit, query, doc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
@@ -10,16 +10,56 @@ import { Plus } from 'lucide-react';
 import Image from 'next/image';
 import type { User, Community } from '@/lib/mock-data';
 import { Skeleton } from './ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
 
 export function Suggestions() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
+  const { toast } = useToast();
 
   const usersQuery = useMemoFirebase(
     () => (firestore && user ? query(collection(firestore, 'users'), limit(3)) : null),
     [firestore, user]
   );
   const { data: suggestedUsers, isLoading: areUsersLoading } = useCollection<User>(usersQuery);
+
+  const handleFollow = async (targetUserId: string, targetUserName: string) => {
+    if (!user || !firestore) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'You must be logged in to follow users.',
+      });
+      return;
+    }
+
+    // Don't allow following yourself
+    if (targetUserId === user.uid) {
+      return;
+    }
+
+    try {
+      const currentUserRef = doc(firestore, 'users', user.uid);
+      const targetUserRef = doc(firestore, 'users', targetUserId);
+
+      // Add target to current user's following list
+      await updateDoc(currentUserRef, { followingIds: arrayUnion(targetUserId) });
+      // Add current user to target's followers list
+      await updateDoc(targetUserRef, { followerIds: arrayUnion(user.uid) });
+      
+      toast({ 
+        title: 'Connected!', 
+        description: `You are now following ${targetUserName}.` 
+      });
+    } catch (error) {
+      console.error('Error following user:', error);
+      toast({ 
+        variant: 'destructive', 
+        title: 'Error', 
+        description: 'Could not follow user. Please try again.' 
+      });
+    }
+  };
   
   const communitiesQuery = useMemoFirebase(
     () => (firestore && user ? query(collection(firestore, 'communities'), limit(2)) : null),
@@ -48,34 +88,43 @@ export function Suggestions() {
                  <Skeleton className="h-8 w-8" />
             </div>
           ))}
-          {!isLoading && suggestedUsers?.map((user) => (
-            <div key={user.id} className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Avatar className="h-10 w-10">
-                  <AvatarImage
-                    src={user.avatar}
-                    alt={user.name}
-                    data-ai-hint="woman portrait"
-                  />
-                  <AvatarFallback>
-                    {user.name
-                      .split(' ')
-                      .map((n) => n[0])
-                      .join('')}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className="font-semibold">{user.name}</p>
-                  <p className="text-sm text-muted-foreground">
-                    Suggested for you
-                  </p>
+          {!isLoading && suggestedUsers?.filter(u => u.id !== user?.uid).map((suggestedUser) => {
+            const isFollowing = user?.followingIds?.includes(suggestedUser.id);
+            return (
+              <div key={suggestedUser.id} className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage
+                      src={suggestedUser.avatar}
+                      alt={suggestedUser.name}
+                      data-ai-hint="woman portrait"
+                    />
+                    <AvatarFallback>
+                      {suggestedUser.name
+                        .split(' ')
+                        .map((n) => n[0])
+                        .join('')}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="font-semibold">{suggestedUser.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      Suggested for you
+                    </p>
+                  </div>
                 </div>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="px-2"
+                  onClick={() => handleFollow(suggestedUser.id, suggestedUser.name)}
+                  disabled={isFollowing}
+                >
+                  <Plus className="h-4 w-4 text-muted-foreground" />
+                </Button>
               </div>
-              <Button variant="outline" size="sm" className="px-2">
-                <Plus className="h-4 w-4 text-muted-foreground" />
-              </Button>
-            </div>
-          ))}
+            );
+          })}
         </CardContent>
       </Card>
 

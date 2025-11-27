@@ -45,16 +45,6 @@ export function CreatePost() {
         return;
     }
 
-    // Check email verification
-    if (!user.emailVerified) {
-      toast({
-        variant: 'destructive',
-        title: 'Email Not Verified',
-        description: 'Please verify your email address before creating posts.',
-      });
-      return;
-    }
-
     // Validate and sanitize content
     const sanitizedContent = content.trim();
     

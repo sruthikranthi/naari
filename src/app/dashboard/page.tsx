@@ -78,7 +78,7 @@ function PageContent() {
     const { user, isUserLoading } = useUser();
 
     const postsQuery = useMemoFirebase(
-      () => (firestore && user && user.emailVerified) ? query(collection(firestore, 'posts'), orderBy('timestamp', 'desc')) : null,
+      () => (firestore && user) ? query(collection(firestore, 'posts'), orderBy('timestamp', 'desc')) : null,
       [firestore, user]
     );
     const { data: posts, isLoading: arePostsLoading } = useCollection<PostFromFirestore>(postsQuery);
