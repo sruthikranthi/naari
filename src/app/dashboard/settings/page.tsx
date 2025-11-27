@@ -32,9 +32,12 @@ export default function SettingsPage() {
           <div className="space-y-4">
             {policyLinks.map((link, index) => (
               <React.Fragment key={link.href}>
-                <Link href={link.href} className="block rounded-lg p-4 transition-colors hover:bg-secondary">
+                <Link
+                  href={link.href}
+                  className="block rounded-lg p-4 transition-colors hover:bg-secondary"
+                >
                   <div className="flex items-start gap-4">
-                    <link.icon className="h-6 w-6 shrink-0 text-primary mt-1" />
+                    <link.icon className="mt-1 h-6 w-6 shrink-0 text-primary" />
                     <div>
                       <p className="font-semibold">{link.title}</p>
                       <p className="text-sm text-muted-foreground">{link.description}</p>
@@ -45,6 +48,37 @@ export default function SettingsPage() {
               </React.Fragment>
             ))}
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Legal Owner Information</CardTitle>
+          <CardDescription>
+            These details are shared with our payment partners to verify platform ownership.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <dl className="space-y-4 text-sm">
+            <div>
+              <dt className="font-semibold text-foreground">Legal Owner Name</dt>
+              <dd className="text-muted-foreground">Venkat Kumar Suyradevara</dd>
+            </div>
+            <div>
+              <dt className="font-semibold text-foreground">Registered Address</dt>
+              <dd className="text-muted-foreground">
+                H No 13-1-143/D/2, Flat 402, Sai Towers, Mattewada, Warangal, Telangana - 506002
+              </dd>
+            </div>
+            <div>
+              <dt className="font-semibold text-foreground">Email</dt>
+              <dd className="text-muted-foreground">restart.guru25@gmail.com</dd>
+            </div>
+            <div>
+              <dt className="font-semibold text-foreground">Mobile Number</dt>
+              <dd className="text-muted-foreground">+91 91330 77023</dd>
+            </div>
+          </dl>
         </CardContent>
       </Card>
     </div>

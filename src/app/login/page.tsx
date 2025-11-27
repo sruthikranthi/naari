@@ -93,62 +93,62 @@ export default function LoginPage() {
   // ---------- Handlers ----------
   const handleLogin = useCallback(
     async (e: React.FormEvent) => {
-      e.preventDefault();
-      setError(null);
-      setEmailNotVerified(false);
+    e.preventDefault();
+    setError(null);
+    setEmailNotVerified(false);
 
-      const sanitizedEmail = sanitizeText(email);
-      const sanitizedPassword = password.trim();
+    const sanitizedEmail = sanitizeText(email);
+    const sanitizedPassword = password.trim();
 
-      if (!validationSchemas.email.validate(sanitizedEmail)) {
-        setError(validationSchemas.email.message);
-        return;
-      }
-      if (sanitizedPassword.length < 6) {
-        setError('Password must be at least 6 characters');
-        return;
-      }
+    if (!validationSchemas.email.validate(sanitizedEmail)) {
+      setError(validationSchemas.email.message);
+      return;
+    }
+    if (sanitizedPassword.length < 6) {
+      setError('Password must be at least 6 characters');
+      return;
+    }
 
       setIsLoading(true);
-      try {
+    try {
         const userCredential = await signInWithEmailAndPassword(
           auth,
           sanitizedEmail,
           sanitizedPassword
         );
-
-        if (!userCredential.user.emailVerified) {
-          setEmailNotVerified(true);
-          toast({
-            variant: 'destructive',
-            title: 'Email Not Verified',
-            description: 'Please verify your email address before accessing the dashboard.',
-          });
-        } else {
-          toast({
-            title: 'Login Successful!',
+      
+      if (!userCredential.user.emailVerified) {
+        setEmailNotVerified(true);
+        toast({
+          variant: 'destructive',
+          title: 'Email Not Verified',
+          description: 'Please verify your email address before accessing the dashboard.',
+        });
+      } else {
+        toast({
+          title: 'Login Successful!',
             description: 'Redirecting...',
-          });
+        });
           // Redirect is handled by effect when profile is ready
           redirectedRef.current = false; // allow redirect once profile loads
-        }
+      }
       } catch (err: any) {
-        let errorMessage = 'Please check your credentials and try again.';
+      let errorMessage = 'Please check your credentials and try again.';
         let errorHint = '';
 
         switch (err.code) {
           case 'auth/user-not-found':
-            errorMessage = 'No account found with this email address.';
+        errorMessage = 'No account found with this email address.';
             errorHint = 'Please check your email or sign up for a new account.';
             break;
           case 'auth/wrong-password':
-            errorMessage = 'Incorrect password. Please try again.';
+        errorMessage = 'Incorrect password. Please try again.';
             break;
           case 'auth/too-many-requests':
             errorMessage = 'Too many failed attempts. Try again later.';
             break;
           case 'auth/invalid-email':
-            errorMessage = 'Invalid email address.';
+        errorMessage = 'Invalid email address.';
             break;
           case 'auth/network-request-failed':
             errorMessage = 'Network error. Check your connection.';
@@ -160,15 +160,15 @@ export default function LoginPage() {
             if (err.message) errorMessage = err.message;
         }
 
-        setError(errorMessage);
-        toast({
-          variant: 'destructive',
-          title: 'Login Failed',
+      setError(errorMessage);
+      toast({
+        variant: 'destructive',
+        title: 'Login Failed',
           description: errorHint || errorMessage,
-        });
-      } finally {
-        setIsLoading(false);
-      }
+      });
+    } finally {
+      setIsLoading(false);
+    }
     },
     [auth, email, password, toast]
   );
@@ -343,77 +343,77 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <form onSubmit={handleLogin}>
+        <form onSubmit={handleLogin}>
             <div className="grid gap-4">
-              {emailNotVerified && (
-                <Alert variant="destructive">
-                  <Mail className="h-4 w-4" />
-                  <AlertTitle>Email Verification Required</AlertTitle>
-                  <AlertDescription className="mt-2">
-                    Your email address has not been verified. Please check your inbox and click the verification link.
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="mt-2 w-full"
-                      onClick={handleResendVerification}
-                      disabled={isResendingVerification}
-                    >
-                      {isResendingVerification ? (
-                        <>
-                          <Loader className="mr-2 h-4 w-4 animate-spin" />
-                          Sending...
-                        </>
-                      ) : (
-                        'Resend Verification Email'
-                      )}
-                    </Button>
-                  </AlertDescription>
-                </Alert>
-              )}
+            {emailNotVerified && (
+              <Alert variant="destructive">
+                <Mail className="h-4 w-4" />
+                <AlertTitle>Email Verification Required</AlertTitle>
+                <AlertDescription className="mt-2">
+                  Your email address has not been verified. Please check your inbox and click the verification link.
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="mt-2 w-full"
+                    onClick={handleResendVerification}
+                    disabled={isResendingVerification}
+                  >
+                    {isResendingVerification ? (
+                      <>
+                        <Loader className="mr-2 h-4 w-4 animate-spin" />
+                        Sending...
+                      </>
+                    ) : (
+                      'Resend Verification Email'
+                    )}
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            )}
 
-              <div className="grid gap-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="m@example.com"
-                  required
-                  value={email}
-                  onChange={(e) => {
-                    const sanitized = sanitizeText(e.target.value);
-                    setEmail(sanitized);
+            <div className="grid gap-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="m@example.com"
+                required
+                value={email}
+                onChange={(e) => {
+                  const sanitized = sanitizeText(e.target.value);
+                  setEmail(sanitized);
                     if (error && isValidEmail(sanitized)) setError(null);
-                  }}
-                  onBlur={(e) => {
-                    const sanitized = sanitizeText(e.target.value);
-                    if (!isValidEmail(sanitized) && sanitized.length > 0) {
-                      setError(validationSchemas.email.message);
-                    }
-                  }}
-                />
-              </div>
+                }}
+                onBlur={(e) => {
+                  const sanitized = sanitizeText(e.target.value);
+                  if (!isValidEmail(sanitized) && sanitized.length > 0) {
+                    setError(validationSchemas.email.message);
+                  }
+                }}
+              />
+            </div>
 
-              <div className="grid gap-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  required
-                  minLength={6}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-              </div>
+            <div className="grid gap-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                required
+                minLength={6}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
 
-              {error && <p className="text-sm text-destructive">{error}</p>}
+            {error && <p className="text-sm text-destructive">{error}</p>}
             </div>
 
             <Button className="w-full mt-4" type="submit" disabled={isLoading || isGoogleLoading}>
               {isLoading && <Loader className="mr-2 h-4 w-4 animate-spin" />}
               Sign In with Email
             </Button>
-          </form>
+        </form>
         </CardContent>
       </Card>
     </div>
