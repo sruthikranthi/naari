@@ -120,6 +120,18 @@ export function PostCard({ post }: { post: PostFromFirestore }) {
             />
           </div>
         )}
+        {post.video && (
+          <div className="relative aspect-video overflow-hidden rounded-lg border">
+            <video
+              src={post.video}
+              controls
+              className="w-full h-full object-contain"
+              preload="metadata"
+            >
+              Your browser does not support the video tag.
+            </video>
+          </div>
+        )}
         {post.pollOptions && (
           <div className="space-y-3 rounded-lg border p-4">
             <div className='flex items-center gap-2 font-medium text-sm'>

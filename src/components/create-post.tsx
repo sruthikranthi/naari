@@ -2,8 +2,9 @@
 'use client';
 import { useState, useRef } from 'react';
 import Image from 'next/image';
-import { useAuth, useFirestore } from '@/firebase';
+import { useAuth, useFirestore, useStorage } from '@/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -11,7 +12,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import type { Post } from '@/lib/mock-data';
-import { BarChart, Image as ImageIcon, Video, X, Camera, Shield } from 'lucide-react';
+import { BarChart, Image as ImageIcon, Video, X, Camera, Shield, Loader } from 'lucide-react';
 import { Input } from './ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { CameraCapture } from './camera-capture';
@@ -24,15 +25,18 @@ export function CreatePost() {
   const { toast } = useToast();
   const { user } = useUser();
   const firestore = useFirestore();
+  const storage = useStorage();
 
   const [content, setContent] = useState('');
   const [showPoll, setShowPoll] = useState(false);
   const [pollOptions, setPollOptions] = useState(['', '']);
   const [mediaPreview, setMediaPreview] = useState<string | null>(null);
   const [mediaType, setMediaType] = useState<'image' | 'video' | null>(null);
+  const [mediaFile, setMediaFile] = useState<File | null>(null);
   const [isAnonymous, setIsAnonymous] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
 
   const handlePost = async () => {
@@ -67,49 +71,82 @@ export function CreatePost() {
       return;
     }
 
-    // Sanitize poll options
-    const sanitizedPollOptions = showPoll 
-      ? pollOptions
-          .filter(opt => opt.trim() !== '')
-          .map(opt => ({ 
-            text: opt.trim().substring(0, 100), // Limit poll option length
-            votes: 0 
-          }))
-      : undefined;
+    setIsUploading(true);
 
-    const newPost = {
-      author: {
-        id: user.uid,
-        name: user.displayName || 'Anonymous Sakhi',
-        avatar: user.photoURL || `https://picsum.photos/seed/${user.uid}/100/100`,
-      },
-      content: sanitizedContent,
-      timestamp: serverTimestamp(),
-      likes: 0,
-      comments: 0,
-      isAnonymous,
-      image: mediaType === 'image' ? mediaPreview! : undefined,
-      pollOptions: sanitizedPollOptions
-    };
-    
     try {
-        const postsCollection = collection(firestore, 'posts');
-        await addDoc(postsCollection, newPost);
-        toast({
-            title: 'Post Created!',
-            description: 'Your post has been shared with the community.',
-        })
+      let mediaUrl: string | undefined = undefined;
 
-        // Reset form
-        setContent('');
-        setMediaPreview(null);
-        setMediaType(null);
-        setShowPoll(false);
-        setPollOptions(['', '']);
-        setIsAnonymous(false);
-        if(fileInputRef.current) {
-            fileInputRef.current.value = '';
+      // Upload media to Firebase Storage if present
+      if (mediaFile && mediaType) {
+        try {
+          const timestamp = Date.now();
+          const fileExtension = mediaFile.name.split('.').pop() || (mediaType === 'image' ? 'jpg' : 'mp4');
+          const fileName = `${user.uid}/${timestamp}.${fileExtension}`;
+          const storageRef = ref(storage, `posts/${fileName}`);
+          
+          await uploadBytes(storageRef, mediaFile);
+          mediaUrl = await getDownloadURL(storageRef);
+        } catch (uploadError) {
+          console.error('Error uploading media:', uploadError);
+          toast({
+            variant: 'destructive',
+            title: 'Upload Failed',
+            description: 'Could not upload media. Please try again.',
+          });
+          setIsUploading(false);
+          return;
         }
+      } else if (mediaPreview && mediaType === 'image') {
+        // For images from camera capture (data URLs), we can use them directly
+        // or upload them. For now, using data URL for images is acceptable
+        mediaUrl = mediaPreview;
+      }
+
+      // Sanitize poll options
+      const sanitizedPollOptions = showPoll 
+        ? pollOptions
+            .filter(opt => opt.trim() !== '')
+            .map(opt => ({ 
+              text: opt.trim().substring(0, 100), // Limit poll option length
+              votes: 0 
+            }))
+        : undefined;
+
+      const newPost = {
+        author: {
+          id: user.uid,
+          name: user.displayName || 'Anonymous Sakhi',
+          avatar: user.photoURL || `https://picsum.photos/seed/${user.uid}/100/100`,
+        },
+        content: sanitizedContent,
+        timestamp: serverTimestamp(),
+        likes: 0,
+        comments: 0,
+        isAnonymous,
+        image: mediaType === 'image' ? mediaUrl : undefined,
+        video: mediaType === 'video' ? mediaUrl : undefined,
+        pollOptions: sanitizedPollOptions
+      };
+      
+      const postsCollection = collection(firestore, 'posts');
+      await addDoc(postsCollection, newPost);
+      
+      toast({
+          title: 'Post Created!',
+          description: 'Your post has been shared with the community.',
+      })
+
+      // Reset form
+      setContent('');
+      setMediaPreview(null);
+      setMediaType(null);
+      setMediaFile(null);
+      setShowPoll(false);
+      setPollOptions(['', '']);
+      setIsAnonymous(false);
+      if(fileInputRef.current) {
+          fileInputRef.current.value = '';
+      }
     } catch (error) {
         console.error("Error creating post: ", error);
         toast({
@@ -117,6 +154,8 @@ export function CreatePost() {
             title: 'Error',
             description: 'Could not create post. Please try again.',
         });
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -144,9 +183,49 @@ export function CreatePost() {
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      // Validate file type
+      const isImage = file.type.startsWith('image/');
+      const isVideo = file.type.startsWith('video/');
+      
+      if (!isImage && !isVideo) {
+        toast({
+          variant: 'destructive',
+          title: 'Invalid File Type',
+          description: 'Please select an image or video file.',
+        });
+        return;
+      }
+
+      // Validate file size (max 50MB for videos, 10MB for images)
+      const maxSize = isVideo ? 50 * 1024 * 1024 : 10 * 1024 * 1024;
+      if (file.size > maxSize) {
+        toast({
+          variant: 'destructive',
+          title: 'File Too Large',
+          description: isVideo 
+            ? 'Video file must be less than 50MB.' 
+            : 'Image file must be less than 10MB.',
+        });
+        return;
+      }
+
+      // Validate video format
+      if (isVideo) {
+        const validVideoTypes = ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime'];
+        if (!validVideoTypes.includes(file.type)) {
+          toast({
+            variant: 'destructive',
+            title: 'Unsupported Video Format',
+            description: 'Please use MP4, WebM, OGG, or MOV format.',
+          });
+          return;
+        }
+      }
+
+      setMediaFile(file);
       const url = URL.createObjectURL(file);
       setMediaPreview(url);
-      setMediaType(file.type.startsWith('image/') ? 'image' : 'video');
+      setMediaType(isImage ? 'image' : 'video');
       setShowPoll(false);
     }
   };
@@ -159,8 +238,12 @@ export function CreatePost() {
   };
   
   const removeMedia = () => {
+      if (mediaPreview && mediaPreview.startsWith('blob:')) {
+        URL.revokeObjectURL(mediaPreview);
+      }
       setMediaPreview(null);
       setMediaType(null);
+      setMediaFile(null);
       if(fileInputRef.current) {
           fileInputRef.current.value = '';
       }
@@ -209,7 +292,15 @@ export function CreatePost() {
                         <Image src={mediaPreview} alt="Preview" width={800} height={320} className="w-full h-auto object-contain" unoptimized />
                     </div>
                     ) : (
-                    <video src={mediaPreview} controls className="max-h-80 w-full rounded-lg" />
+                    <video 
+                      src={mediaPreview} 
+                      controls 
+                      className="max-h-80 w-full rounded-lg"
+                      preload="metadata"
+                    >
+                      <source src={mediaPreview} type={mediaFile?.type || 'video/mp4'} />
+                      Your browser does not support the video tag.
+                    </video>
                     )}
                     <Button
                         variant="destructive"
@@ -321,9 +412,16 @@ export function CreatePost() {
                   onClick={handlePost}
                   aria-label="Publish post"
                   className="min-h-[44px] touch-manipulation"
-                  disabled={!content.trim() && !mediaPreview && !showPoll}
+                  disabled={(!content.trim() && !mediaPreview && !showPoll) || isUploading}
                 >
-                  Post
+                  {isUploading ? (
+                    <>
+                      <Loader className="mr-2 h-4 w-4 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    'Post'
+                  )}
                 </Button>
               </div>
             </div>

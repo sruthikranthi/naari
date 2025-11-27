@@ -15,7 +15,7 @@ export function FirebaseClientProvider({ children }: FirebaseClientProviderProps
       const services = initializeFirebase();
       
       // Validate that all services were initialized
-      if (!services || !services.firebaseApp || !services.auth || !services.firestore) {
+      if (!services || !services.firebaseApp || !services.auth || !services.firestore || !services.storage) {
         throw new Error('Firebase initialization failed: One or more services are undefined');
       }
       
@@ -31,6 +31,7 @@ export function FirebaseClientProvider({ children }: FirebaseClientProviderProps
       firebaseApp={firebaseServices.firebaseApp}
       auth={firebaseServices.auth}
       firestore={firebaseServices.firestore}
+      storage={firebaseServices.storage}
     >
       {children}
     </FirebaseProvider>

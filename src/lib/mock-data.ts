@@ -52,6 +52,7 @@ export type Post = {
   };
   content: string;
   image?: string;
+  video?: string;
   timestamp: any;
   likes: number;
   comments: number;
