@@ -1,7 +1,7 @@
 
 'use client';
-import React, { type ReactNode, useState, createContext, useContext, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { type ReactNode, useState, createContext, useContext, useEffect, useRef } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import {
   Search,
 } from 'lucide-react';
@@ -80,27 +80,46 @@ function Layout({ children }: { children: ReactNode }) {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const router = useRouter();
+  const pathname = usePathname();
+  const hasRedirectedRef = useRef(false);
 
   // Check if user has mobile number
   const userDocRef = useMemoFirebase(() => (firestore && user) ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<User>(userDocRef);
 
   useEffect(() => {
-    // If user is not logged in, redirect to login
-    if (!isUserLoading && !user) {
-      router.push('/login');
+    // Don't redirect if we're already on a dashboard route (allows navigation within dashboard)
+    const isDashboardRoute = pathname?.startsWith('/dashboard');
+    
+    // Prevent multiple redirects only if we're not on a dashboard route
+    if (hasRedirectedRef.current && !isDashboardRoute) {
+      return;
+    }
+
+    // If user is not logged in, redirect to login (only if not already there)
+    if (!isUserLoading && !user && pathname !== '/login') {
+      hasRedirectedRef.current = true;
+      router.replace('/login');
       return;
     }
 
     // If user is logged in but profile doesn't exist or doesn't have mobile number, redirect to mobile number page
+    // Only redirect if we're not already on the mobile-number page AND not on a dashboard route
     // Note: userProfile will be null if document doesn't exist, which is fine - we'll redirect to create it
-    if (!isProfileLoading && user) {
+    if (!isProfileLoading && user && pathname !== '/mobile-number' && !isDashboardRoute) {
       if (!userProfile || !userProfile.mobileNumber) {
-        router.push('/mobile-number');
+        hasRedirectedRef.current = true;
+        router.replace('/mobile-number');
         return;
       }
     }
-  }, [user, isUserLoading, userProfile, isProfileLoading, router]);
+
+    // Reset redirect flag if we're on a valid dashboard route and have a profile
+    // This allows free navigation within dashboard routes
+    if (user && userProfile && userProfile.mobileNumber && isDashboardRoute) {
+      hasRedirectedRef.current = false;
+    }
+  }, [user, isUserLoading, userProfile, isProfileLoading, router, pathname]);
 
   // Show loading state while checking
   if (isUserLoading || isProfileLoading) {

@@ -25,6 +25,7 @@ export function MobileBottomNav() {
     <nav
       className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 md:hidden"
       aria-label="Mobile navigation"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       <div className="flex h-16 items-center justify-around">
         {mobileNavItems.map((item) => {
@@ -33,6 +34,7 @@ export function MobileBottomNav() {
             <Link
               key={item.href}
               href={item.href}
+              prefetch={true}
               className={cn(
                 'flex flex-col items-center justify-center gap-1 flex-1 h-full min-h-[44px] touch-manipulation transition-colors',
                 isActive
