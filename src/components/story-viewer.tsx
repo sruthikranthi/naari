@@ -135,7 +135,16 @@ export function StoryViewer({ users, initialUser, onClose }: StoryViewerProps) {
             priority
           />
         )}
-        {/* Add video support if needed */}
+        {currentStory.type === 'video' && (
+          <video
+            src={currentStory.url}
+            className="w-full h-full object-cover"
+            autoPlay
+            playsInline
+            loop={false}
+            onEnded={handleNextStory}
+          />
+        )}
 
         {/* Close Button */}
         <button onClick={(e) => { e.stopPropagation(); onClose(); }} className="absolute top-4 right-4 z-20 text-white">
