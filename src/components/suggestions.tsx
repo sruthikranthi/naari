@@ -1,12 +1,13 @@
 
 'use client';
 import Link from 'next/link';
+import { useState } from 'react';
 import { useCollection, useFirestore, useUser, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, limit, query, doc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Plus } from 'lucide-react';
+import { Plus, Loader, Check } from 'lucide-react';
 import Image from 'next/image';
 import type { User, Community } from '@/lib/mock-data';
 import { Skeleton } from './ui/skeleton';
@@ -16,6 +17,7 @@ export function Suggestions() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
+  const [followingInProgress, setFollowingInProgress] = useState<Set<string>>(new Set());
 
   // Fetch current user's profile to check following status
   const currentUserDocRef = useMemoFirebase(() => {
@@ -45,25 +47,61 @@ export function Suggestions() {
       return;
     }
 
+    // Check if already following
+    if (currentUserProfile?.followingIds?.includes(targetUserId)) {
+      toast({
+        title: 'Already Following',
+        description: `You are already following ${targetUserName}.`,
+      });
+      return;
+    }
+
+    // Set loading state
+    setFollowingInProgress(prev => new Set(prev).add(targetUserId));
+
     try {
       const currentUserRef = doc(firestore, 'users', user.uid);
       const targetUserRef = doc(firestore, 'users', targetUserId);
 
+      // Ensure followingIds array exists
+      const currentFollowingIds = currentUserProfile?.followingIds || [];
+      const targetFollowerIds = suggestedUsers?.find(u => u.id === targetUserId)?.followerIds || [];
+
       // Add target to current user's following list
-      await updateDoc(currentUserRef, { followingIds: arrayUnion(targetUserId) });
+      await updateDoc(currentUserRef, { 
+        followingIds: arrayUnion(targetUserId)
+      });
+      
       // Add current user to target's followers list
-      await updateDoc(targetUserRef, { followerIds: arrayUnion(user.uid) });
+      await updateDoc(targetUserRef, { 
+        followerIds: arrayUnion(user.uid)
+      });
       
       toast({ 
         title: 'Connected!', 
         description: `You are now following ${targetUserName}.` 
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error following user:', error);
+      let errorMessage = 'Could not follow user. Please try again.';
+      
+      if (error.code === 'permission-denied') {
+        errorMessage = 'Permission denied. Please check your account permissions.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       toast({ 
         variant: 'destructive', 
         title: 'Error', 
-        description: 'Could not follow user. Please try again.' 
+        description: errorMessage
+      });
+    } finally {
+      // Remove loading state
+      setFollowingInProgress(prev => {
+        const next = new Set(prev);
+        next.delete(targetUserId);
+        return next;
       });
     }
   };
@@ -97,6 +135,8 @@ export function Suggestions() {
           ))}
           {!isLoading && suggestedUsers?.filter(u => u.id !== user?.uid).map((suggestedUser) => {
             const isFollowing = currentUserProfile?.followingIds?.includes(suggestedUser.id) || false;
+            const isFollowingInProgress = followingInProgress.has(suggestedUser.id);
+            
             return (
               <div key={suggestedUser.id} className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -116,18 +156,24 @@ export function Suggestions() {
                   <div>
                     <p className="font-semibold">{suggestedUser.name}</p>
                     <p className="text-sm text-muted-foreground">
-                      Suggested for you
+                      {isFollowing ? 'Connected' : 'Suggested for you'}
                     </p>
                   </div>
                 </div>
                 <Button 
-                  variant="outline" 
+                  variant={isFollowing ? "secondary" : "outline"}
                   size="sm" 
                   className="px-2"
                   onClick={() => handleFollow(suggestedUser.id, suggestedUser.name)}
-                  disabled={isFollowing}
+                  disabled={isFollowing || isFollowingInProgress}
                 >
-                  <Plus className="h-4 w-4 text-muted-foreground" />
+                  {isFollowingInProgress ? (
+                    <Loader className="h-4 w-4 animate-spin text-muted-foreground" />
+                  ) : isFollowing ? (
+                    <Check className="h-4 w-4 text-green-600" />
+                  ) : (
+                    <Plus className="h-4 w-4 text-muted-foreground" />
+                  )}
                 </Button>
               </div>
             );

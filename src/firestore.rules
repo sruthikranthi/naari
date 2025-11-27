@@ -107,11 +107,25 @@ service cloud.firestore {
       allow get: if isSignedIn();
       allow list: if isSignedIn(); // Allow listing for chat participant resolution and admin panel
       allow create: if isOwner(userId) && request.resource.data.id == userId;
-      // Allow a user to update their own profile, but not their followers list.
-      // The rule allows updates if followerIds is not being changed (not in update keys OR matches existing value)
-      allow update: if isExistingOwner(userId) 
-                    && isRelationalIdImmutable('id')
-                    && (!('followerIds' in request.resource.data) || request.resource.data.followerIds == resource.data.followerIds);
+      // Allow a user to update their own profile, including their followingIds.
+      // Allow other users to add themselves to this user's followerIds (for follow functionality).
+      // When updating followerIds, allow if:
+      //   1. User is updating their own profile and not changing followerIds, OR
+      //   2. Another user is adding themselves to followerIds (using arrayUnion - new array contains all old values)
+      allow update: if isRelationalIdImmutable('id')
+                    && (
+                      // User updating their own profile (can update followingIds, but not followerIds directly)
+                      (isExistingOwner(userId) && (!('followerIds' in request.resource.data) || request.resource.data.followerIds == resource.data.followerIds))
+                      ||
+                      // Another user adding themselves to followerIds (follow functionality)
+                      // Check: new followerIds contains auth.uid and preserves all existing followerIds
+                      (isSignedIn() 
+                       && 'followerIds' in request.resource.data
+                       && request.auth.uid in request.resource.data.followerIds
+                       && (!('followerIds' in resource.data) || 
+                           (request.resource.data.followerIds.size() >= resource.data.followerIds.size() 
+                            && request.resource.data.followerIds.hasAll(resource.data.followerIds))))
+                    );
       allow delete: if isExistingOwner(userId);
     }
     
