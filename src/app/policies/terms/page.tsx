@@ -6,12 +6,12 @@ export default function TermsPage() {
       <p>Last updated: July 28, 2024</p>
       
       <p>
-        Welcome to Sakhi Circle! These terms and conditions outline the rules and regulations for the use of
-        Sakhi Circle&apos;s Website, located at [Your Website URL].
+        Welcome to Naarimani! These terms and conditions outline the rules and regulations for the use of
+        Naarimani&apos;s Website, located at [Your Website URL].
       </p>
 
       <p>
-        By accessing this website we assume you accept these terms and conditions. Do not continue to use Sakhi Circle
+        By accessing this website we assume you accept these terms and conditions. Do not continue to use Naarimani
         if you do not agree to take all of the terms and conditions stated on this page.
       </p>
 

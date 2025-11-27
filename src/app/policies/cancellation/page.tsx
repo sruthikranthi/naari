@@ -6,7 +6,7 @@ export default function CancellationPolicyPage() {
       <p>Last updated: July 28, 2024</p>
 
       <p>
-        This policy outlines the terms for cancelling services, subscriptions, or bookings made through Sakhi Circle.
+        This policy outlines the terms for cancelling services, subscriptions, or bookings made through Naarimani.
       </p>
 
       <h2>1. Subscriptions (Premium Membership)</h2>

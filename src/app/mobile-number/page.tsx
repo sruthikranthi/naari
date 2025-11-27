@@ -201,7 +201,7 @@ export default function MobileNumberPage() {
 
       toast({
         title: 'Mobile Number Saved!',
-        description: 'Welcome to Sakhi Circle!',
+        description: 'Welcome to Naarimani!',
       });
 
       // Redirect to dashboard

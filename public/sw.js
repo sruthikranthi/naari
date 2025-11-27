@@ -83,7 +83,7 @@ self.addEventListener('fetch', (event) => {
 // Push notification event
 self.addEventListener('push', (event) => {
   const data = event.data ? event.data.json() : {};
-  const title = data.title || 'Sakhi Circle';
+  const title = data.title || 'Naarimani';
   const options = {
     body: data.body || 'You have a new notification',
     icon: data.icon || '/icon-192x192.png',

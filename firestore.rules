@@ -1,6 +1,6 @@
 
 /**
- * This ruleset enforces a security model for the Sakhi Circle application,
+ * This ruleset enforces a security model for the Naarimani application,
  * balancing user-owned data with collaborative, shared resources.
  *
  * Core Philosophy:

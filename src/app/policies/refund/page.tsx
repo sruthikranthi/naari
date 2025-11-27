@@ -6,7 +6,7 @@ export default function RefundPolicyPage() {
       <p>Last updated: July 28, 2024</p>
 
       <p>
-        Thank you for shopping at Sakhi Circle. We appreciate the fact that you like to buy the stuff we build. We also want
+        Thank you for shopping at Naarimani. We appreciate the fact that you like to buy the stuff we build. We also want
         to make sure you have a rewarding experience while you’re exploring, evaluating, and purchasing our products.
       </p>
       
@@ -31,7 +31,7 @@ export default function RefundPolicyPage() {
       <h2>3. Marketplace Physical Goods</h2>
       <p>
         Refunds for physical goods purchased through the marketplace are subject to the individual seller&apos;s return and refund policy.
-        Sakhi Circle facilitates the connection but is not directly responsible for the seller&apos;s products. Please check the seller&apos;s policy on the product page before purchasing.
+        Naarimani facilitates the connection but is not directly responsible for the seller&apos;s products. Please check the seller&apos;s policy on the product page before purchasing.
       </p>
 
       <h2>4. Contact Us</h2>

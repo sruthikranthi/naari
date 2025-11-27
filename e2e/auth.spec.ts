@@ -10,7 +10,7 @@ test.describe('Authentication', () => {
   });
 
   test('should display login page', async ({ page }) => {
-    await expect(page).toHaveTitle(/Sakhi Circle/i);
+    await expect(page).toHaveTitle(/Naarimani/i);
     await expect(page.getByRole('heading', { name: /login/i })).toBeVisible();
   });
 

@@ -47,7 +47,7 @@ export function Logo({ className }: { className?: string }) {
           strokeMiterlimit="10"
         />
       </svg>
-      <span>Sakhi Circle</span>
+      <span>Naarimani</span>
     </div>
   );
 }

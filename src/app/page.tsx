@@ -242,7 +242,7 @@ function VerificationPage() {
                 className="mt-1"
               />
               <Label htmlFor="terms" className="text-sm text-muted-foreground font-normal">
-                I agree to the Sakhi Circle{' '}
+                I agree to the Naarimani{' '}
                 <Link
                   href="/policies/terms"
                   className="text-primary hover:underline"

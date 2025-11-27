@@ -203,7 +203,7 @@ export default function LoginPage() {
 
         toast({
           title: 'Login Successful!',
-          description: 'Welcome to Sakhi Circle!',
+        description: 'Welcome to Naarimani!',
         });
 
         redirectedRef.current = false;
@@ -250,7 +250,7 @@ export default function LoginPage() {
 
       toast({
         title: 'Login Successful!',
-        description: 'Welcome to Sakhi Circle!',
+        description: 'Welcome to Naarimani!',
       });
 
       // allow redirect after profile loads
@@ -303,7 +303,7 @@ export default function LoginPage() {
 
       <Card className="w-full max-w-sm" style={{ willChange: 'auto' }}>
         <CardHeader>
-          <CardTitle className="text-2xl">Welcome to Sakhi Circle</CardTitle>
+          <CardTitle className="text-2xl">Welcome to Naarimani</CardTitle>
           <CardDescription>Sign in to access your safe space and connect with the community.</CardDescription>
         </CardHeader>
 

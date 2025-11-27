@@ -51,7 +51,7 @@ export default function CreateProfilePage() {
       await setDoc(userDocRef, userProfile);
       toast({
         title: 'Profile Created!',
-        description: 'Welcome to Sakhi Circle!',
+        description: 'Welcome to Naarimani!',
       });
       router.push('/dashboard/profile');
     } catch (error) {

@@ -1,4 +1,4 @@
-# Sakhi Circle (Naari)
+# Naarimani (Naari)
 
 A women-only social platform built with Next.js and Firebase.
 

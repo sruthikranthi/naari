@@ -1,4 +1,4 @@
-# **App Name**: Sakhi Circle
+# **App Name**: Naarimani
 
 ## Core Features:
 

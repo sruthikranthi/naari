@@ -1,6 +1,6 @@
 # Firestore Indexes Documentation
 
-This document explains the Firestore indexes used in the Sakhi Circle application.
+This document explains the Firestore indexes used in the Naarimani application.
 
 ## Index Organization
 

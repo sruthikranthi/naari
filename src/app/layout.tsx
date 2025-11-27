@@ -9,7 +9,7 @@ import { OfflineIndicator } from '@/components/offline-indicator';
 import { ServiceWorkerRegistration } from '@/components/service-worker-registration';
 
 export const metadata: Metadata = {
-  title: 'Sakhi Circle - India\'s First Women-Only Social Platform',
+  title: 'Naarimani - India\'s First Women-Only Social Platform',
   description:
     'India\'s first women-only social platform for safety, friendship, learning, support & empowerment.',
   manifest: '/manifest.json',
@@ -24,21 +24,23 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'Sakhi Circle',
+    title: 'Naarimani',
   },
   formatDetection: {
     telephone: false,
   },
   openGraph: {
     type: 'website',
-    siteName: 'Sakhi Circle',
-    title: 'Sakhi Circle - India\'s First Women-Only Social Platform',
-    description: 'India\'s first women-only social platform for safety, friendship, learning, support & empowerment.',
+    siteName: 'Naarimani',
+    title: 'Naarimani - India\'s First Women-Only Social Platform',
+    description:
+      'India\'s first women-only social platform for safety, friendship, learning, support & empowerment.',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Sakhi Circle',
-    description: 'India\'s first women-only social platform for safety, friendship, learning, support & empowerment.',
+    title: 'Naarimani',
+    description:
+      'India\'s first women-only social platform for safety, friendship, learning, support & empowerment.',
   },
   icons: {
     icon: [
@@ -81,7 +83,7 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="Sakhi Circle" />
+        <meta name="apple-mobile-web-app-title" content="Naarimani" />
       </head>
       <body
         className={cn(
