@@ -16,20 +16,26 @@ const SPLASH_SKIP_KEY = 'sakhi_splash_skipped';
 
 export function SplashScreen({ onComplete }: SplashScreenProps) {
   const [isAnimating, setIsAnimating] = useState(true);
-  const [shouldShow, setShouldShow] = useState(true);
+  // Check localStorage on initial render, not in effect
+  const [shouldShow, setShouldShow] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem(SPLASH_SKIP_KEY) !== 'true';
+    }
+    return true;
+  });
   const { user, isUserLoading } = useUser();
   const router = useRouter();
 
-  // Check if user has skipped splash before
+  // Handle skip completion after initial render
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const hasSkipped = localStorage.getItem(SPLASH_SKIP_KEY) === 'true';
-      if (hasSkipped) {
-        setShouldShow(false);
+    if (!shouldShow) {
+      // Use setTimeout to avoid synchronous setState in effect
+      const timer = setTimeout(() => {
         onComplete();
-      }
+      }, 0);
+      return () => clearTimeout(timer);
     }
-  }, [onComplete]);
+  }, [shouldShow, onComplete]);
 
   useEffect(() => {
     if (!shouldShow) return;
