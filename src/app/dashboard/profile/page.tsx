@@ -613,6 +613,10 @@ export default function ProfilePage() {
             </>
           )}
         </CardContent>
+ HEAD
+=======
+      </Card>
+ fdee1c2 (Move video verification workflow to profile page)
 
       <Tabs defaultValue="activity" className="w-full">
         <TabsList className="grid w-full grid-cols-4">
