@@ -10,8 +10,20 @@ interface FirebaseClientProviderProps {
 
 export function FirebaseClientProvider({ children }: FirebaseClientProviderProps) {
   const firebaseServices = useMemo(() => {
-    // Initialize Firebase on the client side, once per component mount.
-    return initializeFirebase();
+    try {
+      // Initialize Firebase on the client side, once per component mount.
+      const services = initializeFirebase();
+      
+      // Validate that all services were initialized
+      if (!services || !services.firebaseApp || !services.auth || !services.firestore) {
+        throw new Error('Firebase initialization failed: One or more services are undefined');
+      }
+      
+      return services;
+    } catch (error) {
+      console.error('Firebase initialization error:', error);
+      throw error; // Re-throw to prevent rendering with invalid state
+    }
   }, []); // Empty dependency array ensures this runs only once on mount
 
   return (
