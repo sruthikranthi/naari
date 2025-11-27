@@ -6,6 +6,9 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 
 const nextConfig: NextConfig = {
   /* config options here */
+  // PWA configuration
+  reactStrictMode: true,
+  swcMinify: true,
   images: {
     remotePatterns: [
       {
