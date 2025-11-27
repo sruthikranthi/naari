@@ -331,5 +331,42 @@ service cloud.firestore {
       allow get, list, update, delete: if isSuperAdmin();
       allow create: if isOwner(request.resource.data.userId);
     }
+
+    // -------------------------------------------------------------------------
+    // Notifications (/notifications)
+    // -------------------------------------------------------------------------
+
+    /**
+     * @description Users can read their own notifications. System can create notifications for users.
+     * @path /notifications/{notificationId}
+     * @allow (get, list) User `user_abc` reading notifications where `userId` is `user_abc`.
+     * @allow (create) System creating a notification for user `user_abc`.
+     * @deny (read) User `user_xyz` trying to read notifications for user `user_abc`.
+     * @principle Users can only access their own notifications for privacy.
+     */
+    match /notifications/{notificationId} {
+      // For get operations, check if the notification belongs to the user
+      allow get: if isSignedIn() && (resource == null || resource.data.userId == request.auth.uid);
+      // For list queries, check each document - only return notifications belonging to the user
+      // The where clause in the query works together with this rule to ensure security
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      // Allow creating notifications for the authenticated user
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      // Allow updating/deleting own notifications
+      allow update: if isSignedIn() && resource != null && resource.data.userId == request.auth.uid;
+      allow delete: if isSignedIn() && resource != null && resource.data.userId == request.auth.uid;
+    }
+
+    // -------------------------------------------------------------------------
+    // Notification Preferences (/notification_preferences)
+    // -------------------------------------------------------------------------
+
+    /**
+     * @description Users can read and update their own notification preferences.
+     * @path /notification_preferences/{preferenceId}
+     */
+    match /notification_preferences/{preferenceId} {
+      allow get, list, create, update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
   }
 }

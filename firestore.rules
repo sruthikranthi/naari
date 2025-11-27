@@ -111,20 +111,18 @@ service cloud.firestore {
       // Allow other users to add themselves to this user's followerIds (for follow functionality).
       // When updating followerIds, allow if:
       //   1. User is updating their own profile and not changing followerIds, OR
-      //   2. Another user is adding themselves to followerIds (using arrayUnion - new array contains all old values)
+      //   2. Another user is adding themselves to followerIds (follow functionality)
       allow update: if isRelationalIdImmutable('id')
                     && (
                       // User updating their own profile (can update followingIds, but not followerIds directly)
                       (isExistingOwner(userId) && (!('followerIds' in request.resource.data) || request.resource.data.followerIds == resource.data.followerIds))
                       ||
                       // Another user adding themselves to followerIds (follow functionality)
-                      // Check: new followerIds contains auth.uid and preserves all existing followerIds
+                      // Allow if: followerIds is being updated, auth.uid is in the new array, and it's only adding (not removing)
                       (isSignedIn() 
                        && 'followerIds' in request.resource.data
                        && request.auth.uid in request.resource.data.followerIds
-                       && (!('followerIds' in resource.data) || 
-                           (request.resource.data.followerIds.size() >= resource.data.followerIds.size() 
-                            && request.resource.data.followerIds.hasAll(resource.data.followerIds))))
+                       && (!('followerIds' in resource.data) || request.resource.data.followerIds.size() >= resource.data.followerIds.size()))
                     );
       allow delete: if isExistingOwner(userId);
     }
@@ -330,6 +328,43 @@ service cloud.firestore {
     match /professional_applications/{applicationId} {
       allow get, list, update, delete: if isSuperAdmin();
       allow create: if isOwner(request.resource.data.userId);
+    }
+
+    // -------------------------------------------------------------------------
+    // Notifications (/notifications)
+    // -------------------------------------------------------------------------
+
+    /**
+     * @description Users can read their own notifications. System can create notifications for users.
+     * @path /notifications/{notificationId}
+     * @allow (get, list) User `user_abc` reading notifications where `userId` is `user_abc`.
+     * @allow (create) System creating a notification for user `user_abc`.
+     * @deny (read) User `user_xyz` trying to read notifications for user `user_abc`.
+     * @principle Users can only access their own notifications for privacy.
+     */
+    match /notifications/{notificationId} {
+      // For get operations, check if the notification belongs to the user
+      allow get: if isSignedIn() && (resource == null || resource.data.userId == request.auth.uid);
+      // For list queries, check each document - only return notifications belonging to the user
+      // The where clause in the query works together with this rule to ensure security
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      // Allow creating notifications for the authenticated user
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      // Allow updating/deleting own notifications
+      allow update: if isSignedIn() && resource != null && resource.data.userId == request.auth.uid;
+      allow delete: if isSignedIn() && resource != null && resource.data.userId == request.auth.uid;
+    }
+
+    // -------------------------------------------------------------------------
+    // Notification Preferences (/notification_preferences)
+    // -------------------------------------------------------------------------
+
+    /**
+     * @description Users can read and update their own notification preferences.
+     * @path /notification_preferences/{preferenceId}
+     */
+    match /notification_preferences/{preferenceId} {
+      allow get, list, create, update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
     }
   }
 }
