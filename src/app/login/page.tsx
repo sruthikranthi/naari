@@ -13,6 +13,8 @@ import {
   signInWithEmailAndPassword,
   sendEmailVerification,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   GoogleAuthProvider,
 } from 'firebase/auth';
 import { doc } from 'firebase/firestore';
@@ -191,6 +193,38 @@ export default function LoginPage() {
     }
   }, [auth, toast]);
 
+  useEffect(() => {
+    if (!auth) return;
+    let isMounted = true;
+
+    getRedirectResult(auth)
+      .then((result) => {
+        if (!isMounted || !result?.user) return;
+
+        toast({
+          title: 'Login Successful!',
+          description: 'Welcome to Sakhi Circle!',
+        });
+
+        redirectedRef.current = false;
+      })
+      .catch((err: any) => {
+        console.error('Google redirect sign-in error:', err);
+        if (!isMounted) return;
+        const message = err?.message || 'Failed to complete Google sign-in redirect.';
+        setError(message);
+        toast({
+          variant: 'destructive',
+          title: 'Google Sign-In Failed',
+          description: message,
+        });
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [auth, toast]);
+
   const handleGoogleSignIn = useCallback(async () => {
     if (!auth) {
       setError('Authentication service is not available. Please refresh the page.');
@@ -224,19 +258,34 @@ export default function LoginPage() {
     } catch (err: any) {
       console.error('Google sign-in error:', err);
       let message = 'Failed to sign in with Google. Please try again.';
+      let handled = false;
+      if (err.code === 'auth/internal-error') {
+        try {
+          const provider = new GoogleAuthProvider();
+          provider.addScope('profile');
+          provider.addScope('email');
+          await signInWithRedirect(auth, provider);
+          handled = true;
+        } catch (redirectErr: any) {
+          console.error('Google redirect fallback error:', redirectErr);
+          message = redirectErr?.message || message;
+        }
+      }
       if (err.code === 'auth/popup-closed-by-user') {
         message = 'Sign-in popup was closed.';
       } else if (err.code === 'auth/popup-blocked') {
         message = 'Popup was blocked by your browser.';
-      } else if (err.message) {
+      } else if (!handled && err.message) {
         message = err.message;
       }
-      setError(message);
-      toast({
-        variant: 'destructive',
-        title: 'Google Sign-In Failed',
-        description: message,
-      });
+      if (!handled) {
+        setError(message);
+        toast({
+          variant: 'destructive',
+          title: 'Google Sign-In Failed',
+          description: message,
+        });
+      }
     } finally {
       setIsGoogleLoading(false);
     }
