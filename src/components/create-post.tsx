@@ -112,7 +112,7 @@ export function CreatePost() {
             }))
         : undefined;
 
-      const newPost = {
+      const newPost: any = {
         author: {
           id: user.uid,
           name: user.displayName || 'Anonymous Sakhi',
@@ -123,10 +123,18 @@ export function CreatePost() {
         likes: 0,
         comments: 0,
         isAnonymous,
-        image: mediaType === 'image' ? mediaUrl : undefined,
-        video: mediaType === 'video' ? mediaUrl : undefined,
-        pollOptions: sanitizedPollOptions
       };
+
+      // Only include image/video fields if they have values (Firestore doesn't accept undefined)
+      if (mediaType === 'image' && mediaUrl) {
+        newPost.image = mediaUrl;
+      }
+      if (mediaType === 'video' && mediaUrl) {
+        newPost.video = mediaUrl;
+      }
+      if (sanitizedPollOptions && sanitizedPollOptions.length > 0) {
+        newPost.pollOptions = sanitizedPollOptions;
+      }
       
       const postsCollection = collection(firestore, 'posts');
       await addDoc(postsCollection, newPost);
