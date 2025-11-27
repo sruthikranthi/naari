@@ -109,9 +109,12 @@ export function Stories() {
     }
   };
 
-  const handleCloseDialog = () => {
-    setIsCameraOpen(false);
-    handleRemoveMedia();
+  const handleDialogChange = (open: boolean) => {
+    setIsCameraOpen(open);
+    if (!open) {
+      // Only clear media when closing
+      handleRemoveMedia();
+    }
   };
 
   const isLoading = isUserLoading || areUsersLoading;
@@ -122,10 +125,10 @@ export function Stories() {
         <div className="p-4">
           <div className="flex items-center space-x-4">
             {/* Add Story */}
-            <Dialog open={isCameraOpen} onOpenChange={handleCloseDialog}>
+            <Dialog open={isCameraOpen} onOpenChange={handleDialogChange}>
               <DialogTrigger asChild>
-                <div className="flex flex-col items-center space-y-1 cursor-pointer">
-                  <button className="relative flex h-16 w-16 items-center justify-center rounded-full bg-secondary">
+                <button className="flex flex-col items-center space-y-1 cursor-pointer bg-transparent border-0 p-0">
+                  <div className="relative flex h-16 w-16 items-center justify-center rounded-full bg-secondary">
                      {isLoading ? (
                         <Skeleton className="h-[60px] w-[60px] rounded-full" />
                      ) : (
@@ -143,9 +146,9 @@ export function Stories() {
                     <div className="absolute bottom-0 right-0 flex h-5 w-5 items-center justify-center rounded-full border-2 border-card bg-primary text-primary-foreground">
                       <Plus className="h-3 w-3" />
                     </div>
-                  </button>
+                  </div>
                   <span className="w-16 truncate text-xs">Your Story</span>
-                </div>
+                </button>
               </DialogTrigger>
               <DialogContent className="max-w-2xl">
                 <DialogHeader>
