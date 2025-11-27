@@ -70,12 +70,14 @@ export function CameraCapture({ onMediaCaptured, showControls = true }: CameraCa
     getCameraPermission();
     return () => {
       // Clean up stream when component unmounts or dependencies change
-      if (stream) {
-        stream.getTracks().forEach((track) => track.stop());
+      const currentStream = stream;
+      const currentVideoRef = videoRef.current;
+      if (currentStream) {
+        currentStream.getTracks().forEach((track) => track.stop());
       }
       // Also clear video srcObject
-      if (videoRef.current) {
-        videoRef.current.srcObject = null;
+      if (currentVideoRef) {
+        currentVideoRef.srcObject = null;
       }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -1,6 +1,7 @@
 
 'use client';
 import { useState, useMemo, useRef } from 'react';
+import Image from 'next/image';
 import type { User, StoryItem } from '@/lib/mock-data';
 import { useCollection, useFirestore, useUser, useMemoFirebase, useStorage } from '@/firebase';
 import { collection, doc, updateDoc, arrayUnion, serverTimestamp } from 'firebase/firestore';
@@ -71,8 +72,9 @@ export function Stories() {
   // Include current user if they have stories
   const allStoryUsers = useMemo(() => {
     const otherUsers = usersWithMockStories.filter(u => u.id !== loggedInUser?.uid && u.stories && u.stories.length > 0);
-    const currentUserWithStories = loggedInUser && allUsers?.find(u => u.id === loggedInUser.uid)?.stories && allUsers.find(u => u.id === loggedInUser.uid)?.stories!.length > 0
-      ? [allUsers.find(u => u.id === loggedInUser.uid)!]
+    const currentUser = loggedInUser ? allUsers?.find(u => u.id === loggedInUser.uid) : null;
+    const currentUserWithStories = currentUser && currentUser.stories && currentUser.stories.length > 0
+      ? [currentUser]
       : [];
     return [...currentUserWithStories, ...otherUsers];
   }, [usersWithMockStories, loggedInUser, allUsers]);
@@ -257,10 +259,12 @@ export function Stories() {
                   <div className="space-y-4">
                     <div className="relative aspect-[9/16] bg-black rounded-lg overflow-hidden">
                       {mediaType === 'image' ? (
-                        <img
+                        <Image
                           src={mediaPreview}
                           alt="Story preview"
-                          className="w-full h-full object-contain"
+                          fill
+                          className="object-contain"
+                          unoptimized
                         />
                       ) : (
                         <video
