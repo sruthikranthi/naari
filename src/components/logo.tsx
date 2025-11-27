@@ -1,10 +1,15 @@
+'use client';
+
+import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
 export function Logo({ className }: { className?: string }) {
   return (
-    <div
+    <Link 
+      href="/dashboard" 
+      aria-label="Go to dashboard"
       className={cn(
-        'flex items-center gap-2 text-xl font-bold font-headline text-foreground',
+        'flex items-center gap-2 text-xl font-bold font-headline text-foreground cursor-pointer hover:opacity-80 transition-opacity',
         className
       )}
     >
@@ -48,6 +53,6 @@ export function Logo({ className }: { className?: string }) {
         />
       </svg>
       <span>Naarimani</span>
-    </div>
+    </Link>
   );
 }
