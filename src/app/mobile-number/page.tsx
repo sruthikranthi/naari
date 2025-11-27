@@ -61,6 +61,7 @@ export default function MobileNumberPage() {
   const [errorDetails, setErrorDetails] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const [showHelp, setShowHelp] = useState(false);
+  const [hasRedirected, setHasRedirected] = useState(false);
 
   // Fetch user profile to check if mobile number already exists
   // Only create doc ref if user exists and we're not redirecting
@@ -71,8 +72,6 @@ export default function MobileNumberPage() {
     return doc(firestore, 'users', user.uid);
   }, [firestore, user, hasRedirected]);
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<User>(userDocRef);
-
-  const [hasRedirected, setHasRedirected] = useState(false);
   const redirectingRef = useRef(false);
   const lastCheckedRef = useRef<string | null>(null);
   const redirectTimeoutRef = useRef<NodeJS.Timeout | null>(null);

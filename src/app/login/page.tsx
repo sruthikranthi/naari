@@ -1,17 +1,26 @@
-
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { signInWithEmailAndPassword, sendEmailVerification, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import {
+  useAuth,
+  useUser,
+  useFirestore,
+  useDoc,
+  useMemoFirebase,
+} from '@/firebase';
+import {
+  signInWithEmailAndPassword,
+  sendEmailVerification,
+  signInWithPopup,
+  GoogleAuthProvider,
+} from 'firebase/auth';
 import { doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -26,12 +35,15 @@ import { Separator } from '@/components/ui/separator';
 import type { User } from '@/lib/mock-data';
 
 export default function LoginPage() {
+  // ---------- Core services ----------
   const auth = useAuth();
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const router = useRouter();
   const pathname = usePathname();
   const { toast } = useToast();
+
+  // ---------- State & refs (DECLARED BEFORE hooks that use them) ----------
   const [email, setEmail] = useState('admin@sakhi.com');
   const [password, setPassword] = useState('password');
   const [isLoading, setIsLoading] = useState(false);
@@ -40,136 +52,127 @@ export default function LoginPage() {
   const [isResendingVerification, setIsResendingVerification] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
-  // Check user profile for mobile number
-  // Only create doc ref if user exists and we're not redirecting
+  // Prevents multiple navigations (uses ref so effect doesn't re-run redirect)
+  const redirectedRef = useRef(false);
+
+  // ---------- Firestore doc + profile (memoized) ----------
   const userDocRef = useMemoFirebase(() => {
-    if (!firestore || !user || hasRedirected) {
-      return null;
-    }
+    if (!firestore || !user) return null;
     return doc(firestore, 'users', user.uid);
-  }, [firestore, user, hasRedirected]);
+  }, [firestore, user]);
+
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<User>(userDocRef);
-  const [hasRedirected, setHasRedirected] = useState(false);
-  const redirectingRef = useRef(false);
-  const lastCheckedRef = useRef<string | null>(null);
-  const redirectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // ---------- Derived flags ----------
+  const isAuthReady = !isUserLoading && Boolean(user);
+  const isProfileReady = !isProfileLoading;
+
+  // ---------- Redirect effect (single source of truth) ----------
   useEffect(() => {
-    // Clear any pending redirect timeout
-    if (redirectTimeoutRef.current) {
-      clearTimeout(redirectTimeoutRef.current);
-      redirectTimeoutRef.current = null;
-    }
+    // Only run when auth/profile are ready, and haven't redirected yet
+    if (redirectedRef.current) return;
+    if (!isAuthReady || !isProfileReady) return;
 
-    // Prevent multiple redirects using ref to avoid re-renders
-    if (redirectingRef.current || hasRedirected) return;
-    
-    // Create a stable key for the current state to prevent rapid re-checks
-    const stateKey = `${isUserLoading}-${isProfileLoading}-${user?.uid || 'no-user'}-${userProfile?.mobileNumber || 'no-mobile'}`;
-    if (lastCheckedRef.current === stateKey) return;
-    lastCheckedRef.current = stateKey;
-    
-    // Debounce redirect to prevent rapid re-renders
-    redirectTimeoutRef.current = setTimeout(() => {
-      if (!isUserLoading && !isProfileLoading && user) {
-        redirectingRef.current = true;
-        setHasRedirected(true);
-        // If user has mobile number, go to dashboard (only if not already there)
-        if (userProfile && userProfile.mobileNumber && pathname !== '/dashboard') {
-          router.replace('/dashboard');
-        } else if ((!userProfile || !userProfile.mobileNumber) && pathname !== '/mobile-number') {
-          // Otherwise, go to mobile number collection (only if not already there)
-          router.replace('/mobile-number');
+    // If user is missing (logged out) -> noop
+    if (!user) return;
+
+    // mark redirected to prevent duplicate navigations
+    redirectedRef.current = true;
+
+    // Route decision
+    const hasMobile = Boolean(userProfile?.mobileNumber);
+    if (hasMobile && pathname !== '/dashboard') {
+      router.replace('/dashboard');
+    } else if (!hasMobile && pathname !== '/mobile-number') {
+      router.replace('/mobile-number');
+    }
+  }, [isAuthReady, isProfileReady, user, userProfile, router, pathname]);
+
+  // ---------- Handlers ----------
+  const handleLogin = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      setError(null);
+      setEmailNotVerified(false);
+
+      const sanitizedEmail = sanitizeText(email);
+      const sanitizedPassword = password.trim();
+
+      if (!validationSchemas.email.validate(sanitizedEmail)) {
+        setError(validationSchemas.email.message);
+        return;
+      }
+      if (sanitizedPassword.length < 6) {
+        setError('Password must be at least 6 characters');
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        const userCredential = await signInWithEmailAndPassword(
+          auth,
+          sanitizedEmail,
+          sanitizedPassword
+        );
+
+        if (!userCredential.user.emailVerified) {
+          setEmailNotVerified(true);
+          toast({
+            variant: 'destructive',
+            title: 'Email Not Verified',
+            description: 'Please verify your email address before accessing the dashboard.',
+          });
+        } else {
+          toast({
+            title: 'Login Successful!',
+            description: 'Redirecting...',
+          });
+          // Redirect is handled by effect when profile is ready
+          redirectedRef.current = false; // allow redirect once profile loads
         }
-      }
-    }, 100); // 100ms debounce
+      } catch (err: any) {
+        let errorMessage = 'Please check your credentials and try again.';
+        let errorHint = '';
 
-    return () => {
-      if (redirectTimeoutRef.current) {
-        clearTimeout(redirectTimeoutRef.current);
-        redirectTimeoutRef.current = null;
-      }
-    };
-  }, [user, isUserLoading, userProfile, isProfileLoading, router, hasRedirected, pathname]);
+        switch (err.code) {
+          case 'auth/user-not-found':
+            errorMessage = 'No account found with this email address.';
+            errorHint = 'Please check your email or sign up for a new account.';
+            break;
+          case 'auth/wrong-password':
+            errorMessage = 'Incorrect password. Please try again.';
+            break;
+          case 'auth/too-many-requests':
+            errorMessage = 'Too many failed attempts. Try again later.';
+            break;
+          case 'auth/invalid-email':
+            errorMessage = 'Invalid email address.';
+            break;
+          case 'auth/network-request-failed':
+            errorMessage = 'Network error. Check your connection.';
+            break;
+          case 'auth/operation-not-allowed':
+            errorMessage = 'This sign-in method is not enabled.';
+            break;
+          default:
+            if (err.message) errorMessage = err.message;
+        }
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError(null);
-    setEmailNotVerified(false);
-
-    // Validate and sanitize inputs
-    const sanitizedEmail = sanitizeText(email);
-    const sanitizedPassword = password.trim();
-
-    if (!validationSchemas.email.validate(sanitizedEmail)) {
-      setError(validationSchemas.email.message);
-      setIsLoading(false);
-      return;
-    }
-
-    if (sanitizedPassword.length < 6) {
-      setError('Password must be at least 6 characters');
-      setIsLoading(false);
-      return;
-    }
-
-    try {
-      const userCredential = await signInWithEmailAndPassword(auth, sanitizedEmail, sanitizedPassword);
-      
-      // Check email verification
-      if (!userCredential.user.emailVerified) {
-        setEmailNotVerified(true);
+        setError(errorMessage);
         toast({
           variant: 'destructive',
-          title: 'Email Not Verified',
-          description: 'Please verify your email address before accessing the dashboard.',
+          title: 'Login Failed',
+          description: errorHint || errorMessage,
         });
-      } else {
-        toast({
-          title: 'Login Successful!',
-          description: 'Redirecting...',
-        });
-        // The useEffect will handle the redirect based on mobile number
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error: any) {
-      let errorMessage = 'Please check your credentials and try again.';
-      let errorHint = '';
-      
-      if (error.code === 'auth/user-not-found') {
-        errorMessage = 'No account found with this email address.';
-        errorHint = 'Please check your email or sign up for a new account.';
-      } else if (error.code === 'auth/wrong-password') {
-        errorMessage = 'Incorrect password. Please try again.';
-        errorHint = 'Make sure Caps Lock is off and check for typos. You can reset your password if needed.';
-      } else if (error.code === 'auth/too-many-requests') {
-        errorMessage = 'Too many failed attempts. Please try again later.';
-        errorHint = 'For security, your account has been temporarily locked. Please wait a few minutes or reset your password.';
-      } else if (error.code === 'auth/invalid-email') {
-        errorMessage = 'Invalid email address.';
-        errorHint = 'Please enter a valid email address (e.g., name@example.com).';
-      } else if (error.code === 'auth/network-request-failed') {
-        errorMessage = 'Network error. Please check your connection.';
-        errorHint = 'Make sure you have a stable internet connection and try again.';
-      } else if (error.code === 'auth/operation-not-allowed') {
-        errorMessage = 'This sign-in method is not enabled.';
-        errorHint = 'Please contact support or try a different sign-in method.';
-      }
-      
-      setError(errorMessage);
-      toast({
-        variant: 'destructive',
-        title: 'Login Failed',
-        description: errorHint || errorMessage,
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    },
+    [auth, email, password, toast]
+  );
 
-  const handleResendVerification = async () => {
+  const handleResendVerification = useCallback(async () => {
     if (!auth.currentUser) return;
-    
     setIsResendingVerification(true);
     try {
       await sendEmailVerification(auth.currentUser);
@@ -177,18 +180,18 @@ export default function LoginPage() {
         title: 'Verification Email Sent',
         description: 'Please check your inbox and click the verification link.',
       });
-    } catch (error: any) {
+    } catch (err: any) {
       toast({
         variant: 'destructive',
         title: 'Failed to Send Verification Email',
-        description: error.message || 'Please try again later.',
+        description: err?.message || 'Please try again later.',
       });
     } finally {
       setIsResendingVerification(false);
     }
-  };
+  }, [auth, toast]);
 
-  const handleGoogleSignIn = async () => {
+  const handleGoogleSignIn = useCallback(async () => {
     if (!auth) {
       setError('Authentication service is not available. Please refresh the page.');
       toast({
@@ -201,77 +204,61 @@ export default function LoginPage() {
 
     setIsGoogleLoading(true);
     setError(null);
-    
     try {
       const provider = new GoogleAuthProvider();
-      // Add additional scopes if needed
       provider.addScope('profile');
       provider.addScope('email');
-      
+
       const userCredential = await signInWithPopup(auth, provider);
-      
-      // Verify the user was actually authenticated
       if (!userCredential || !userCredential.user) {
         throw new Error('Authentication failed. No user returned.');
       }
-      
+
       toast({
         title: 'Login Successful!',
         description: 'Welcome to Sakhi Circle!',
       });
-      
-      // The useEffect will handle the redirect based on mobile number
-      // Reset redirect flag to allow redirect after successful login
-      setHasRedirected(false);
-    } catch (error: any) {
-      console.error('Google sign-in error:', error);
-      let errorMessage = 'Failed to sign in with Google. Please try again.';
-      let errorHint = '';
-      
-      if (error.code === 'auth/popup-closed-by-user') {
-        errorMessage = 'Sign-in popup was closed.';
-        errorHint = 'Please try again and complete the sign-in process.';
-      } else if (error.code === 'auth/popup-blocked') {
-        errorMessage = 'Popup was blocked by your browser.';
-        errorHint = 'Please allow popups for this site and try again.';
-      } else if (error.code === 'auth/cancelled-popup-request') {
-        errorMessage = 'Sign-in was cancelled.';
-        errorHint = 'Please try again.';
-      } else if (error.code === 'auth/unauthorized-domain') {
-        errorMessage = 'This domain is not authorized for Google sign-in.';
-        errorHint = 'Please contact support.';
-      } else if (error.code === 'auth/operation-not-allowed') {
-        errorMessage = 'Google sign-in is not enabled.';
-        errorHint = 'Please contact support or use email sign-in.';
-      } else if (error.message) {
-        errorMessage = error.message;
+
+      // allow redirect after profile loads
+      redirectedRef.current = false;
+    } catch (err: any) {
+      console.error('Google sign-in error:', err);
+      let message = 'Failed to sign in with Google. Please try again.';
+      if (err.code === 'auth/popup-closed-by-user') {
+        message = 'Sign-in popup was closed.';
+      } else if (err.code === 'auth/popup-blocked') {
+        message = 'Popup was blocked by your browser.';
+      } else if (err.message) {
+        message = err.message;
       }
-      
-      setError(errorMessage);
+      setError(message);
       toast({
         variant: 'destructive',
         title: 'Google Sign-In Failed',
-        description: errorHint || errorMessage,
+        description: message,
       });
     } finally {
       setIsGoogleLoading(false);
     }
-  };
+  }, [auth, toast]);
 
+  // ---------- UI ----------
   return (
-    <div className="flex min-h-screen w-full flex-col items-center justify-center bg-secondary/50 p-4" style={{ willChange: 'auto', minHeight: '100vh' }}>
+    <div
+      className="flex min-h-screen w-full flex-col items-center justify-center bg-secondary/50 p-4"
+      style={{ willChange: 'auto', minHeight: '100vh' }}
+    >
       <div className="absolute top-8 left-8">
         <Logo />
       </div>
+
       <Card className="w-full max-w-sm" style={{ willChange: 'auto' }}>
         <CardHeader>
           <CardTitle className="text-2xl">Welcome to Sakhi Circle</CardTitle>
-          <CardDescription>
-            Sign in to access your safe space and connect with the community.
-          </CardDescription>
+          <CardDescription>Sign in to access your safe space and connect with the community.</CardDescription>
         </CardHeader>
+
         <CardContent className="grid gap-4">
-          {/* Google Sign In Button */}
           <Button
             type="button"
             variant="outline"
@@ -286,23 +273,12 @@ export default function LoginPage() {
               </>
             ) : (
               <>
+                {/* Google icon */}
                 <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
-                  <path
-                    fill="currentColor"
-                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                  />
-                  <path
-                    fill="currentColor"
-                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                  />
-                  <path
-                    fill="currentColor"
-                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                  />
-                  <path
-                    fill="currentColor"
-                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                  />
+                  <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                  <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                  <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                  <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                 </svg>
                 Continue with Google
               </>
@@ -346,6 +322,7 @@ export default function LoginPage() {
                   </AlertDescription>
                 </Alert>
               )}
+
               <div className="grid gap-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -357,9 +334,7 @@ export default function LoginPage() {
                   onChange={(e) => {
                     const sanitized = sanitizeText(e.target.value);
                     setEmail(sanitized);
-                    if (error && isValidEmail(sanitized)) {
-                      setError(null);
-                    }
+                    if (error && isValidEmail(sanitized)) setError(null);
                   }}
                   onBlur={(e) => {
                     const sanitized = sanitizeText(e.target.value);
@@ -369,6 +344,7 @@ export default function LoginPage() {
                   }}
                 />
               </div>
+
               <div className="grid gap-2">
                 <Label htmlFor="password">Password</Label>
                 <Input
@@ -380,8 +356,10 @@ export default function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                 />
               </div>
+
               {error && <p className="text-sm text-destructive">{error}</p>}
             </div>
+
             <Button className="w-full mt-4" type="submit" disabled={isLoading || isGoogleLoading}>
               {isLoading && <Loader className="mr-2 h-4 w-4 animate-spin" />}
               Sign In with Email
