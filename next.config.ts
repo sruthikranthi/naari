@@ -44,7 +44,7 @@ const nextConfig: NextConfig = {
               "img-src 'self' data: https: blob:",
               "media-src 'self' blob: https: data:",
               "font-src 'self' https://fonts.gstatic.com data:",
-              "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.firebase.com wss://*.firebaseio.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com",
+              "connect-src 'self' blob: https://*.googleapis.com https://*.firebaseio.com https://*.firebase.com wss://*.firebaseio.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com",
               "frame-src 'self' https://*.google.com",
               "object-src 'none'",
               "base-uri 'self'",
