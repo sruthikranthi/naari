@@ -16,29 +16,35 @@ const SPLASH_SKIP_KEY = 'sakhi_splash_skipped';
 
 export function SplashScreen({ onComplete }: SplashScreenProps) {
   const [isAnimating, setIsAnimating] = useState(true);
-  // Check localStorage on initial render, not in effect
-  const [shouldShow, setShouldShow] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem(SPLASH_SKIP_KEY) !== 'true';
-    }
-    return true;
-  });
+  const [shouldShow, setShouldShow] = useState(true); // Always start with true to match SSR
+  const [isMounted, setIsMounted] = useState(false);
   const { user, isUserLoading } = useUser();
   const router = useRouter();
 
+  // Check localStorage only after component mounts (client-side only)
+  useEffect(() => {
+    setIsMounted(true);
+    if (typeof window !== 'undefined') {
+      const hasSkipped = localStorage.getItem(SPLASH_SKIP_KEY) === 'true';
+      if (hasSkipped) {
+        setShouldShow(false);
+      }
+    }
+  }, []);
+
   // Handle skip completion after initial render
   useEffect(() => {
-    if (!shouldShow) {
+    if (isMounted && !shouldShow) {
       // Use setTimeout to avoid synchronous setState in effect
       const timer = setTimeout(() => {
         onComplete();
       }, 0);
       return () => clearTimeout(timer);
     }
-  }, [shouldShow, onComplete]);
+  }, [isMounted, shouldShow, onComplete]);
 
   useEffect(() => {
-    if (!shouldShow) return;
+    if (!isMounted || !shouldShow) return;
     
     // Show splash for at least 2 seconds
     const timer = setTimeout(() => {
@@ -49,7 +55,7 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
     }, 2500);
 
     return () => clearTimeout(timer);
-  }, [onComplete, shouldShow]);
+  }, [isMounted, onComplete, shouldShow]);
 
   const handleSkip = () => {
     if (typeof window !== 'undefined') {
@@ -68,7 +74,8 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
     }
   }, [user, isUserLoading, router]);
 
-  if (!shouldShow) {
+  // Don't render until mounted to prevent hydration mismatch
+  if (!isMounted || !shouldShow) {
     return null;
   }
 

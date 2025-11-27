@@ -10,16 +10,18 @@ import { cn } from '@/lib/utils';
  * Shows when the user is offline and hides when back online
  */
 export function OfflineIndicator() {
-  // Use lazy initializer to avoid SSR issues and setState in effect
-  const [isOnline, setIsOnline] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return navigator.onLine;
-    }
-    return true;
-  });
+  // Always start with true to match SSR (assume online on server)
+  const [isOnline, setIsOnline] = useState(true);
   const [wasOffline, setWasOffline] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
+    setIsMounted(true);
+    // Set initial online status after mount
+    if (typeof window !== 'undefined') {
+      setIsOnline(navigator.onLine);
+    }
+
     const handleOnline = () => {
       setIsOnline(true);
       // Show a brief "back online" message
@@ -32,16 +34,21 @@ export function OfflineIndicator() {
       setWasOffline(false);
     };
 
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
+    if (typeof window !== 'undefined') {
+      window.addEventListener('online', handleOnline);
+      window.addEventListener('offline', handleOffline);
+    }
 
     return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('online', handleOnline);
+        window.removeEventListener('offline', handleOffline);
+      }
     };
   }, []);
 
-  if (isOnline && !wasOffline) {
+  // Don't render until mounted to prevent hydration mismatch
+  if (!isMounted || (isOnline && !wasOffline)) {
     return null;
   }
 

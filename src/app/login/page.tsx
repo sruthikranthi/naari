@@ -190,15 +190,12 @@ export default function LoginPage() {
 
   // ---------- UI ----------
   return (
-    <div
-      className="flex min-h-screen w-full flex-col items-center justify-center bg-secondary/50 p-4"
-      style={{ willChange: 'auto', minHeight: '100vh' }}
-    >
+    <div className="flex min-h-screen w-full flex-col items-center justify-center bg-secondary/50 p-4">
       <div className="absolute top-8 left-8">
         <Logo />
       </div>
 
-      <Card className="w-full max-w-sm" style={{ willChange: 'auto' }}>
+      <Card className="w-full max-w-sm">
         <CardHeader>
           <CardTitle className="text-2xl">Welcome to Naarimani</CardTitle>
           <CardDescription>Sign in to access your safe space and connect with the community.</CardDescription>
