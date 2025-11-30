@@ -2,50 +2,81 @@
  * Server-side Firebase initialization for API routes
  * This file is for server-side use only (API routes, server components)
  * 
- * Note: For server-side operations, we use the regular Firebase SDK
- * but we need to handle authentication differently in API routes.
+ * Uses Firebase Admin SDK for server-side operations which bypasses security rules
  */
 
 import { firebaseConfig } from '@/firebase/config';
-import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
-import { getStorage } from 'firebase/storage';
+import admin from 'firebase-admin';
 
-let firebaseApp: FirebaseApp | null = null;
+let adminApp: admin.app.App | null = null;
 
+/**
+ * Initialize Firebase Admin SDK for server-side operations
+ * Admin SDK bypasses Firestore security rules and is designed for server-side use
+ */
 export function initializeFirebaseServer() {
   // Return existing app if already initialized
-  if (firebaseApp) {
-    return getSdks(firebaseApp);
+  if (adminApp) {
+    return {
+      firestore: admin.firestore(),
+      auth: admin.auth(),
+      storage: admin.storage(),
+    };
   }
 
-  // Check if Firebase is already initialized
-  if (getApps().length > 0) {
-    firebaseApp = getApp();
-    return getSdks(firebaseApp);
+  // Check if already initialized
+  if (admin.apps.length > 0) {
+    adminApp = admin.app();
+    return {
+      firestore: admin.firestore(),
+      auth: admin.auth(),
+      storage: admin.storage(),
+    };
   }
 
-  // Validate that firebaseConfig has required fields
-  if (!firebaseConfig || !firebaseConfig.apiKey || !firebaseConfig.projectId) {
-    throw new Error(
-      'Firebase configuration is missing. Please ensure NEXT_PUBLIC_FIREBASE_API_KEY and NEXT_PUBLIC_FIREBASE_PROJECT_ID are set.'
-    );
+  // Initialize Admin SDK
+  // Option 1: Use service account (recommended for production)
+  // Option 2: Use application default credentials
+  // Option 3: Use environment variables (for Vercel/Netlify)
+  
+  try {
+    // Try to initialize with service account credentials from environment
+    if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
+      const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
+      adminApp = admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+        projectId: firebaseConfig.projectId,
+      });
+    } else if (process.env.FIREBASE_PROJECT_ID) {
+      // Use application default credentials (for Firebase App Hosting or GCP)
+      adminApp = admin.initializeApp({
+        projectId: firebaseConfig.projectId,
+      });
+    } else {
+      // Fallback: Initialize with project ID only (works in some environments)
+      adminApp = admin.initializeApp({
+        projectId: firebaseConfig.projectId,
+      });
+    }
+  } catch (error: any) {
+    console.error('Firebase Admin initialization error:', error);
+    // If Admin SDK fails, try to initialize with minimal config
+    try {
+      adminApp = admin.initializeApp({
+        projectId: firebaseConfig.projectId,
+      });
+    } catch (fallbackError: any) {
+      throw new Error(
+        `Failed to initialize Firebase Admin SDK: ${fallbackError.message}. ` +
+        `Please set FIREBASE_SERVICE_ACCOUNT_KEY or FIREBASE_PROJECT_ID environment variable.`
+      );
+    }
   }
 
-  // Initialize Firebase with the config (server-side always needs config)
-  firebaseApp = initializeApp(firebaseConfig, 'server');
-
-  // Return the SDKs
-  return getSdks(firebaseApp);
-}
-
-function getSdks(firebaseApp: FirebaseApp) {
   return {
-    firebaseApp,
-    auth: getAuth(firebaseApp),
-    firestore: getFirestore(firebaseApp),
-    storage: getStorage(firebaseApp)
+    firestore: admin.firestore(),
+    auth: admin.auth(),
+    storage: admin.storage(),
   };
 }
 
@@ -54,15 +85,11 @@ function getSdks(firebaseApp: FirebaseApp) {
  */
 export async function verifyAuthToken(token: string): Promise<string | null> {
   try {
-    const { initializeFirebaseServer } = await import('./server');
     const { auth } = initializeFirebaseServer();
-    // Note: verifyIdToken is from Admin SDK, we'll use a different approach
-    // For now, we'll trust the token and extract userId from it
-    // In production, you should use Firebase Admin SDK to verify tokens
-    return null; // Will be implemented with Admin SDK if needed
+    const decodedToken = await auth.verifyIdToken(token);
+    return decodedToken.uid;
   } catch (error) {
     console.error('Token verification error:', error);
     return null;
   }
 }
-

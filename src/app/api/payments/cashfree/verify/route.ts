@@ -5,7 +5,6 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { initializeFirebaseServer } from '@/firebase/server';
-import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 
 const CASHFREE_APP_ID = process.env.CASHFREE_APP_ID || '';
 const CASHFREE_SECRET_KEY = process.env.CASHFREE_SECRET_KEY || '';
@@ -28,16 +27,25 @@ export async function POST(request: NextRequest) {
 
     const { firestore } = initializeFirebaseServer();
 
-    // Get payment record
+    // Get payment record using Admin SDK
     let paymentDoc;
+    let paymentData;
     if (paymentId) {
-      paymentDoc = await getDoc(doc(firestore, 'payments', paymentId));
+      paymentDoc = await firestore.collection('payments').doc(paymentId).get();
+      if (!paymentDoc.exists) {
+        return NextResponse.json(
+          { error: 'Payment not found' },
+          { status: 404 }
+        );
+      }
+      paymentData = paymentDoc.data();
     } else {
       // Find by orderId
-      const { collection, query, where, getDocs } = await import('firebase/firestore');
-      const paymentsRef = collection(firestore, 'payments');
-      const q = query(paymentsRef, where('orderId', '==', orderId));
-      const snapshot = await getDocs(q);
+      const snapshot = await firestore.collection('payments')
+        .where('orderId', '==', orderId)
+        .limit(1)
+        .get();
+      
       if (snapshot.empty) {
         return NextResponse.json(
           { error: 'Payment not found' },
@@ -45,16 +53,8 @@ export async function POST(request: NextRequest) {
         );
       }
       paymentDoc = snapshot.docs[0];
+      paymentData = paymentDoc.data();
     }
-
-    if (!paymentDoc || !paymentDoc.exists()) {
-      return NextResponse.json(
-        { error: 'Payment not found' },
-        { status: 404 }
-      );
-    }
-
-    const paymentData = paymentDoc.data();
     const cfOrderId = paymentData.orderId || orderId;
 
     // Verify payment with Cashfree
@@ -80,14 +80,13 @@ export async function POST(request: NextRequest) {
     const paymentStatus = verifyData.order_status === 'PAID' ? 'completed' : 
                          verifyData.order_status === 'ACTIVE' ? 'pending' : 'failed';
 
-    // Update payment status in Firestore
-    const paymentRef = doc(firestore, 'payments', paymentDoc.id);
-    await updateDoc(paymentRef, {
+    // Update payment status in Firestore using Admin SDK
+    await firestore.collection('payments').doc(paymentDoc.id).update({
       status: paymentStatus,
       transactionId: verifyData.payment_details?.cf_payment_id || null,
-      updatedAt: serverTimestamp(),
+      updatedAt: firestore.Timestamp.now(),
       metadata: {
-        ...paymentData.metadata,
+        ...paymentData?.metadata,
         cashfree_order_status: verifyData.order_status,
         cashfree_payment_details: verifyData.payment_details,
       },

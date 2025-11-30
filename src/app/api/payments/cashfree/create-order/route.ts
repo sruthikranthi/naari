@@ -5,7 +5,6 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { initializeFirebaseServer } from '@/firebase/server';
-import { collection, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
 
 // Initialize Cashfree SDK (you'll need to install: npm install cashfree-pg)
 // For now, we'll use direct API calls
@@ -55,22 +54,18 @@ export async function POST(request: NextRequest) {
       console.log('Auth token provided, userId:', userId);
     }
 
-    // Create payment record in Firestore first
+    // Create payment record in Firestore first using Admin SDK
     let firestore;
     let paymentDoc;
     let orderId;
     try {
       const firebaseInit = initializeFirebaseServer();
       firestore = firebaseInit.firestore;
-      const paymentsRef = collection(firestore, 'payments');
       
       orderId = `order_${Date.now()}_${Math.random().toString(36).substring(7)}`;
       
-      // Create payment document
-      // Note: Firestore rules require request.auth.uid == userId
-      // Since we're in an API route, we need to ensure the token is valid
-      // For now, we'll create the document and let Firestore rules validate
-      paymentDoc = await addDoc(paymentsRef, {
+      // Create payment document using Admin SDK (bypasses security rules)
+      const paymentData = {
         userId,
         orderId,
         amount: parseFloat(amount),
@@ -79,9 +74,11 @@ export async function POST(request: NextRequest) {
         paymentMethod: 'cashfree',
         description: description || 'Payment via Cashfree',
         metadata: metadata || {},
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
+        createdAt: firestore.Timestamp.now(),
+        updatedAt: firestore.Timestamp.now(),
+      };
+      
+      paymentDoc = await firestore.collection('payments').add(paymentData);
       
       console.log('Payment record created successfully:', paymentDoc.id);
     } catch (firestoreError: any) {
@@ -160,18 +157,18 @@ export async function POST(request: NextRequest) {
         }
         console.error('Cashfree API Error:', errorData);
         
-        // Update payment status to failed
-        if (paymentDoc && firestore) {
-          try {
-            await updateDoc(doc(firestore, 'payments', paymentDoc.id), {
-              status: 'failed',
-              updatedAt: serverTimestamp(),
-              metadata: { error: errorData.message || 'Failed to create order' },
-            });
-          } catch (updateError) {
-            console.error('Failed to update payment status:', updateError);
-          }
+      // Update payment status to failed
+      if (paymentDoc && firestore) {
+        try {
+          await firestore.collection('payments').doc(paymentDoc.id).update({
+            status: 'failed',
+            updatedAt: firestore.Timestamp.now(),
+            metadata: { error: errorData.message || 'Failed to create order' },
+          });
+        } catch (updateError) {
+          console.error('Failed to update payment status:', updateError);
         }
+      }
 
         return NextResponse.json(
           { error: 'Failed to create Cashfree order', details: errorData },
@@ -210,14 +207,14 @@ export async function POST(request: NextRequest) {
 
     // Update payment record with Cashfree order details
     try {
-      await updateDoc(doc(firestore, 'payments', paymentDoc.id), {
+      await firestore.collection('payments').doc(paymentDoc.id).update({
         orderId: cashfreeData.order_id || cashfreeOrderData.order_id,
         metadata: {
           ...metadata,
           cashfree_order_id: cashfreeData.order_id,
           payment_session_id: cashfreeData.payment_session_id,
         },
-        updatedAt: serverTimestamp(),
+        updatedAt: firestore.Timestamp.now(),
       });
     } catch (updateError: any) {
       console.error('Failed to update payment with Cashfree data:', updateError);

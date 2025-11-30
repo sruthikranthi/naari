@@ -5,7 +5,6 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { initializeFirebaseServer } from '@/firebase/server';
-import { doc, updateDoc, serverTimestamp, collection, addDoc } from 'firebase/firestore';
 
 const CASHFREE_SECRET_KEY = process.env.CASHFREE_SECRET_KEY || '';
 
@@ -43,11 +42,11 @@ export async function POST(request: NextRequest) {
 
     const { firestore } = initializeFirebaseServer();
 
-    // Find payment by orderId
-    const { collection: firestoreCollection, query, where, getDocs } = await import('firebase/firestore');
-    const paymentsRef = firestoreCollection(firestore, 'payments');
-    const q = query(paymentsRef, where('orderId', '==', orderId));
-    const snapshot = await getDocs(q);
+    // Find payment by orderId using Admin SDK
+    const snapshot = await firestore.collection('payments')
+      .where('orderId', '==', orderId)
+      .limit(1)
+      .get();
 
     if (snapshot.empty) {
       console.error('Payment not found for orderId:', orderId);
@@ -70,28 +69,26 @@ export async function POST(request: NextRequest) {
       paymentStatus = 'failed';
     }
 
-    // Update payment status
-    const paymentRef = doc(firestore, 'payments', paymentDoc.id);
-    await updateDoc(paymentRef, {
+    // Update payment status using Admin SDK
+    await firestore.collection('payments').doc(paymentDoc.id).update({
       status: paymentStatus,
-      transactionId: paymentDetails?.cf_payment_id || paymentData.transactionId || null,
-      updatedAt: serverTimestamp(),
+      transactionId: paymentDetails?.cf_payment_id || paymentData?.transactionId || null,
+      updatedAt: firestore.Timestamp.now(),
       metadata: {
-        ...paymentData.metadata,
+        ...paymentData?.metadata,
         cashfree_order_status: orderStatus,
         cashfree_payment_details: paymentDetails,
         webhook_received_at: new Date().toISOString(),
       },
     });
 
-    // Log webhook event
-    const webhooksRef = collection(firestore, 'payment_webhooks');
-    await addDoc(webhooksRef, {
+    // Log webhook event using Admin SDK
+    await firestore.collection('payment_webhooks').add({
       orderId,
       orderStatus,
       paymentStatus,
       payload: body,
-      receivedAt: serverTimestamp(),
+      receivedAt: firestore.Timestamp.now(),
     });
 
     return NextResponse.json({ success: true, message: 'Webhook processed' });
