@@ -571,9 +571,8 @@ export default function TambolaPage() {
                     <Users className="text-primary" /> Players ({currentGame.playerIds?.length || 0})
                   </CardTitle>
                   {isGameAdmin && (
-                    <>
-                      <div className="flex gap-2">
-                        <Dialog open={isShareDialogOpen} onOpenChange={setIsShareDialogOpen}>
+                    <div className="flex gap-2">
+                      <Dialog open={isShareDialogOpen} onOpenChange={setIsShareDialogOpen}>
                         <DialogTrigger asChild>
                           <Button size="sm" variant="outline">
                             <Share2 className="h-4 w-4 mr-1" /> Share
@@ -702,9 +701,9 @@ export default function TambolaPage() {
                             </div>
                           )}
                         </div>
-                      </DialogContent>
-                    </Dialog>
-                    </>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
                   )}
                 </div>
               </CardHeader>
