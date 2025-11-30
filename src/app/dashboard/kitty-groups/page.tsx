@@ -232,6 +232,48 @@ export default function KittyGroupsPage() {
   
   const isLoading = isUserLoading || areGroupsLoading || areUsersLoading;
 
+  // Check for pending payment completion
+  useEffect(() => {
+    const completePayment = searchParams.get('completePayment');
+    const orderId = searchParams.get('orderId');
+    
+    if (completePayment === 'true' && orderId && user && firestore) {
+      // Get pending group data from localStorage
+      const pendingKittyGroup = localStorage.getItem('pending_kitty_group');
+      if (pendingKittyGroup) {
+        try {
+          const { groupData } = JSON.parse(pendingKittyGroup);
+          
+          const newGroup = {
+            name: groupData.name,
+            contribution: groupData.contribution,
+            nextTurn: 'TBD',
+            nextDate: 'TBD',
+            memberIds: [user.uid],
+            orderId: orderId,
+            createdAt: new Date().toISOString(),
+          };
+
+          addDoc(collection(firestore, 'kitty_groups'), newGroup)
+            .then(() => {
+              toast({
+                title: 'Kitty Group Created!',
+                description: `The group "${groupData.name}" has been successfully created.`,
+              });
+              localStorage.removeItem('pending_kitty_group');
+              router.replace('/dashboard/kitty-groups');
+            })
+            .catch((e) => {
+              console.error("Error creating kitty group: ", e);
+              toast({ variant: 'destructive', title: 'Error', description: 'Could not create kitty group.' });
+            });
+        } catch (e) {
+          console.error('Error processing pending kitty group:', e);
+        }
+      }
+    }
+  }, [searchParams, user, firestore, toast, router]);
+
   return (
     <div>
       <PageHeader
