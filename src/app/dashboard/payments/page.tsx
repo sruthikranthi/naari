@@ -10,7 +10,7 @@ import { CashfreePayment } from '@/components/cashfree-payment';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { verifyCashfreePayment } from '@/lib/payments';
 import { CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -25,13 +25,7 @@ export default function PaymentsPage() {
   const orderId = searchParams.get('orderId');
   const status = searchParams.get('status');
 
-  useEffect(() => {
-    if (orderId && status) {
-      verifyPaymentStatus();
-    }
-  }, [orderId, status]);
-
-  const verifyPaymentStatus = async () => {
+  const verifyPaymentStatus = useCallback(async () => {
     if (!orderId) return;
 
     setVerificationStatus('verifying');
@@ -61,7 +55,13 @@ export default function PaymentsPage() {
         variant: 'destructive',
       });
     }
-  };
+  }, [orderId, toast]);
+
+  useEffect(() => {
+    if (orderId && status) {
+      verifyPaymentStatus();
+    }
+  }, [orderId, status, verifyPaymentStatus]);
 
   if (verificationStatus === 'verifying') {
     return (
@@ -120,7 +120,7 @@ export default function PaymentsPage() {
               Payment Verification Failed
             </CardTitle>
             <CardDescription>
-              We couldn't verify your payment. Please contact support if you've already paid.
+              We couldn&apos;t verify your payment. Please contact support if you&apos;ve already paid.
             </CardDescription>
           </CardHeader>
         </Card>
