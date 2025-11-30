@@ -124,10 +124,11 @@ export function CashfreePayment({
       }
 
       // If payment session ID is provided, use Cashfree Checkout.js
-      if (response.paymentSessionId && response.orderToken) {
+      // Note: Cashfree's new API only requires payment_session_id, order_token is optional
+      if (response.paymentSessionId) {
         console.log('Using Cashfree Checkout.js with session:', response.paymentSessionId);
-        // Load Cashfree Checkout.js script
-        await loadCashfreeCheckout(response.paymentSessionId, response.orderToken);
+        // Load Cashfree Checkout.js script (orderToken is optional in new API)
+        await loadCashfreeCheckout(response.paymentSessionId, response.orderToken || '');
       } else {
         console.error('❌ Missing payment data:', {
           hasPaymentUrl: !!response.paymentUrl,
@@ -137,7 +138,7 @@ export function CashfreePayment({
         });
         toast({
           title: 'Payment Error',
-          description: `Payment URL not available. Missing: ${!response.paymentUrl ? 'paymentUrl' : ''} ${!response.paymentSessionId ? 'paymentSessionId' : ''} ${!response.orderToken ? 'orderToken' : ''}`,
+          description: `Payment session not available. Please try again.`,
           variant: 'destructive',
         });
         setPaymentStatus('failed');
@@ -156,7 +157,7 @@ export function CashfreePayment({
     }
   };
 
-  const loadCashfreeCheckout = async (paymentSessionId: string, orderToken: string) => {
+  const loadCashfreeCheckout = async (paymentSessionId: string, orderToken?: string) => {
     return new Promise<void>((resolve, reject) => {
       // Check if script is already loaded
       if (window.Cashfree && window.Cashfree.Checkout) {
@@ -180,13 +181,26 @@ export function CashfreePayment({
     });
   };
 
-  const initializeCheckout = (paymentSessionId: string, orderToken: string) => {
+  const initializeCheckout = (paymentSessionId: string, orderToken?: string) => {
     try {
-      const checkout = new (window as any).Cashfree.Checkout({
+      // Cashfree Checkout.js v3 only requires paymentSessionId
+      // orderToken is optional and may not be present in newer API versions
+      const checkoutOptions: any = {
         paymentSessionId,
         returnUrl: `${window.location.origin}/api/payments/cashfree/return`,
+      };
+
+      // Only add orderToken if it's provided (for backward compatibility)
+      if (orderToken) {
+        checkoutOptions.orderToken = orderToken;
+      }
+
+      console.log('Initializing Cashfree Checkout with:', {
+        paymentSessionId,
+        hasOrderToken: !!orderToken,
       });
 
+      const checkout = new (window as any).Cashfree.Checkout(checkoutOptions);
       checkout.redirect();
     } catch (error) {
       console.error('Error initializing Cashfree checkout:', error);
