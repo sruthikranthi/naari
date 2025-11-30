@@ -35,12 +35,21 @@ export const metadata: Metadata = {
     title: 'Naarimani - India\'s First Women-Only Social Platform',
     description:
       'India\'s first women-only social platform for safety, friendship, learning, support & empowerment.',
+    images: [
+      {
+        url: '/icon-512x512.png',
+        width: 512,
+        height: 512,
+        alt: 'Naarimani Logo',
+      },
+    ],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Naarimani',
     description:
       'India\'s first women-only social platform for safety, friendship, learning, support & empowerment.',
+    images: ['/icon-512x512.png'],
   },
   icons: {
     icon: [
