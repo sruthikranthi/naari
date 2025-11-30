@@ -82,6 +82,7 @@ type KittyGroupFormValues = z.infer<typeof kittyGroupSchema>;
 export default function KittyGroupsPage() {
   const { toast } = useToast();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const firestore = useFirestore();
@@ -272,7 +273,8 @@ export default function KittyGroupsPage() {
         }
       }
     }
-  }, [searchParams, user, firestore, toast, router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, firestore, toast, router]);
 
   return (
     <div>
