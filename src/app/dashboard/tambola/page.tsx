@@ -124,6 +124,38 @@ export default function TambolaPage() {
     setTicket(generateTicket());
   }
 
+  // Check for pending game start after payment
+  useEffect(() => {
+    const startGame = searchParams.get('startGame');
+    const orderId = searchParams.get('orderId');
+    
+    if (startGame === 'true' && orderId) {
+      // Get pending game data from localStorage
+      const pendingTambola = localStorage.getItem('pending_tambola_game');
+      if (pendingTambola) {
+        try {
+          const { orderId: storedOrderId } = JSON.parse(pendingTambola);
+          if (storedOrderId === orderId) {
+            // Start the game
+            resetGame();
+            setGameStatus('running');
+            setTimeout(() => {
+              handleNextNumber();
+            }, 100);
+            toast({ 
+              title: 'Payment Successful!', 
+              description: 'Game started! Good luck!' 
+            });
+            localStorage.removeItem('pending_tambola_game');
+            router.replace('/dashboard/tambola');
+          }
+        } catch (e) {
+          console.error('Error processing pending tambola game:', e);
+        }
+      }
+    }
+  }, [searchParams, toast, router, handleNextNumber]);
+
   const handleNextNumber = useCallback(() => {
     if (calledNumbers.length >= 90) {
       toast({ title: 'Game Over!', description: 'All numbers have been called.' });
@@ -329,7 +361,7 @@ export default function TambolaPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-2 gap-4">
-              <Button onClick={handleStartGame} disabled={gameStatus === 'running'}>Start New</Button>
+              <Button onClick={handleStartGame} disabled={gameStatus === 'running'}>Pay ₹99 & Start Game</Button>
               <Button onClick={handleNextNumber} disabled={gameStatus !== 'running'}>Next Number</Button>
               <Button variant="outline" disabled={gameStatus !== 'running'}>Pause Game</Button>
               <Button variant="destructive" onClick={resetGame} disabled={gameStatus === 'idle'}>End Game</Button>
