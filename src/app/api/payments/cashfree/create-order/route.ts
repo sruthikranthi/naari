@@ -196,6 +196,8 @@ export async function POST(request: NextRequest) {
         // Note: 'wallet' is NOT valid in new API version, use 'nb' for netbanking
         // cc = Credit Card, dc = Debit Card, upi = UPI, nb = Net Banking
         payment_methods: 'cc,dc,upi,nb', // Core payment methods (wallet removed in v2022-09-01)
+        // Add Naarimani logo to payment page
+        payment_logo: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/icon-512x512.png`,
       },
     };
 
