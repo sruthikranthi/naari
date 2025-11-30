@@ -48,7 +48,7 @@ const subscriptionPlans: SubscriptionPlan[] = [
     id: 'kitty-group',
     name: 'Kitty Group Premium',
     description: 'Create a new Kitty Group (one-time payment per group)',
-    price: 99,
+    price: 1,
     icon: <Users className="h-6 w-6" />,
     features: [
       'Secure Kitty System',
@@ -64,7 +64,7 @@ const subscriptionPlans: SubscriptionPlan[] = [
     id: 'tambola',
     name: 'Tambola Game',
     description: 'Play a Tambola game (per game payment)',
-    price: 99,
+    price: 1,
     icon: <Gamepad2 className="h-6 w-6" />,
     features: [
       'Play one Tambola game',

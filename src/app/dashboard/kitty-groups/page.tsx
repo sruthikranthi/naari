@@ -133,7 +133,7 @@ export default function KittyGroupsPage() {
       // Create payment order
       const { processCashfreePayment } = await import('@/lib/payments');
       const paymentResponse = await processCashfreePayment(
-        99,
+        1,
         'INR',
         `Kitty Group: ${data.name}`,
         user.uid,

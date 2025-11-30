@@ -400,7 +400,7 @@ export default function TambolaPage() {
       // Create payment order
       const { processCashfreePayment } = await import('@/lib/payments');
       const paymentResponse = await processCashfreePayment(
-        99,
+        1,
         'INR',
         'Tambola Game - Single Game Payment',
         user.uid,
@@ -743,7 +743,7 @@ export default function TambolaPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-2 gap-4">
-              <Button onClick={handleStartGame} disabled={gameStatus === 'running' || !!currentGame}>Pay ₹99 & Start Game</Button>
+              <Button onClick={handleStartGame} disabled={gameStatus === 'running' || !!currentGame}>Pay ₹1 & Start Game</Button>
               <Button onClick={handleNextNumber} disabled={gameStatus !== 'running' || !isGameAdmin}>Next Number</Button>
               <Button variant="outline" disabled={gameStatus !== 'running'}>Pause Game</Button>
               <Button variant="destructive" onClick={resetGame} disabled={gameStatus === 'idle'}>End Game</Button>
