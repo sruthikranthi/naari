@@ -63,7 +63,7 @@ export default function KittyGroupDetailPage() {
 
   return (
     <KittyGroupClient
-      group={{...group, members: group.memberIds?.length || 0}}
+      group={{...group, members: group.memberIds?.length || 0, memberIds: group.memberIds}}
       groupMembers={groupMembers || []}
       upcomingEvent={upcomingEvent}
       currentUser={currentUser}

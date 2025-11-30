@@ -75,6 +75,7 @@ type KittyGroup = {
   id: string;
   name: string;
   members: number;
+  memberIds?: string[]; // Add memberIds for admin checks
   nextTurn: string;
   contribution: number;
   nextDate: string;
@@ -422,7 +423,8 @@ export function KittyGroupClient({ group, groupMembers, upcomingEvent, currentUs
                 </DialogFooter>
               </DialogContent>
             </Dialog>
-          }
+            </>
+          )}
 
           <Button
             variant="outline"
