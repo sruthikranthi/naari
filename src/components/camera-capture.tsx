@@ -68,15 +68,15 @@ export function CameraCapture({ onMediaCaptured, showControls = true }: CameraCa
 
   useEffect(() => {
     getCameraPermission();
+    // Capture videoRef.current when effect runs
+    const videoElement = videoRef.current;
     return () => {
       // Clean up stream when component unmounts or dependencies change
       const currentStream = stream;
-      // Capture videoRef.current at the time of cleanup setup
-      const videoElement = videoRef.current;
       if (currentStream) {
         currentStream.getTracks().forEach((track) => track.stop());
       }
-      // Also clear video srcObject
+      // Also clear video srcObject using captured reference
       if (videoElement) {
         videoElement.srcObject = null;
       }

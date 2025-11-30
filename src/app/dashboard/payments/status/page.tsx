@@ -6,7 +6,7 @@
  */
 
 import { useSearchParams, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useUser } from '@/firebase/provider';
 import { verifyCashfreePayment } from '@/lib/payments';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -27,15 +27,7 @@ export default function PaymentStatusPage() {
   const orderStatus = searchParams.get('status');
   const paymentId = searchParams.get('paymentId');
 
-  useEffect(() => {
-    if (orderId || paymentId) {
-      verifyPayment();
-    } else {
-      setStatus('failed');
-    }
-  }, [orderId, paymentId]);
-
-  const verifyPayment = async () => {
+  const verifyPayment = useCallback(async () => {
     try {
       const result = await verifyCashfreePayment(orderId || undefined, paymentId || undefined);
       setPaymentDetails(result);
@@ -65,7 +57,15 @@ export default function PaymentStatusPage() {
         variant: 'destructive',
       });
     }
-  };
+  }, [orderId, paymentId, toast]);
+
+  useEffect(() => {
+    if (orderId || paymentId) {
+      verifyPayment();
+    } else {
+      setStatus('failed');
+    }
+  }, [orderId, paymentId, verifyPayment]);
 
   if (status === 'loading') {
     return (
