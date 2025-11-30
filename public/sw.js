@@ -24,16 +24,22 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
+      // Delete ALL old caches to prevent corrupted content
       return Promise.all(
-        cacheNames
-          .filter((cacheName) => {
-            return cacheName !== CACHE_NAME && cacheName !== RUNTIME_CACHE;
-          })
-          .map((cacheName) => caches.delete(cacheName))
+        cacheNames.map((cacheName) => {
+          // Delete all caches except the current ones
+          if (cacheName !== CACHE_NAME && cacheName !== RUNTIME_CACHE) {
+            return caches.delete(cacheName);
+          }
+        })
       );
+    }).then(() => {
+      // Force claim all clients immediately
+      return self.clients.claim();
     })
   );
-  return self.clients.claim();
+  // Skip waiting to activate immediately
+  self.skipWaiting();
 });
 
 // Fetch event - serve from cache, fallback to network
