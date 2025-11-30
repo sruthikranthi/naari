@@ -29,8 +29,9 @@ export async function POST(request: NextRequest) {
     const { firestore } = initializeFirebaseServer();
 
     // Get payment record using Admin SDK
-    let paymentDoc;
-    let paymentData: any;
+    let paymentDoc: admin.firestore.DocumentSnapshot<admin.firestore.DocumentData>;
+    let paymentData: admin.firestore.DocumentData | undefined;
+    
     if (paymentId) {
       paymentDoc = await firestore.collection('payments').doc(paymentId).get();
       if (!paymentDoc.exists) {
@@ -41,6 +42,12 @@ export async function POST(request: NextRequest) {
       }
       paymentData = paymentDoc.data();
     } else {
+      if (!orderId) {
+        return NextResponse.json(
+          { error: 'orderId is required when paymentId is not provided' },
+          { status: 400 }
+        );
+      }
       // Find by orderId
       const snapshot = await firestore.collection('payments')
         .where('orderId', '==', orderId)
@@ -57,6 +64,7 @@ export async function POST(request: NextRequest) {
       paymentData = paymentDoc.data();
     }
 
+    // TypeScript guard: ensure paymentData is not undefined
     if (!paymentData) {
       return NextResponse.json(
         { error: 'Payment data not found' },
@@ -64,7 +72,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const cfOrderId = paymentData.orderId || orderId;
+    // Now TypeScript knows paymentData is defined
+    const cfOrderId = (paymentData.orderId as string) || orderId || '';
 
     // Verify payment with Cashfree
     const verifyResponse = await fetch(`${CASHFREE_BASE_URL}/orders/${cfOrderId}`, {
