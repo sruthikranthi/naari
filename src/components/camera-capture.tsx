@@ -71,13 +71,14 @@ export function CameraCapture({ onMediaCaptured, showControls = true }: CameraCa
     return () => {
       // Clean up stream when component unmounts or dependencies change
       const currentStream = stream;
-      const currentVideoRef = videoRef.current;
+      // Capture videoRef.current at the time of cleanup setup
+      const videoElement = videoRef.current;
       if (currentStream) {
         currentStream.getTracks().forEach((track) => track.stop());
       }
       // Also clear video srcObject
-      if (currentVideoRef) {
-        currentVideoRef.srcObject = null;
+      if (videoElement) {
+        videoElement.srcObject = null;
       }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps

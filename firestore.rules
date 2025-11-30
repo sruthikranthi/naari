@@ -382,5 +382,65 @@ service cloud.firestore {
     match /notification_preferences/{preferenceId} {
       allow get, list, create, update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
     }
+
+    // -------------------------------------------------------------------------
+    // Payments (/payments)
+    // -------------------------------------------------------------------------
+
+    /**
+     * @description Users can read their own payments. System can create/update payments via API.
+     * @path /payments/{paymentId}
+     * @allow (get, list) User reading their own payments where `userId` matches.
+     * @allow (create, update) System creating/updating payments via API routes.
+     * @deny (read) User trying to read payments for other users.
+     */
+    match /payments/{paymentId} {
+      // Users can read their own payments
+      allow get: if isSignedIn() && (resource == null || resource.data.userId == request.auth.uid);
+      // Users can list their own payments (query with where clause)
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      // Allow creating payments (API will set userId)
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      // Allow updating payments (only status and metadata updates via API)
+      allow update: if isSignedIn() && resource != null && resource.data.userId == request.auth.uid;
+      // Users cannot delete payments (only system can via API if needed)
+      allow delete: if false;
+    }
+
+    // -------------------------------------------------------------------------
+    // Refunds (/refunds)
+    // -------------------------------------------------------------------------
+
+    /**
+     * @description Users can read refunds for their payments. System can create/update refunds.
+     * @path /refunds/{refundId}
+     */
+    match /refunds/{refundId} {
+      // Users can read refunds (will need to query by paymentId which belongs to user)
+      allow get, list: if isSignedIn();
+      // Allow creating refunds (API will handle validation)
+      allow create: if isSignedIn();
+      // Allow updating refund status (via API)
+      allow update: if isSignedIn();
+      // Users cannot delete refunds
+      allow delete: if false;
+    }
+
+    // -------------------------------------------------------------------------
+    // Payment Webhooks (/payment_webhooks)
+    // -------------------------------------------------------------------------
+
+    /**
+     * @description System-only collection for logging payment webhooks.
+     * @path /payment_webhooks/{webhookId}
+     */
+    match /payment_webhooks/{webhookId} {
+      // Only allow creation via API (webhook handler)
+      allow create: if isSignedIn();
+      // Users cannot read webhook logs
+      allow read: if false;
+      // No updates or deletes
+      allow update, delete: if false;
+    }
   }
 }

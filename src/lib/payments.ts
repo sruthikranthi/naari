@@ -1,6 +1,6 @@
 /**
  * Payment integration utilities
- * Supports Stripe and PayPal
+ * Supports Stripe, PayPal, and Cashfree
  */
 
 import { collection, addDoc, query, where, getDocs, orderBy, limit, updateDoc, doc, serverTimestamp, Firestore } from 'firebase/firestore';
@@ -19,13 +19,28 @@ export interface Payment {
   amount: number;
   currency: string;
   status: 'pending' | 'completed' | 'failed' | 'refunded';
-  paymentMethod: 'stripe' | 'paypal' | 'other';
+  paymentMethod: 'stripe' | 'paypal' | 'cashfree' | 'other';
   paymentIntentId?: string; // Stripe payment intent ID
-  transactionId?: string; // PayPal transaction ID
+  transactionId?: string; // PayPal/Cashfree transaction ID
   description: string;
   metadata?: Record<string, any>;
   createdAt: any;
   updatedAt: any;
+}
+
+export interface CashfreeCustomerDetails {
+  name: string;
+  email?: string;
+  phone?: string;
+}
+
+export interface CashfreeOrderResponse {
+  success: boolean;
+  paymentId: string;
+  orderId: string;
+  paymentSessionId: string;
+  orderToken: string;
+  paymentUrl: string | null;
 }
 
 export interface Refund {
@@ -238,5 +253,63 @@ export async function processPayPalPayment(
     orderId: `order_${paymentId}`,
     approvalUrl: `https://paypal.com/checkout?order=${paymentId}`,
   };
+}
+
+/**
+ * Cashfree payment integration
+ * Creates a payment order via Cashfree API
+ */
+export async function processCashfreePayment(
+  amount: number,
+  currency: string = 'INR',
+  description: string,
+  userId: string,
+  customerDetails: CashfreeCustomerDetails,
+  metadata?: Record<string, any>
+): Promise<CashfreeOrderResponse> {
+  const response = await fetch('/api/payments/cashfree/create-order', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      amount,
+      currency,
+      description,
+      userId,
+      customerDetails,
+      metadata,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to create Cashfree order');
+  }
+
+  return response.json();
+}
+
+/**
+ * Verify Cashfree payment status
+ */
+export async function verifyCashfreePayment(
+  orderId?: string,
+  paymentId?: string
+): Promise<{ success: boolean; status: Payment['status']; orderStatus: string }> {
+  const response = await fetch('/api/payments/cashfree/verify', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ orderId, paymentId }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to verify payment');
+  }
+
+  return response.json();
 }
 
