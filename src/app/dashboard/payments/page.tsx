@@ -9,6 +9,7 @@ import { useUser } from '@/firebase/provider';
 import { CashfreePayment } from '@/components/cashfree-payment';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useState, useCallback } from 'react';
 import { verifyCashfreePayment } from '@/lib/payments';
@@ -143,6 +144,7 @@ export default function PaymentsPage() {
       <Tabs defaultValue="new-payment" className="space-y-4">
         <TabsList>
           <TabsTrigger value="new-payment">New Payment</TabsTrigger>
+          <TabsTrigger value="subscriptions">Subscriptions</TabsTrigger>
           <TabsTrigger value="payment-history">Payment History</TabsTrigger>
         </TabsList>
 
@@ -166,6 +168,27 @@ export default function PaymentsPage() {
                   console.error('Payment error:', error);
                 }}
               />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="subscriptions">
+          <Card>
+            <CardHeader>
+              <CardTitle>Subscription Plans</CardTitle>
+              <CardDescription>
+                Choose a subscription plan to unlock premium features
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <p className="text-muted-foreground text-sm mb-4">
+                  View and manage your subscription plans. Subscribe to unlock premium features.
+                </p>
+                <Button asChild className="w-full">
+                  <a href="/dashboard/subscriptions">View Subscription Plans</a>
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

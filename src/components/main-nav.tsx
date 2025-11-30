@@ -14,6 +14,7 @@ import {
   Briefcase,
   Shield,
   Award,
+  Crown,
 } from 'lucide-react';
 
 import {
@@ -51,6 +52,11 @@ const navItems = [
     href: '/dashboard/admin',
     icon: Shield,
     label: 'Admin Panel',
+  },
+  {
+    href: '/dashboard/subscriptions',
+    icon: Crown,
+    label: 'Subscriptions',
   },
 ];
 
