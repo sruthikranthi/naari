@@ -38,10 +38,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Log environment and credentials status (without exposing actual keys)
+    console.log('Cashfree Configuration:', {
+      environment: isProduction ? 'PRODUCTION' : 'SANDBOX',
+      baseUrl: CASHFREE_BASE_URL,
+      hasAppId: !!CASHFREE_APP_ID,
+      hasSecretKey: !!CASHFREE_SECRET_KEY,
+      appIdLength: CASHFREE_APP_ID?.length || 0,
+      secretKeyLength: CASHFREE_SECRET_KEY?.length || 0,
+      nodeEnv: process.env.NODE_ENV,
+    });
+
     if (!CASHFREE_APP_ID || !CASHFREE_SECRET_KEY) {
-      console.error('Cashfree credentials missing:', { 
+      console.error('❌ Cashfree credentials missing:', { 
         hasAppId: !!CASHFREE_APP_ID, 
-        hasSecretKey: !!CASHFREE_SECRET_KEY 
+        hasSecretKey: !!CASHFREE_SECRET_KEY,
+        environment: isProduction ? 'PRODUCTION' : 'SANDBOX',
+        expectedUrl: CASHFREE_BASE_URL,
       });
       return NextResponse.json(
         { error: 'Cashfree credentials not configured. Please set CASHFREE_APP_ID and CASHFREE_SECRET_KEY environment variables.' },
@@ -148,6 +161,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate phone number format (Cashfree requires 10-digit phone)
+    const phone = customerDetails.phone || '9999999999';
+    const phoneDigits = phone.replace(/\D/g, ''); // Remove all non-digits
+    if (phoneDigits.length !== 10) {
+      console.error('❌ Invalid phone number format:', { 
+        provided: phone, 
+        digitsOnly: phoneDigits, 
+        length: phoneDigits.length,
+        required: '10 digits'
+      });
+      return NextResponse.json(
+        { error: 'Invalid phone number. Phone number must be exactly 10 digits.' },
+        { status: 400 }
+      );
+    }
+
     // Create order in Cashfree
     const cashfreeOrderData = {
       order_id: orderId,
@@ -158,7 +187,7 @@ export async function POST(request: NextRequest) {
         customer_id: userId,
         customer_name: customerDetails.name || 'Customer',
         customer_email: customerDetails.email || '',
-        customer_phone: customerDetails.phone || '',
+        customer_phone: phoneDigits, // Use validated 10-digit phone
       },
       order_meta: {
         return_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/payments/cashfree/return?order_id={order_id}`,
@@ -166,6 +195,15 @@ export async function POST(request: NextRequest) {
         payment_methods: 'cc,dc,upi,wallet,netbanking', // All payment methods
       },
     };
+
+    console.log('📤 Sending request to Cashfree:', {
+      url: `${CASHFREE_BASE_URL}/orders`,
+      environment: isProduction ? 'PRODUCTION (LIVE)' : 'SANDBOX (TEST)',
+      orderId: cashfreeOrderData.order_id,
+      amount: cashfreeOrderData.order_amount,
+      customerPhone: cashfreeOrderData.customer_details.customer_phone,
+      customerEmail: cashfreeOrderData.customer_details.customer_email,
+    });
 
     // Call Cashfree API to create order
     let cashfreeResponse;
@@ -184,12 +222,32 @@ export async function POST(request: NextRequest) {
 
       if (!cashfreeResponse.ok) {
         let errorData;
+        let errorText = '';
         try {
-          errorData = await cashfreeResponse.json();
+          errorText = await cashfreeResponse.text();
+          errorData = JSON.parse(errorText);
         } catch (e) {
-          errorData = { message: `HTTP ${cashfreeResponse.status}: ${cashfreeResponse.statusText}` };
+          errorData = { 
+            message: `HTTP ${cashfreeResponse.status}: ${cashfreeResponse.statusText}`,
+            rawResponse: errorText.substring(0, 500), // First 500 chars
+          };
         }
-        console.error('Cashfree API Error:', errorData);
+        
+        // Detailed error logging for debugging
+        console.error('❌ Cashfree API Error (FULL DETAILS):', {
+          status: cashfreeResponse.status,
+          statusText: cashfreeResponse.statusText,
+          environment: isProduction ? 'PRODUCTION (LIVE)' : 'SANDBOX (TEST)',
+          baseUrl: CASHFREE_BASE_URL,
+          hasAppId: !!CASHFREE_APP_ID,
+          hasSecretKey: !!CASHFREE_SECRET_KEY,
+          errorData: errorData,
+          requestBody: {
+            order_id: cashfreeOrderData.order_id,
+            order_amount: cashfreeOrderData.order_amount,
+            customer_phone: cashfreeOrderData.customer_details.customer_phone,
+          },
+        });
         
       // Update payment status to failed
       if (paymentDoc && firestore) {
