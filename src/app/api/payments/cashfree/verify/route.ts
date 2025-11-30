@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
 
     // Get payment record using Admin SDK
     let paymentDoc;
-    let paymentData;
+    let paymentData: any;
     if (paymentId) {
       paymentDoc = await firestore.collection('payments').doc(paymentId).get();
       if (!paymentDoc.exists) {
@@ -56,6 +56,14 @@ export async function POST(request: NextRequest) {
       paymentDoc = snapshot.docs[0];
       paymentData = paymentDoc.data();
     }
+
+    if (!paymentData) {
+      return NextResponse.json(
+        { error: 'Payment data not found' },
+        { status: 404 }
+      );
+    }
+
     const cfOrderId = paymentData.orderId || orderId;
 
     // Verify payment with Cashfree
