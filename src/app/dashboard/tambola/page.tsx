@@ -21,6 +21,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { CashfreePayment } from '@/components/cashfree-payment';
+import { useUser } from '@/firebase/provider';
 
 // A more robust function to generate a valid Tambola ticket
 const generateTicket = (): (number | null)[][] => {
@@ -99,12 +101,14 @@ const prizes = [
 
 export default function TambolaPage() {
   const { toast } = useToast();
+  const { user } = useUser();
   const [calledNumbers, setCalledNumbers] = useState<number[]>([]);
   const [currentNumber, setCurrentNumber] = useState<number | null>(null);
   const [ticket, setTicket] = useState<(number | null)[][]>([]);
   const [dabbedNumbers, setDabbedNumbers] = useState<number[]>([]);
   const [claimedPrizes, setClaimedPrizes] = useState<string[]>([]);
   const [gameStatus, setGameStatus] = useState<'idle' | 'running' | 'paused' | 'ended'>('idle');
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Initialize ticket on mount
@@ -137,10 +141,30 @@ export default function TambolaPage() {
   }, [calledNumbers, toast]);
 
   const handleStartGame = () => {
+    // Show payment dialog first
+    setIsPaymentDialogOpen(true);
+  };
+
+  const handlePaymentSuccess = (paymentId: string, orderId: string) => {
+    // Start game after successful payment
     resetGame();
     setGameStatus('running');
+    setIsPaymentDialogOpen(false);
     // We call handleNextNumber inside a timeout to give state a moment to update
     setTimeout(handleNextNumber, 100);
+    toast({ 
+      title: 'Payment Successful!', 
+      description: 'Game started! Good luck!' 
+    });
+  };
+
+  const handlePaymentError = (error: string) => {
+    toast({
+      title: 'Payment Failed',
+      description: error,
+      variant: 'destructive',
+    });
+    setIsPaymentDialogOpen(false);
   };
 
   const handleDabNumber = (number: number) => {

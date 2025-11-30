@@ -31,7 +31,7 @@ const subscriptionPlans: SubscriptionPlan[] = [
     id: 'yearly',
     name: 'Yearly Premium',
     description: 'Unlock all premium features for a full year',
-    price: 99,
+    price: 49,
     icon: <Crown className="h-6 w-6" />,
     features: [
       'Access to all premium features',
@@ -47,8 +47,8 @@ const subscriptionPlans: SubscriptionPlan[] = [
   {
     id: 'kitty-group',
     name: 'Kitty Group Premium',
-    description: 'Premium features for your Kitty Group',
-    price: 199,
+    description: 'Create a new Kitty Group (one-time payment per group)',
+    price: 99,
     icon: <Users className="h-6 w-6" />,
     features: [
       'Secure Kitty System',
@@ -58,23 +58,23 @@ const subscriptionPlans: SubscriptionPlan[] = [
       'Custom group settings',
       'Analytics and insights',
     ],
-    metadata: { type: 'kitty_group_subscription', duration: 'lifetime' },
+    metadata: { type: 'kitty_group_subscription', duration: 'one-time per group' },
   },
   {
     id: 'tambola',
-    name: 'Tambola Premium',
-    description: 'Premium access to Tambola games and features',
+    name: 'Tambola Game',
+    description: 'Play a Tambola game (per game payment)',
     price: 99,
     icon: <Gamepad2 className="h-6 w-6" />,
     features: [
-      'Unlimited Tambola games',
+      'Play one Tambola game',
       'Exclusive prize pools',
-      'Priority game access',
-      'Advanced ticket management',
-      'Game history and analytics',
+      'Real-time game updates',
+      'Ticket management',
+      'Game history',
       'Special event access',
     ],
-    metadata: { type: 'tambola_subscription', duration: '1 year' },
+    metadata: { type: 'tambola_game', duration: 'per game' },
   },
 ];
 

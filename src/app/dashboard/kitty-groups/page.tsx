@@ -51,6 +51,8 @@ import { Controller } from 'react-hook-form';
 import { useCollection, useFirestore, useUser, useMemoFirebase } from '@/firebase';
 import { collection, addDoc, query, where } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
+import { CashfreePayment } from '@/components/cashfree-payment';
+import { useRouter } from 'next/navigation';
 
 
 const tools = [
@@ -79,7 +81,10 @@ type KittyGroupFormValues = z.infer<typeof kittyGroupSchema>;
 
 export default function KittyGroupsPage() {
   const { toast } = useToast();
+  const router = useRouter();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [pendingGroupData, setPendingGroupData] = useState<KittyGroupFormValues | null>(null);
   const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
 
@@ -111,27 +116,54 @@ export default function KittyGroupsPage() {
       return;
     }
 
+    // Store form data and show payment dialog
+    setPendingGroupData(data);
+    setIsDialogOpen(false);
+    setIsPaymentDialogOpen(true);
+  };
+
+  const handlePaymentSuccess = async (paymentId: string, orderId: string) => {
+    if (!user || !pendingGroupData) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Payment data missing.' });
+      return;
+    }
+
     const newGroup = {
-      name: data.name,
-      contribution: data.contribution,
+      name: pendingGroupData.name,
+      contribution: pendingGroupData.contribution,
       nextTurn: 'TBD',
       nextDate: 'TBD',
       memberIds: [user.uid], // Creator is the first member
+      paymentId: paymentId,
+      orderId: orderId,
+      createdAt: new Date().toISOString(),
       // 'members' field from mock data is now derived from memberIds.length
     };
 
     try {
-        await addDoc(collection(firestore, 'kitty_groups'), newGroup);
-        toast({
-          title: 'Kitty Group Created!',
-          description: `The group "${data.name}" has been successfully created.`,
-        });
-        reset();
-        setIsDialogOpen(false);
+      await addDoc(collection(firestore, 'kitty_groups'), newGroup);
+      toast({
+        title: 'Kitty Group Created!',
+        description: `The group "${pendingGroupData.name}" has been successfully created.`,
+      });
+      reset();
+      setPendingGroupData(null);
+      setIsPaymentDialogOpen(false);
+      router.push('/dashboard/kitty-groups');
     } catch(e) {
-        console.error("Error creating kitty group: ", e);
-        toast({ variant: 'destructive', title: 'Error', description: 'Could not create kitty group.' });
+      console.error("Error creating kitty group: ", e);
+      toast({ variant: 'destructive', title: 'Error', description: 'Could not create kitty group.' });
     }
+  };
+
+  const handlePaymentError = (error: string) => {
+    toast({
+      title: 'Payment Failed',
+      description: error,
+      variant: 'destructive',
+    });
+    setIsPaymentDialogOpen(false);
+    setPendingGroupData(null);
   };
   
   const handleToolClick = (toolId: string) => {
@@ -333,6 +365,33 @@ export default function KittyGroupsPage() {
                   <Button type="submit">Create Group</Button>
                 </DialogFooter>
               </form>
+            </DialogContent>
+          </Dialog>
+
+          {/* Payment Dialog for Kitty Group Creation */}
+          <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
+            <DialogContent className="sm:max-w-[500px]">
+              <DialogHeader>
+                <DialogTitle>Complete Payment to Create Kitty Group</DialogTitle>
+                <CardDescription>
+                  Pay ₹99 to create your new Kitty Group: {pendingGroupData?.name}
+                </CardDescription>
+              </DialogHeader>
+              <div className="py-4">
+                <CashfreePayment
+                  amount={99}
+                  currency="INR"
+                  description={`Kitty Group: ${pendingGroupData?.name || 'New Group'}`}
+                  onSuccess={handlePaymentSuccess}
+                  onError={handlePaymentError}
+                  metadata={{
+                    subscriptionType: 'kitty_group',
+                    type: 'kitty_group_creation',
+                    groupName: pendingGroupData?.name,
+                    duration: 'one-time per group',
+                  }}
+                />
+              </div>
             </DialogContent>
           </Dialog>
 
