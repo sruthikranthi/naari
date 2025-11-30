@@ -38,6 +38,43 @@ export default function PaymentStatusPage() {
           title: 'Payment Successful',
           description: 'Payment completed successfully!',
         });
+        
+        // Complete pending actions after successful payment
+        if (typeof window !== 'undefined') {
+          // Check for pending kitty group creation
+          const pendingKittyGroup = localStorage.getItem('pending_kitty_group');
+          if (pendingKittyGroup) {
+            try {
+              const { orderId: storedOrderId, groupData } = JSON.parse(pendingKittyGroup);
+              if (storedOrderId === orderId || storedOrderId === paymentId) {
+                // Redirect to kitty groups page to complete creation
+                setTimeout(() => {
+                  router.push(`/dashboard/kitty-groups?completePayment=true&orderId=${orderId}`);
+                }, 2000);
+                localStorage.removeItem('pending_kitty_group');
+              }
+            } catch (e) {
+              console.error('Error processing pending kitty group:', e);
+            }
+          }
+
+          // Check for pending tambola game
+          const pendingTambola = localStorage.getItem('pending_tambola_game');
+          if (pendingTambola) {
+            try {
+              const { orderId: storedOrderId } = JSON.parse(pendingTambola);
+              if (storedOrderId === orderId || storedOrderId === paymentId) {
+                // Redirect to tambola page to start game
+                setTimeout(() => {
+                  router.push(`/dashboard/tambola?startGame=true&orderId=${orderId}`);
+                }, 2000);
+                localStorage.removeItem('pending_tambola_game');
+              }
+            } catch (e) {
+              console.error('Error processing pending tambola game:', e);
+            }
+          }
+        }
       } else if (result.status === 'pending') {
         setStatus('pending');
       } else {

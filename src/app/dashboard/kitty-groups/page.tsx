@@ -1,6 +1,6 @@
 
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Card,
   CardContent,
@@ -43,6 +43,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -51,7 +52,6 @@ import { Controller } from 'react-hook-form';
 import { useCollection, useFirestore, useUser, useMemoFirebase } from '@/firebase';
 import { collection, addDoc, query, where } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
-import { CashfreePayment } from '@/components/cashfree-payment';
 import { useRouter } from 'next/navigation';
 
 
@@ -83,8 +83,7 @@ export default function KittyGroupsPage() {
   const { toast } = useToast();
   const router = useRouter();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
-  const [pendingGroupData, setPendingGroupData] = useState<KittyGroupFormValues | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
   const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
 
@@ -116,55 +115,95 @@ export default function KittyGroupsPage() {
       return;
     }
 
-    // Store form data and show payment dialog
-    setPendingGroupData(data);
     setIsDialogOpen(false);
-    setIsPaymentDialogOpen(true);
-  };
-
-  const handlePaymentSuccess = async (paymentId: string, orderId: string) => {
-    if (!user || !pendingGroupData) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Payment data missing.' });
-      return;
-    }
-
-    const newGroup = {
-      name: pendingGroupData.name,
-      contribution: pendingGroupData.contribution,
-      nextTurn: 'TBD',
-      nextDate: 'TBD',
-      memberIds: [user.uid], // Creator is the first member
-      paymentId: paymentId,
-      orderId: orderId,
-      createdAt: new Date().toISOString(),
-      // 'members' field from mock data is now derived from memberIds.length
-    };
+    setIsProcessing(true);
 
     try {
-      await addDoc(collection(firestore, 'kitty_groups'), newGroup);
+      // Get Firebase Auth token
+      const { getAuth } = await import('firebase/auth');
+      const { initializeFirebase } = await import('@/firebase');
+      const auth = initializeFirebase().auth;
+      let authToken: string | null = null;
+      
+      if (auth.currentUser) {
+        authToken = await auth.currentUser.getIdToken();
+      }
+
+      // Create payment order
+      const { processCashfreePayment } = await import('@/lib/payments');
+      const paymentResponse = await processCashfreePayment(
+        99,
+        'INR',
+        `Kitty Group: ${data.name}`,
+        user.uid,
+        {
+          name: user.displayName || 'User',
+          email: user.email || '',
+          phone: '9999999999',
+        },
+        {
+          subscriptionType: 'kitty_group',
+          type: 'kitty_group_creation',
+          groupName: data.name,
+          groupData: data, // Store form data in metadata
+          duration: 'one-time per group',
+        },
+        authToken || undefined
+      );
+
+      // Store pending group data in localStorage with orderId
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('pending_kitty_group', JSON.stringify({
+          orderId: paymentResponse.orderId,
+          paymentId: paymentResponse.paymentId,
+          groupData: data,
+        }));
+      }
+
+      // Redirect to payment URL if available
+      if (paymentResponse.paymentUrl) {
+        window.location.href = paymentResponse.paymentUrl;
+        return;
+      }
+
+      // If payment session ID is available, use Cashfree Checkout.js
+      if (paymentResponse.paymentSessionId) {
+        // Load Cashfree SDK and redirect
+        const script = document.createElement('script');
+        script.src = 'https://sdk.cashfree.com/js/v3/cashfree.js';
+        script.async = true;
+        script.onload = () => {
+          const isProduction = process.env.NODE_ENV === 'production' || 
+                              window.location.hostname !== 'localhost';
+          const cashfree = new (window as any).Cashfree({ 
+            mode: isProduction ? 'production' : 'sandbox' 
+          });
+          cashfree.checkout({
+            paymentSessionId: paymentResponse.paymentSessionId,
+            redirectTarget: '_self',
+          });
+        };
+        document.body.appendChild(script);
+        return;
+      }
+
       toast({
-        title: 'Kitty Group Created!',
-        description: `The group "${pendingGroupData.name}" has been successfully created.`,
+        title: 'Payment Error',
+        description: 'Payment URL not available. Please try again.',
+        variant: 'destructive',
       });
-      reset();
-      setPendingGroupData(null);
-      setIsPaymentDialogOpen(false);
-      router.push('/dashboard/kitty-groups');
-    } catch(e) {
-      console.error("Error creating kitty group: ", e);
-      toast({ variant: 'destructive', title: 'Error', description: 'Could not create kitty group.' });
+    } catch (error: any) {
+      console.error('Payment error:', error);
+      toast({
+        title: 'Payment Failed',
+        description: error.message || 'Failed to initiate payment',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsProcessing(false);
     }
   };
 
-  const handlePaymentError = (error: string) => {
-    toast({
-      title: 'Payment Failed',
-      description: error,
-      variant: 'destructive',
-    });
-    setIsPaymentDialogOpen(false);
-    setPendingGroupData(null);
-  };
   
   const handleToolClick = (toolId: string) => {
     if (toolId === 'winner-selection') {
@@ -365,33 +404,6 @@ export default function KittyGroupsPage() {
                   <Button type="submit">Create Group</Button>
                 </DialogFooter>
               </form>
-            </DialogContent>
-          </Dialog>
-
-          {/* Payment Dialog for Kitty Group Creation */}
-          <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
-            <DialogContent className="sm:max-w-[500px]">
-              <DialogHeader>
-                <DialogTitle>Complete Payment to Create Kitty Group</DialogTitle>
-                <CardDescription>
-                  Pay ₹99 to create your new Kitty Group: {pendingGroupData?.name}
-                </CardDescription>
-              </DialogHeader>
-              <div className="py-4">
-                <CashfreePayment
-                  amount={99}
-                  currency="INR"
-                  description={`Kitty Group: ${pendingGroupData?.name || 'New Group'}`}
-                  onSuccess={handlePaymentSuccess}
-                  onError={handlePaymentError}
-                  metadata={{
-                    subscriptionType: 'kitty_group',
-                    type: 'kitty_group_creation',
-                    groupName: pendingGroupData?.name,
-                    duration: 'one-time per group',
-                  }}
-                />
-              </div>
             </DialogContent>
           </Dialog>
 

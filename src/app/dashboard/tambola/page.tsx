@@ -21,7 +21,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { CashfreePayment } from '@/components/cashfree-payment';
 import { useUser } from '@/firebase/provider';
 
 // A more robust function to generate a valid Tambola ticket
@@ -101,6 +100,8 @@ const prizes = [
 
 export default function TambolaPage() {
   const { toast } = useToast();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { user } = useUser();
   const [calledNumbers, setCalledNumbers] = useState<number[]>([]);
   const [currentNumber, setCurrentNumber] = useState<number | null>(null);
@@ -108,7 +109,6 @@ export default function TambolaPage() {
   const [dabbedNumbers, setDabbedNumbers] = useState<number[]>([]);
   const [claimedPrizes, setClaimedPrizes] = useState<string[]>([]);
   const [gameStatus, setGameStatus] = useState<'idle' | 'running' | 'paused' | 'ended'>('idle');
-  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Initialize ticket on mount
@@ -140,31 +140,91 @@ export default function TambolaPage() {
     setCurrentNumber(nextNumber);
   }, [calledNumbers, toast]);
 
-  const handleStartGame = () => {
-    // Show payment dialog first
-    setIsPaymentDialogOpen(true);
-  };
+  const handleStartGame = async () => {
+    if (!user) {
+      toast({ variant: 'destructive', title: 'Not authenticated' });
+      return;
+    }
 
-  const handlePaymentSuccess = (paymentId: string, orderId: string) => {
-    // Start game after successful payment
-    resetGame();
-    setGameStatus('running');
-    setIsPaymentDialogOpen(false);
-    // We call handleNextNumber inside a timeout to give state a moment to update
-    setTimeout(handleNextNumber, 100);
-    toast({ 
-      title: 'Payment Successful!', 
-      description: 'Game started! Good luck!' 
-    });
-  };
+    try {
+      // Get Firebase Auth token
+      const { getAuth } = await import('firebase/auth');
+      const { initializeFirebase } = await import('@/firebase');
+      const auth = initializeFirebase().auth;
+      let authToken: string | null = null;
+      
+      if (auth.currentUser) {
+        authToken = await auth.currentUser.getIdToken();
+      }
 
-  const handlePaymentError = (error: string) => {
-    toast({
-      title: 'Payment Failed',
-      description: error,
-      variant: 'destructive',
-    });
-    setIsPaymentDialogOpen(false);
+      // Create payment order
+      const { processCashfreePayment } = await import('@/lib/payments');
+      const paymentResponse = await processCashfreePayment(
+        99,
+        'INR',
+        'Tambola Game - Single Game Payment',
+        user.uid,
+        {
+          name: user.displayName || 'User',
+          email: user.email || '',
+          phone: '9999999999',
+        },
+        {
+          subscriptionType: 'tambola',
+          type: 'tambola_game',
+          duration: 'per game',
+        },
+        authToken || undefined
+      );
+
+      // Store pending game start in localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('pending_tambola_game', JSON.stringify({
+          orderId: paymentResponse.orderId,
+          paymentId: paymentResponse.paymentId,
+        }));
+      }
+
+      // Redirect to payment URL if available
+      if (paymentResponse.paymentUrl) {
+        window.location.href = paymentResponse.paymentUrl;
+        return;
+      }
+
+      // If payment session ID is available, use Cashfree Checkout.js
+      if (paymentResponse.paymentSessionId) {
+        // Load Cashfree SDK and redirect
+        const script = document.createElement('script');
+        script.src = 'https://sdk.cashfree.com/js/v3/cashfree.js';
+        script.async = true;
+        script.onload = () => {
+          const isProduction = process.env.NODE_ENV === 'production' || 
+                              window.location.hostname !== 'localhost';
+          const cashfree = new (window as any).Cashfree({ 
+            mode: isProduction ? 'production' : 'sandbox' 
+          });
+          cashfree.checkout({
+            paymentSessionId: paymentResponse.paymentSessionId,
+            redirectTarget: '_self',
+          });
+        };
+        document.body.appendChild(script);
+        return;
+      }
+
+      toast({
+        title: 'Payment Error',
+        description: 'Payment URL not available. Please try again.',
+        variant: 'destructive',
+      });
+    } catch (error: any) {
+      console.error('Payment error:', error);
+      toast({
+        title: 'Payment Failed',
+        description: error.message || 'Failed to initiate payment',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleDabNumber = (number: number) => {
@@ -357,32 +417,6 @@ export default function TambolaPage() {
           </Card>
 
         </div>
-
-        {/* Payment Dialog for Tambola Game */}
-        <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle>Complete Payment to Start Tambola Game</DialogTitle>
-              <CardDescription>
-                Pay ₹99 to start a new Tambola game
-              </CardDescription>
-            </DialogHeader>
-            <div className="py-4">
-              <CashfreePayment
-                amount={99}
-                currency="INR"
-                description="Tambola Game - Single Game Payment"
-                onSuccess={handlePaymentSuccess}
-                onError={handlePaymentError}
-                metadata={{
-                  subscriptionType: 'tambola',
-                  type: 'tambola_game',
-                  duration: 'per game',
-                }}
-              />
-            </div>
-          </DialogContent>
-        </Dialog>
 
       </div>
     </div>
