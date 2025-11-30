@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { initializeFirebase } from '@/firebase';
+import { initializeFirebaseServer } from '@/firebase/server';
 import { doc, updateDoc, serverTimestamp, collection, addDoc } from 'firebase/firestore';
 
 const CASHFREE_SECRET_KEY = process.env.CASHFREE_SECRET_KEY || '';
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { firestore } = initializeFirebase();
+    const { firestore } = initializeFirebaseServer();
 
     // Find payment by orderId
     const { collection: firestoreCollection, query, where, getDocs } = await import('firebase/firestore');

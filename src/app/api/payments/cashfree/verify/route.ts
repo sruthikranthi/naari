@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { initializeFirebase } from '@/firebase';
+import { initializeFirebaseServer } from '@/firebase/server';
 import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 
 const CASHFREE_APP_ID = process.env.CASHFREE_APP_ID || '';
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { firestore } = initializeFirebase();
+    const { firestore } = initializeFirebaseServer();
 
     // Get payment record
     let paymentDoc;

@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { initializeFirebase } from '@/firebase';
+import { initializeFirebaseServer } from '@/firebase/server';
 import { collection, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
 
 // Initialize Cashfree SDK (you'll need to install: npm install cashfree-pg)
@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
     let paymentDoc;
     let orderId;
     try {
-      const firebaseInit = initializeFirebase();
+      const firebaseInit = initializeFirebaseServer();
       firestore = firebaseInit.firestore;
       const paymentsRef = collection(firestore, 'payments');
       
