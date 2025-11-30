@@ -139,8 +139,16 @@ export default function TambolaPage() {
             // Start the game
             resetGame();
             setGameStatus('running');
+            // Call next number after a delay
             setTimeout(() => {
-              handleNextNumber();
+              if (calledNumbers.length < 90) {
+                let nextNumber;
+                do {
+                  nextNumber = Math.floor(Math.random() * 90) + 1;
+                } while (calledNumbers.includes(nextNumber));
+                setCalledNumbers((prev) => [...prev, nextNumber]);
+                setCurrentNumber(nextNumber);
+              }
             }, 100);
             toast({ 
               title: 'Payment Successful!', 
@@ -154,7 +162,7 @@ export default function TambolaPage() {
         }
       }
     }
-  }, [searchParams, toast, router, handleNextNumber]);
+  }, [searchParams, toast, router, calledNumbers]);
 
   const handleNextNumber = useCallback(() => {
     if (calledNumbers.length >= 90) {
