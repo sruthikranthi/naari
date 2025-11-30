@@ -292,6 +292,17 @@ export async function POST(request: NextRequest) {
     let cashfreeData;
     try {
       cashfreeData = await cashfreeResponse.json();
+      
+      // Log the full Cashfree response for debugging
+      console.log('✅ Cashfree API Success Response:', {
+        order_id: cashfreeData.order_id,
+        payment_session_id: cashfreeData.payment_session_id,
+        order_token: cashfreeData.order_token,
+        payment_link: cashfreeData.payment_link,
+        payment_url: cashfreeData.payment_url,
+        allKeys: Object.keys(cashfreeData),
+        fullResponse: JSON.stringify(cashfreeData, null, 2),
+      });
     } catch (parseError: any) {
       console.error('Failed to parse Cashfree response:', parseError);
       return NextResponse.json(
@@ -308,6 +319,8 @@ export async function POST(request: NextRequest) {
           ...metadata,
           cashfree_order_id: cashfreeData.order_id,
           payment_session_id: cashfreeData.payment_session_id,
+          order_token: cashfreeData.order_token,
+          payment_link: cashfreeData.payment_link || cashfreeData.payment_url,
         },
         updatedAt: admin.firestore.Timestamp.now(),
       });
@@ -316,13 +329,29 @@ export async function POST(request: NextRequest) {
       // Continue even if update fails, as payment is created
     }
 
+    // Cashfree returns payment_link or payment_url, or we can construct from session_id and token
+    const paymentUrl = cashfreeData.payment_link || 
+                       cashfreeData.payment_url || 
+                       (cashfreeData.payment_session_id && cashfreeData.order_token 
+                         ? `https://payments.cashfree.com/forms/v2/${cashfreeData.payment_session_id}` 
+                         : null);
+
+    console.log('📤 Returning payment response:', {
+      paymentId: paymentDoc.id,
+      orderId: cashfreeData.order_id || cashfreeOrderData.order_id,
+      paymentSessionId: cashfreeData.payment_session_id,
+      orderToken: cashfreeData.order_token,
+      paymentUrl: paymentUrl,
+      hasPaymentUrl: !!paymentUrl,
+    });
+
     return NextResponse.json({
       success: true,
       paymentId: paymentDoc.id,
       orderId: cashfreeData.order_id || cashfreeOrderData.order_id,
       paymentSessionId: cashfreeData.payment_session_id,
       orderToken: cashfreeData.order_token,
-      paymentUrl: cashfreeData.payment_link || null,
+      paymentUrl: paymentUrl,
     });
   } catch (error: any) {
     console.error('Unexpected error creating Cashfree order:', error);
