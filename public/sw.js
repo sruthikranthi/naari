@@ -1,6 +1,7 @@
 // Service Worker for offline support and push notifications
-const CACHE_NAME = 'sakhi-circle-v1';
-const RUNTIME_CACHE = 'sakhi-circle-runtime';
+// Update cache version when service worker changes to force cache refresh
+const CACHE_NAME = 'sakhi-circle-v2';
+const RUNTIME_CACHE = 'sakhi-circle-runtime-v2';
 
 // Assets to cache on install
 const STATIC_ASSETS = [
@@ -47,6 +48,28 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  const url = new URL(event.request.url);
+
+  // Don't cache Next.js static assets (CSS, JS, fonts) - they're versioned and should always be fresh
+  // These files have hashes in their names and should never be cached by service worker
+  if (
+    url.pathname.startsWith('/_next/static/') ||
+    url.pathname.startsWith('/_next/image') ||
+    url.pathname.includes('/_next/static/css/') ||
+    url.pathname.includes('/_next/static/chunks/') ||
+    url.pathname.includes('/_next/static/media/')
+  ) {
+    // Network-first for Next.js static assets - always fetch fresh
+    event.respondWith(
+      fetch(event.request).catch(() => {
+        // Only use cache if network fails completely
+        return caches.match(event.request);
+      })
+    );
+    return;
+  }
+
+  // For other resources, use cache-first strategy
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       if (cachedResponse) {
