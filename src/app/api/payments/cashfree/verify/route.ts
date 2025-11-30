@@ -19,6 +19,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { orderId, paymentId } = body;
 
+    console.log('🔍 Verifying payment:', { orderId, paymentId });
+
     if (!orderId && !paymentId) {
       return NextResponse.json(
         { error: 'Either orderId or paymentId is required' },
@@ -26,7 +28,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { firestore } = initializeFirebaseServer();
+    // Initialize Firebase Admin SDK
+    let firestore;
+    try {
+      const firebaseInit = initializeFirebaseServer();
+      firestore = firebaseInit.firestore;
+      
+      if (!firestore) {
+        throw new Error('Firestore instance is null. Firebase Admin SDK may not be properly initialized.');
+      }
+    } catch (firebaseError: any) {
+      console.error('❌ Firebase Admin SDK initialization error:', {
+        message: firebaseError.message,
+        stack: firebaseError.stack,
+      });
+      return NextResponse.json(
+        { error: 'Failed to initialize Firebase', message: firebaseError.message },
+        { status: 500 }
+      );
+    }
 
     // Get payment record using Admin SDK
     let paymentDoc: admin.firestore.DocumentSnapshot<admin.firestore.DocumentData>;
@@ -75,40 +95,102 @@ export async function POST(request: NextRequest) {
     // Now TypeScript knows paymentData is defined
     const cfOrderId = (paymentData.orderId as string) || orderId || '';
 
-    // Verify payment with Cashfree
-    const verifyResponse = await fetch(`${CASHFREE_BASE_URL}/orders/${cfOrderId}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-client-id': CASHFREE_APP_ID,
-        'x-client-secret': CASHFREE_SECRET_KEY,
-        'x-api-version': '2022-09-01',
-      },
+    if (!cfOrderId) {
+      console.error('❌ No order ID found:', { orderId, paymentId, paymentDataOrderId: paymentData.orderId });
+      return NextResponse.json(
+        { error: 'Order ID not found in payment record' },
+        { status: 400 }
+      );
+    }
+
+    console.log('📞 Calling Cashfree API to verify order:', {
+      url: `${CASHFREE_BASE_URL}/orders/${cfOrderId}`,
+      environment: isProduction ? 'PRODUCTION' : 'SANDBOX',
+      hasAppId: !!CASHFREE_APP_ID,
+      hasSecretKey: !!CASHFREE_SECRET_KEY,
     });
 
+    // Verify payment with Cashfree
+    let verifyResponse;
+    try {
+      verifyResponse = await fetch(`${CASHFREE_BASE_URL}/orders/${cfOrderId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-client-id': CASHFREE_APP_ID,
+          'x-client-secret': CASHFREE_SECRET_KEY,
+          'x-api-version': '2022-09-01',
+        },
+      });
+    } catch (fetchError: any) {
+      console.error('❌ Cashfree API fetch error:', {
+        message: fetchError.message,
+        stack: fetchError.stack,
+        orderId: cfOrderId,
+      });
+      return NextResponse.json(
+        { error: 'Failed to connect to Cashfree', message: fetchError.message },
+        { status: 500 }
+      );
+    }
+
     if (!verifyResponse.ok) {
-      const errorData = await verifyResponse.json();
+      let errorData;
+      try {
+        errorData = await verifyResponse.json();
+      } catch (e) {
+        errorData = { message: `HTTP ${verifyResponse.status}: ${verifyResponse.statusText}` };
+      }
+      console.error('❌ Cashfree API error:', {
+        status: verifyResponse.status,
+        errorData,
+        orderId: cfOrderId,
+      });
       return NextResponse.json(
         { error: 'Failed to verify payment', details: errorData },
         { status: verifyResponse.status }
       );
     }
 
-    const verifyData = await verifyResponse.json();
+    let verifyData;
+    try {
+      verifyData = await verifyResponse.json();
+      console.log('✅ Cashfree verification response:', {
+        order_status: verifyData.order_status,
+        payment_details: verifyData.payment_details,
+      });
+    } catch (parseError: any) {
+      console.error('❌ Failed to parse Cashfree response:', parseError);
+      return NextResponse.json(
+        { error: 'Invalid response from Cashfree', message: parseError.message },
+        { status: 500 }
+      );
+    }
+
     const paymentStatus = verifyData.order_status === 'PAID' ? 'completed' : 
                          verifyData.order_status === 'ACTIVE' ? 'pending' : 'failed';
 
     // Update payment status in Firestore using Admin SDK
-    await firestore.collection('payments').doc(paymentDoc.id).update({
-      status: paymentStatus,
-      transactionId: verifyData.payment_details?.cf_payment_id || null,
-      updatedAt: admin.firestore.Timestamp.now(),
-      metadata: {
-        ...paymentData?.metadata,
-        cashfree_order_status: verifyData.order_status,
-        cashfree_payment_details: verifyData.payment_details,
-      },
-    });
+    try {
+      await firestore.collection('payments').doc(paymentDoc.id).update({
+        status: paymentStatus,
+        transactionId: verifyData.payment_details?.cf_payment_id || null,
+        updatedAt: admin.firestore.Timestamp.now(),
+        metadata: {
+          ...paymentData?.metadata,
+          cashfree_order_status: verifyData.order_status,
+          cashfree_payment_details: verifyData.payment_details,
+        },
+      });
+      console.log('✅ Payment status updated in Firestore:', { paymentId: paymentDoc.id, status: paymentStatus });
+    } catch (updateError: any) {
+      console.error('❌ Failed to update payment status:', {
+        message: updateError.message,
+        stack: updateError.stack,
+        paymentId: paymentDoc.id,
+      });
+      // Continue even if update fails, return the verification result
+    }
 
     return NextResponse.json({
       success: true,
@@ -119,7 +201,11 @@ export async function POST(request: NextRequest) {
       paymentDetails: verifyData.payment_details,
     });
   } catch (error: any) {
-    console.error('Error verifying Cashfree payment:', error);
+    console.error('❌ Error verifying Cashfree payment:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+    });
     return NextResponse.json(
       { error: 'Internal server error', message: error.message },
       { status: 500 }
