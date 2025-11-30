@@ -140,6 +140,39 @@ export default function TambolaPage() {
     setCurrentNumber(nextNumber);
   }, [calledNumbers, toast]);
 
+  // Check for pending game start after payment
+  useEffect(() => {
+    const startGame = searchParams.get('startGame');
+    const orderId = searchParams.get('orderId');
+    
+    if (startGame === 'true' && orderId) {
+      // Get pending game data from localStorage
+      const pendingTambola = localStorage.getItem('pending_tambola_game');
+      if (pendingTambola) {
+        try {
+          const { orderId: storedOrderId } = JSON.parse(pendingTambola);
+          if (storedOrderId === orderId) {
+            // Start the game
+            resetGame();
+            setGameStatus('running');
+            // Call next number after a delay
+            setTimeout(() => {
+              handleNextNumber();
+            }, 100);
+            toast({ 
+              title: 'Payment Successful!', 
+              description: 'Game started! Good luck!' 
+            });
+            localStorage.removeItem('pending_tambola_game');
+            router.replace('/dashboard/tambola');
+          }
+        } catch (e) {
+          console.error('Error processing pending tambola game:', e);
+        }
+      }
+    }
+  }, [searchParams, toast, router, handleNextNumber]);
+
   const handleStartGame = async () => {
     if (!user) {
       toast({ variant: 'destructive', title: 'Not authenticated' });
