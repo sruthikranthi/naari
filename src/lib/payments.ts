@@ -265,14 +265,9 @@ export async function processCashfreePayment(
   description: string,
   userId: string,
   customerDetails: CashfreeCustomerDetails,
-  metadata?: Record<string, any>
+  metadata?: Record<string, any>,
+  authToken?: string // Pass token from component
 ): Promise<CashfreeOrderResponse> {
-  // Get Firebase Auth token for server-side authentication
-  const { getAuth } = await import('firebase/auth');
-  const { initializeFirebase } = await import('@/firebase');
-  const auth = initializeFirebase().auth;
-  const authToken = auth.currentUser ? await auth.currentUser.getIdToken() : null;
-  
   const response = await fetch('/api/payments/cashfree/create-order', {
     method: 'POST',
     headers: {

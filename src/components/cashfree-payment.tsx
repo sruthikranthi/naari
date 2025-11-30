@@ -72,13 +72,29 @@ export function CashfreePayment({
     setPaymentStatus('processing');
 
     try {
+      // Get Firebase Auth token for server-side authentication
+      const { getAuth } = await import('firebase/auth');
+      const { initializeFirebase } = await import('@/firebase');
+      const auth = initializeFirebase().auth;
+      let authToken: string | null = null;
+      
+      // Get the current user and their token
+      if (auth.currentUser) {
+        authToken = await auth.currentUser.getIdToken();
+      } else {
+        // If currentUser is null, try to get it from the user object
+        // This might happen if the auth state hasn't synced yet
+        console.warn('auth.currentUser is null, trying to get token from user object');
+      }
+
       const response = await processCashfreePayment(
         amount,
         currency,
         description,
         user.uid,
         customerDetails,
-        metadata
+        metadata,
+        authToken || undefined
       );
 
       setPaymentData({
