@@ -22,7 +22,11 @@ const CASHFREE_BASE_URL = isProduction
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { amount, currency = 'INR', userId, description, customerDetails, metadata } = body;
+    const { amount, currency = 'INR', userId, description, customerDetails, metadata, authToken } = body;
+    
+    // Get auth token from Authorization header if not in body
+    const authHeader = request.headers.get('authorization');
+    const token = authToken || (authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null);
 
     // Validate required fields
     if (!amount || !userId || !customerDetails) {
@@ -55,6 +59,8 @@ export async function POST(request: NextRequest) {
       
       orderId = `order_${Date.now()}_${Math.random().toString(36).substring(7)}`;
       
+      // Create payment document with userId - this should work if Firestore rules allow
+      // authenticated users to create payments for themselves
       paymentDoc = await addDoc(paymentsRef, {
         userId,
         orderId,
@@ -67,10 +73,22 @@ export async function POST(request: NextRequest) {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
+      
+      console.log('Payment record created successfully:', paymentDoc.id);
     } catch (firestoreError: any) {
-      console.error('Firestore error:', firestoreError);
+      console.error('Firestore error details:', {
+        message: firestoreError.message,
+        code: firestoreError.code,
+        stack: firestoreError.stack,
+        name: firestoreError.name
+      });
       return NextResponse.json(
-        { error: 'Failed to create payment record', message: firestoreError.message },
+        { 
+          error: 'Failed to create payment record', 
+          message: firestoreError.message,
+          code: firestoreError.code || 'UNKNOWN',
+          details: process.env.NODE_ENV === 'development' ? firestoreError.stack : undefined
+        },
         { status: 500 }
       );
     }

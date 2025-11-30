@@ -399,10 +399,18 @@ service cloud.firestore {
       allow get: if isSignedIn() && (resource == null || resource.data.userId == request.auth.uid);
       // Users can list their own payments (query with where clause)
       allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
-      // Allow creating payments (API will set userId)
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      // Allow creating payments - user must be authenticated and creating for themselves
+      allow create: if isSignedIn() 
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.userId is string
+        && request.resource.data.amount is number
+        && request.resource.data.currency is string
+        && request.resource.data.status == 'pending';
       // Allow updating payments (only status and metadata updates via API)
-      allow update: if isSignedIn() && resource != null && resource.data.userId == request.auth.uid;
+      allow update: if isSignedIn() 
+        && resource != null 
+        && resource.data.userId == request.auth.uid
+        && (!('userId' in request.resource.data) || request.resource.data.userId == resource.data.userId);
       // Users cannot delete payments (only system can via API if needed)
       allow delete: if false;
     }

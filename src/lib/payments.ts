@@ -267,10 +267,17 @@ export async function processCashfreePayment(
   customerDetails: CashfreeCustomerDetails,
   metadata?: Record<string, any>
 ): Promise<CashfreeOrderResponse> {
+  // Get Firebase Auth token for server-side authentication
+  const { getAuth } = await import('firebase/auth');
+  const { initializeFirebase } = await import('@/firebase');
+  const auth = initializeFirebase().auth;
+  const authToken = auth.currentUser ? await auth.currentUser.getIdToken() : null;
+  
   const response = await fetch('/api/payments/cashfree/create-order', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      ...(authToken && { 'Authorization': `Bearer ${authToken}` }),
     },
     body: JSON.stringify({
       amount,
@@ -279,6 +286,7 @@ export async function processCashfreePayment(
       userId,
       customerDetails,
       metadata,
+      authToken, // Also send in body as fallback
     }),
   });
 
