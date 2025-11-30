@@ -123,12 +123,12 @@ export function CashfreePayment({
         return;
       }
 
-      // If payment session ID is provided, use Cashfree Checkout.js
-      // Note: Cashfree's new API only requires payment_session_id, order_token is optional
+      // If payment session ID is provided, use Cashfree Checkout.js v3
+      // Note: Cashfree's new API only requires payment_session_id
       if (response.paymentSessionId) {
-        console.log('Using Cashfree Checkout.js with session:', response.paymentSessionId);
-        // Load Cashfree Checkout.js script (orderToken is optional in new API)
-        await loadCashfreeCheckout(response.paymentSessionId, response.orderToken || '');
+        console.log('Using Cashfree Checkout.js v3 with session:', response.paymentSessionId);
+        // Load Cashfree SDK v3 and initialize checkout
+        await loadCashfreeCheckout(response.paymentSessionId);
       } else {
         console.error('❌ Missing payment data:', {
           hasPaymentUrl: !!response.paymentUrl,
@@ -157,21 +157,21 @@ export function CashfreePayment({
     }
   };
 
-  const loadCashfreeCheckout = async (paymentSessionId: string, orderToken?: string) => {
+  const loadCashfreeCheckout = async (paymentSessionId: string) => {
     return new Promise<void>((resolve, reject) => {
       // Check if script is already loaded
-      if (window.Cashfree && window.Cashfree.Checkout) {
-        initializeCheckout(paymentSessionId, orderToken);
+      if (window.Cashfree) {
+        initializeCheckout(paymentSessionId);
         resolve();
         return;
       }
 
-      // Load Cashfree Checkout.js
+      // Load Cashfree SDK v3
       const script = document.createElement('script');
       script.src = 'https://sdk.cashfree.com/js/v3/cashfree.js';
       script.async = true;
       script.onload = () => {
-        initializeCheckout(paymentSessionId, orderToken);
+        initializeCheckout(paymentSessionId);
         resolve();
       };
       script.onerror = () => {
@@ -181,27 +181,30 @@ export function CashfreePayment({
     });
   };
 
-  const initializeCheckout = (paymentSessionId: string, orderToken?: string) => {
+  const initializeCheckout = (paymentSessionId: string) => {
     try {
-      // Cashfree Checkout.js v3 only requires paymentSessionId
-      // orderToken is optional and may not be present in newer API versions
-      const checkoutOptions: any = {
+      // Cashfree SDK v3 syntax (NOT v2)
+      // v2: new Cashfree.Checkout({...}) ❌
+      // v3: new Cashfree({ mode: "production" }).checkout({...}) ✅
+      
+      const isProduction = process.env.NODE_ENV === 'production' || 
+                          window.location.hostname !== 'localhost';
+      
+      console.log('Initializing Cashfree Checkout v3 with:', {
         paymentSessionId,
-        returnUrl: `${window.location.origin}/api/payments/cashfree/return`,
-      };
-
-      // Only add orderToken if it's provided (for backward compatibility)
-      if (orderToken) {
-        checkoutOptions.orderToken = orderToken;
-      }
-
-      console.log('Initializing Cashfree Checkout with:', {
-        paymentSessionId,
-        hasOrderToken: !!orderToken,
+        mode: isProduction ? 'production' : 'sandbox',
       });
 
-      const checkout = new (window as any).Cashfree.Checkout(checkoutOptions);
-      checkout.redirect();
+      // Initialize Cashfree SDK v3
+      const cashfree = new (window as any).Cashfree({ 
+        mode: isProduction ? 'production' : 'sandbox' 
+      });
+
+      // Start checkout with payment session ID
+      cashfree.checkout({
+        paymentSessionId: paymentSessionId,
+        redirectTarget: '_self', // Open in same window
+      });
     } catch (error) {
       console.error('Error initializing Cashfree checkout:', error);
       toast({
