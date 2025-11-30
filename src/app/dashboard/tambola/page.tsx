@@ -494,9 +494,9 @@ export default function TambolaPage() {
                         <DialogContent className="sm:max-w-[500px]">
                           <DialogHeader>
                             <DialogTitle>Share Tambola Game</DialogTitle>
-                            <CardDescription>
+                            <DialogDescription>
                               Share this link to invite players. Anyone with this link can join your game.
-                            </CardDescription>
+                            </DialogDescription>
                           </DialogHeader>
                           <div className="space-y-4 py-4">
                             <div className="flex items-center gap-2">
