@@ -1,7 +1,9 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
-import { ShoppingCart, X, Plus, Minus } from 'lucide-react';
+import { doc } from 'firebase/firestore';
+import { Loader2, ShoppingCart, X, Plus, Minus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -13,8 +15,20 @@ import {
 } from '@/components/ui/sheet';
 import { useCart } from '@/context/cart-context';
 import { Separator } from './ui/separator';
+import { useCashfreeCheckout } from '@/hooks/use-cashfree';
+import { useToast } from '@/hooks/use-toast';
+import { useFirestore, useMemoFirebase, useUser, useDoc } from '@/firebase';
+import type { User } from '@/lib/mock-data';
 
 export function CartSheet() {
+  const { toast } = useToast();
+  const { user } = useUser();
+  const firestore = useFirestore();
+  const userDocRef = useMemoFirebase(
+    () => (firestore && user ? doc(firestore, 'users', user.uid) : null),
+    [firestore, user]
+  );
+  const { data: userProfile } = useDoc<User>(userDocRef);
   const {
     cartItems,
     cartCount,
@@ -22,6 +36,119 @@ export function CartSheet() {
     updateQuantity,
     cartTotal,
   } = useCart();
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const { isReady: isCashfreeReady, error: cashfreeError, openCheckout } =
+    useCashfreeCheckout();
+
+  useEffect(() => {
+    if (cashfreeError) {
+      toast({
+        variant: 'destructive',
+        title: 'Cashfree is unavailable',
+        description: cashfreeError,
+      });
+    }
+  }, [cashfreeError, toast]);
+
+  const canCheckout = cartCount > 0 && cartTotal > 0;
+  const isCheckoutDisabled = !canCheckout || isCheckingOut || !!cashfreeError || !isCashfreeReady;
+
+  const handleCheckout = async () => {
+    if (!user) {
+      toast({
+        variant: 'destructive',
+        title: 'Please sign in',
+        description: 'You need to be logged in to complete the purchase.',
+      });
+      return;
+    }
+
+    if (!canCheckout) {
+      return;
+    }
+
+    if (!isCashfreeReady) {
+      toast({
+        variant: 'destructive',
+        title: 'Payment gateway is still loading',
+        description: 'Please wait a moment and try again.',
+      });
+      return;
+    }
+
+    const phoneNumber = user.phoneNumber ?? userProfile?.mobileNumber;
+
+    if (!phoneNumber) {
+      toast({
+        variant: 'destructive',
+        title: 'Mobile number required',
+        description: 'Please add your mobile number in profile settings to continue.',
+      });
+      return;
+    }
+
+    setIsCheckingOut(true);
+
+    try {
+      const returnUrl =
+        process.env.NEXT_PUBLIC_CASHFREE_RETURN_URL ??
+        (typeof window !== 'undefined'
+          ? `${window.location.origin}/dashboard/marketplace?paymentStatus=success`
+          : undefined);
+
+      const response = await fetch('/api/payments/cashfree', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          amount: cartTotal,
+          currency: 'INR',
+          cartItems: cartItems.map((item) => ({
+            id: item.id,
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity,
+          })),
+          customer: {
+            id: user.uid,
+            name: user.displayName ?? userProfile?.name ?? 'Naari member',
+            email: user.email ?? undefined,
+            phone: phoneNumber,
+          },
+          metadata: {
+            cartTotal,
+            itemCount: cartCount,
+          },
+          orderNote: `Marketplace purchase of ${cartItems.length} item(s)`,
+          returnUrl,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorPayload = await response.json().catch(() => ({}));
+        throw new Error(
+          errorPayload?.error ?? 'Failed to initiate Cashfree checkout.'
+        );
+      }
+
+      const { paymentSessionId } = await response.json();
+
+      await openCheckout(paymentSessionId);
+    } catch (error) {
+      console.error('Cashfree checkout failed', error);
+      toast({
+        variant: 'destructive',
+        title: 'Unable to start payment',
+        description:
+          error instanceof Error
+            ? error.message
+            : 'Something went wrong. Please try again.',
+      });
+    } finally {
+      setIsCheckingOut(false);
+    }
+  };
 
   return (
     <Sheet>
@@ -98,9 +225,24 @@ export function CartSheet() {
                   <span>Subtotal</span>
                   <span>₹{cartTotal.toLocaleString()}</span>
                 </div>
-                <Button className="w-full" size="lg">
-                  Proceed to Checkout
+                <Button
+                  className="w-full"
+                  size="lg"
+                  onClick={handleCheckout}
+                  disabled={isCheckoutDisabled}
+                >
+                  {isCheckingOut ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Starting Cashfree checkout...
+                    </>
+                  ) : (
+                    'Pay securely with Cashfree'
+                  )}
                 </Button>
+                <p className="text-center text-xs text-muted-foreground">
+                  Cashfree powers secure payments for Naarimani.
+                </p>
               </div>
             </SheetFooter>
           </>

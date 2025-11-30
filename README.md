@@ -37,6 +37,20 @@ NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=your_measurement_id_or_empty
 
 # Admin Configuration
 NEXT_PUBLIC_SUPER_ADMIN_ID=your_super_admin_user_id
+
+# Cashfree Payment Gateway (server-side secrets)
+CASHFREE_APP_ID=your_cashfree_app_id
+CASHFREE_SECRET_KEY=your_cashfree_secret_key
+CASHFREE_ENV=sandbox # or production
+CASHFREE_RETURN_URL=https://your-domain.com/dashboard/marketplace?paymentStatus=success
+# Optional webhook target
+CASHFREE_NOTIFY_URL=https://your-domain.com/api/payments/cashfree/webhook
+
+# Cashfree (client-side toggles)
+NEXT_PUBLIC_CASHFREE_MODE=sandbox
+NEXT_PUBLIC_CASHFREE_RETURN_URL=http://localhost:3000/dashboard/marketplace?paymentStatus=success
+# Override only if Cashfree ships a new SDK URL
+NEXT_PUBLIC_CASHFREE_SDK_URL=https://sdk.cashfree.com/js/ui/2.0.0/cashfree.js
 ```
 
 **Note:** All `NEXT_PUBLIC_*` variables are exposed to the client-side bundle. Do not put sensitive secrets here.
