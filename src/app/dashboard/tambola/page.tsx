@@ -110,6 +110,7 @@ export default function TambolaPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useUser();
+  const firestore = useFirestore();
   const [calledNumbers, setCalledNumbers] = useState<number[]>([]);
   const [currentNumber, setCurrentNumber] = useState<number | null>(null);
   const [ticket, setTicket] = useState<(number | null)[][]>([]);
@@ -138,7 +139,7 @@ export default function TambolaPage() {
     () => (firestore && currentGame?.playerIds && currentGame.playerIds.length > 0) 
       ? query(collection(firestore, 'users'), where('id', 'in', currentGame.playerIds.slice(0, 10))) // Firestore 'in' limit is 10
       : null,
-    [firestore, currentGame]
+    [firestore, currentGame?.playerIds]
   );
   const { data: players } = useCollection<User>(playersQuery);
 
@@ -158,10 +159,19 @@ export default function TambolaPage() {
     setTicket(generateTicket());
   }
 
-  const handleNextNumber = useCallback(() => {
+  const handleNextNumber = useCallback(async () => {
     if (calledNumbers.length >= 90) {
       toast({ title: 'Game Over!', description: 'All numbers have been called.' });
       setGameStatus('ended');
+      if (currentGameId && firestore) {
+        try {
+          await updateDoc(doc(firestore, 'tambola_games', currentGameId), {
+            status: 'ended',
+          });
+        } catch (error) {
+          console.error('Error updating game status:', error);
+        }
+      }
       return;
     }
 
@@ -170,9 +180,23 @@ export default function TambolaPage() {
       nextNumber = Math.floor(Math.random() * 90) + 1;
     } while (calledNumbers.includes(nextNumber));
 
-    setCalledNumbers((prev) => [...prev, nextNumber]);
+    const newCalledNumbers = [...calledNumbers, nextNumber];
+    setCalledNumbers(newCalledNumbers);
     setCurrentNumber(nextNumber);
-  }, [calledNumbers, toast]);
+
+    // Update Firestore if admin
+    if (currentGameId && firestore && isGameAdmin) {
+      try {
+        await updateDoc(doc(firestore, 'tambola_games', currentGameId), {
+          calledNumbers: newCalledNumbers,
+          currentNumber: nextNumber,
+          status: 'running',
+        });
+      } catch (error) {
+        console.error('Error updating game:', error);
+      }
+    }
+  }, [calledNumbers, toast, currentGameId, firestore, isGameAdmin]);
 
   // Check for pending game start after payment
   useEffect(() => {
@@ -235,7 +259,7 @@ export default function TambolaPage() {
         }
       }
     }
-  }, [searchParams, toast, router, handleNextNumber, user]);
+  }, [searchParams, toast, router, handleNextNumber, user, firestore]);
 
   // Sync game state with Firestore
   useEffect(() => {
