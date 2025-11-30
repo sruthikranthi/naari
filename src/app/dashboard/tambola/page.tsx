@@ -152,7 +152,7 @@ export default function TambolaPage() {
     const startGame = searchParams.get('startGame');
     const orderId = searchParams.get('orderId');
     
-    if (startGame === 'true' && orderId && user && firestore) {
+    if (startGame === 'true' && orderId && user) {
       // Get pending game data from localStorage
       const pendingTambola = localStorage.getItem('pending_tambola_game');
       if (pendingTambola) {
@@ -161,6 +161,7 @@ export default function TambolaPage() {
           if (storedOrderId === orderId) {
             // Create game in Firestore
             const createGame = async () => {
+              if (!firestore) return;
               try {
                 const newGame = {
                   adminId: user.uid,
@@ -207,21 +208,23 @@ export default function TambolaPage() {
         }
       }
     }
-  }, [searchParams, toast, router, handleNextNumber, user, firestore]);
+  }, [searchParams, toast, router, handleNextNumber, user]);
 
   // Sync game state with Firestore
   useEffect(() => {
-    if (currentGame && currentGameId) {
+    if (currentGame?.id) {
       setCalledNumbers(currentGame.calledNumbers || []);
       setCurrentNumber(currentGame.currentNumber);
       setGameStatus(currentGame.status);
-      setCurrentGameId(currentGame.id);
+      if (currentGame.id !== currentGameId) {
+        setCurrentGameId(currentGame.id);
+      }
     }
-  }, [currentGame, currentGameId]);
+  }, [currentGame?.id, currentGame?.calledNumbers, currentGame?.currentNumber, currentGame?.status, currentGameId]);
 
   // Search for users to invite
   useEffect(() => {
-    if (!searchTerm.trim() || !firestore) {
+    if (!searchTerm.trim()) {
       setSearchResults([]);
       return;
     }
@@ -254,7 +257,7 @@ export default function TambolaPage() {
     }, 300);
 
     return () => clearTimeout(searchTimeout);
-  }, [searchTerm, currentGame?.playerIds, firestore, toast]);
+  }, [searchTerm, currentGame?.playerIds, toast]);
 
   const handleAddPlayer = async (userId: string, userName: string) => {
     if (!firestore || !currentGameId) {

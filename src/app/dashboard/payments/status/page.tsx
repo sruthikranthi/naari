@@ -94,7 +94,7 @@ export default function PaymentStatusPage() {
         variant: 'destructive',
       });
     }
-  }, [orderId, paymentId, toast]);
+  }, [orderId, paymentId, toast, router]);
 
   useEffect(() => {
     if (orderId || paymentId) {
