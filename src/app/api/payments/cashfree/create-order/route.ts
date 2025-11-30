@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { initializeFirebaseServer } from '@/firebase/server';
+import { firebaseConfig } from '@/firebase/config';
 import admin from 'firebase-admin';
 
 // Initialize Cashfree SDK (you'll need to install: npm install cashfree-pg)
@@ -60,8 +61,19 @@ export async function POST(request: NextRequest) {
     let paymentDoc;
     let orderId;
     try {
+      // Check Firebase Admin SDK initialization
+      console.log('Initializing Firebase Admin SDK...', {
+        hasServiceAccountKey: !!process.env.FIREBASE_SERVICE_ACCOUNT_KEY,
+        hasProjectId: !!process.env.FIREBASE_PROJECT_ID,
+        projectId: firebaseConfig.projectId,
+      });
+      
       const firebaseInit = initializeFirebaseServer();
       firestore = firebaseInit.firestore;
+      
+      if (!firestore) {
+        throw new Error('Firestore instance is null. Firebase Admin SDK may not be properly initialized.');
+      }
       
       orderId = `order_${Date.now()}_${Math.random().toString(36).substring(7)}`;
       
@@ -79,6 +91,7 @@ export async function POST(request: NextRequest) {
         updatedAt: admin.firestore.Timestamp.now(),
       };
       
+      console.log('Attempting to create payment record in Firestore...', { orderId, userId });
       paymentDoc = await firestore.collection('payments').add(paymentData);
       
       console.log('Payment record created successfully:', paymentDoc.id);
@@ -89,8 +102,28 @@ export async function POST(request: NextRequest) {
         stack: firestoreError.stack,
         name: firestoreError.name,
         userId,
-        hasToken: !!token
+        hasToken: !!token,
+        errorType: firestoreError.constructor?.name,
+        // Check if it's an initialization error
+        isInitializationError: firestoreError.message?.includes('initialize') || 
+                               firestoreError.message?.includes('Admin SDK') ||
+                               firestoreError.message?.includes('credential'),
       });
+      
+      // Check if it's an initialization error
+      if (firestoreError.message?.includes('initialize') || 
+          firestoreError.message?.includes('Admin SDK') ||
+          firestoreError.message?.includes('credential')) {
+        return NextResponse.json(
+          { 
+            error: 'Firebase Admin SDK initialization failed', 
+            message: 'Unable to initialize Firebase Admin SDK. Please check environment variables.',
+            hint: 'Ensure FIREBASE_SERVICE_ACCOUNT_KEY is set in your environment variables. See FIREBASE_ADMIN_SETUP.md for instructions.',
+            details: process.env.NODE_ENV === 'development' ? firestoreError.message : undefined
+          },
+          { status: 500 }
+        );
+      }
       
       // Check if it's a permission error
       if (firestoreError.code === 'permission-denied' || firestoreError.message?.includes('permission')) {
