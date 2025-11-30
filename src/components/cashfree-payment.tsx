@@ -6,7 +6,7 @@
  */
 
 import { useState } from 'react';
-import { useUser } from '@/firebase/auth/use-user';
+import { useUser } from '@/firebase/provider';
 import { processCashfreePayment, verifyCashfreePayment, type CashfreeCustomerDetails } from '@/lib/payments';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

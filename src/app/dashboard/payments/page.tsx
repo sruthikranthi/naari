@@ -5,7 +5,7 @@
  * Main page for initiating payments
  */
 
-import { useUser } from '@/firebase/auth/use-user';
+import { useUser } from '@/firebase/provider';
 import { CashfreePayment } from '@/components/cashfree-payment';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
