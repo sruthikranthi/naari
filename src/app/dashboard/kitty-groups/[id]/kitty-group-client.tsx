@@ -206,7 +206,7 @@ export function KittyGroupClient({ group, groupMembers, upcomingEvent, currentUs
 
   // Search for users to invite
   useEffect(() => {
-    if (!searchTerm.trim() || !firestore) {
+    if (!searchTerm.trim()) {
       setSearchResults([]);
       return;
     }
@@ -239,7 +239,7 @@ export function KittyGroupClient({ group, groupMembers, upcomingEvent, currentUs
     }, 300);
 
     return () => clearTimeout(searchTimeout);
-  }, [searchTerm, group.memberIds, firestore, toast]);
+  }, [searchTerm, group.memberIds, toast]);
 
   const handleAddMember = async (userId: string, userName: string) => {
     if (!firestore || !groupId) {
@@ -422,7 +422,7 @@ export function KittyGroupClient({ group, groupMembers, upcomingEvent, currentUs
                 </DialogFooter>
               </DialogContent>
             </Dialog>
-          )}
+          }
 
           <Button
             variant="outline"

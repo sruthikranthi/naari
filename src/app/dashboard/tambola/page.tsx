@@ -116,6 +116,33 @@ export default function TambolaPage() {
   const [dabbedNumbers, setDabbedNumbers] = useState<number[]>([]);
   const [claimedPrizes, setClaimedPrizes] = useState<string[]>([]);
   const [gameStatus, setGameStatus] = useState<'idle' | 'running' | 'paused' | 'ended'>('idle');
+  const [currentGameId, setCurrentGameId] = useState<string | null>(null);
+  const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchResults, setSearchResults] = useState<User[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [isAddingPlayer, setIsAddingPlayer] = useState<string | null>(null);
+  const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
+
+  // Fetch current game if gameId is in localStorage
+  const gameIdFromStorage = typeof window !== 'undefined' ? localStorage.getItem('current_tambola_game_id') : null;
+  const gameRef = useMemoFirebase(
+    () => (firestore && gameIdFromStorage ? doc(firestore, 'tambola_games', gameIdFromStorage) : null),
+    [firestore, gameIdFromStorage]
+  );
+  const { data: currentGame } = useDoc<TambolaGame>(gameRef);
+
+  // Fetch players
+  const playersQuery = useMemoFirebase(
+    () => (firestore && currentGame?.playerIds && currentGame.playerIds.length > 0) 
+      ? query(collection(firestore, 'users'), where('id', 'in', currentGame.playerIds.slice(0, 10))) // Firestore 'in' limit is 10
+      : null,
+    [firestore, currentGame]
+  );
+  const { data: players } = useCollection<User>(playersQuery);
+
+  const isGameAdmin = currentGame?.adminId === user?.uid;
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Initialize ticket on mount
@@ -294,6 +321,37 @@ export default function TambolaPage() {
     } finally {
       setIsAddingPlayer(null);
     }
+  };
+
+  const shareLink = typeof window !== 'undefined' && currentGameId
+    ? `${window.location.origin}/dashboard/tambola/join?gameId=${currentGameId}`
+    : '';
+
+  const handleCopyLink = async () => {
+    if (!shareLink) return;
+    try {
+      await navigator.clipboard.writeText(shareLink);
+      setLinkCopied(true);
+      toast({
+        title: 'Link Copied!',
+        description: 'Share this link via WhatsApp or any other platform to invite players.',
+      });
+      setTimeout(() => setLinkCopied(false), 2000);
+    } catch (error) {
+      console.error('Failed to copy link:', error);
+      toast({
+        title: 'Failed to Copy',
+        description: 'Could not copy the link to your clipboard.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleShareWhatsApp = () => {
+    if (!shareLink) return;
+    const message = `Join my Tambola game on Naarimani! Let's play together! 🎲\n\n${shareLink}`;
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
   };
 
   const handleStartGame = async () => {
