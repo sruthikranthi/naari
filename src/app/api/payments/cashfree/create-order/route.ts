@@ -192,7 +192,9 @@ export async function POST(request: NextRequest) {
       order_meta: {
         return_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/payments/cashfree/return?order_id={order_id}`,
         notify_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/payments/cashfree/webhook`,
-        payment_methods: 'cc,dc,upi,wallet,netbanking', // All payment methods
+        // Cashfree valid payment methods: cc,dc,ppc,ccc,emi,paypal,upi,nb,app,paylater,applepay
+        // cc = Credit Card, dc = Debit Card, upi = UPI, nb = Net Banking, app = Wallet, etc.
+        payment_methods: 'cc,dc,upi,nb,app,paylater', // Valid payment methods
       },
     };
 
