@@ -59,7 +59,10 @@ export default function PaymentsPage() {
 
   useEffect(() => {
     if (orderId && status) {
-      verifyPaymentStatus();
+      // Use setTimeout to avoid synchronous setState in effect
+      setTimeout(() => {
+        verifyPaymentStatus();
+      }, 0);
     }
   }, [orderId, status, verifyPaymentStatus]);
 
