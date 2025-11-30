@@ -21,7 +21,14 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { useUser } from '@/firebase/provider';
+import { useUser, useFirestore, useDoc, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, doc, addDoc, updateDoc, arrayUnion, query, where, serverTimestamp } from 'firebase/firestore';
+import type { TambolaGame, User } from '@/lib/mock-data';
+import { searchUsers } from '@/lib/search';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Input } from '@/components/ui/input';
+import { Loader2, Search, UserPlus } from 'lucide-react';
 
 // A more robust function to generate a valid Tambola ticket
 const generateTicket = (): (number | null)[][] => {
@@ -145,33 +152,146 @@ export default function TambolaPage() {
     const startGame = searchParams.get('startGame');
     const orderId = searchParams.get('orderId');
     
-    if (startGame === 'true' && orderId) {
+    if (startGame === 'true' && orderId && user && firestore) {
       // Get pending game data from localStorage
       const pendingTambola = localStorage.getItem('pending_tambola_game');
       if (pendingTambola) {
         try {
-          const { orderId: storedOrderId } = JSON.parse(pendingTambola);
+          const { orderId: storedOrderId, paymentId } = JSON.parse(pendingTambola);
           if (storedOrderId === orderId) {
-            // Start the game
-            resetGame();
-            setGameStatus('running');
-            // Call next number after a delay
-            setTimeout(() => {
-              handleNextNumber();
-            }, 100);
-            toast({ 
-              title: 'Payment Successful!', 
-              description: 'Game started! Good luck!' 
-            });
-            localStorage.removeItem('pending_tambola_game');
-            router.replace('/dashboard/tambola');
+            // Create game in Firestore
+            const createGame = async () => {
+              try {
+                const newGame = {
+                  adminId: user.uid,
+                  playerIds: [user.uid], // Admin is first player
+                  calledNumbers: [],
+                  currentNumber: null,
+                  status: 'idle' as const,
+                  createdAt: serverTimestamp(),
+                  orderId: storedOrderId,
+                  paymentId: paymentId,
+                };
+                const gameDoc = await addDoc(collection(firestore, 'tambola_games'), newGame);
+                setCurrentGameId(gameDoc.id);
+                if (typeof window !== 'undefined') {
+                  localStorage.setItem('current_tambola_game_id', gameDoc.id);
+                }
+                
+                // Start the game locally
+                resetGame();
+                setGameStatus('running');
+                setTimeout(() => {
+                  handleNextNumber();
+                }, 100);
+                
+                toast({ 
+                  title: 'Payment Successful!', 
+                  description: 'Game created! You can now invite players.' 
+                });
+                localStorage.removeItem('pending_tambola_game');
+                router.replace('/dashboard/tambola');
+              } catch (error: any) {
+                console.error('Error creating game:', error);
+                toast({
+                  title: 'Error',
+                  description: 'Failed to create game. Please try again.',
+                  variant: 'destructive',
+                });
+              }
+            };
+            createGame();
           }
         } catch (e) {
           console.error('Error processing pending tambola game:', e);
         }
       }
     }
-  }, [searchParams, toast, router, handleNextNumber]);
+  }, [searchParams, toast, router, handleNextNumber, user, firestore]);
+
+  // Sync game state with Firestore
+  useEffect(() => {
+    if (currentGame && currentGameId) {
+      setCalledNumbers(currentGame.calledNumbers || []);
+      setCurrentNumber(currentGame.currentNumber);
+      setGameStatus(currentGame.status);
+      setCurrentGameId(currentGame.id);
+    }
+  }, [currentGame, currentGameId]);
+
+  // Search for users to invite
+  useEffect(() => {
+    if (!searchTerm.trim() || !firestore) {
+      setSearchResults([]);
+      return;
+    }
+
+    const searchTimeout = setTimeout(async () => {
+      setIsSearching(true);
+      try {
+        const { results } = await searchUsers(searchTerm);
+        // Filter out users who are already players
+        const existingPlayerIds = new Set(currentGame?.playerIds || []);
+        const filteredResults = results
+          .filter(result => result.type === 'user' && !existingPlayerIds.has(result.id))
+          .map(result => ({
+            id: result.id,
+            name: result.title,
+            avatar: result.image || '',
+            city: result.metadata?.city || '',
+          } as User));
+        setSearchResults(filteredResults);
+      } catch (error) {
+        console.error('Error searching users:', error);
+        toast({
+          title: 'Search Error',
+          description: 'Failed to search for users',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsSearching(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(searchTimeout);
+  }, [searchTerm, currentGame?.playerIds, firestore, toast]);
+
+  const handleAddPlayer = async (userId: string, userName: string) => {
+    if (!firestore || !currentGameId) {
+      toast({
+        title: 'Error',
+        description: 'Unable to add player. Please try again.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsAddingPlayer(userId);
+    try {
+      const gameRef = doc(firestore, 'tambola_games', currentGameId);
+      await updateDoc(gameRef, {
+        playerIds: arrayUnion(userId),
+      });
+      
+      toast({
+        title: 'Player Added!',
+        description: `${userName} has been added to the game.`,
+      });
+      
+      // Remove from search results
+      setSearchResults(prev => prev.filter(u => u.id !== userId));
+      setSearchTerm('');
+    } catch (error: any) {
+      console.error('Error adding player:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to add player. You may not have permission.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsAddingPlayer(null);
+    }
+  };
 
   const handleStartGame = async () => {
     if (!user) {
@@ -355,6 +475,134 @@ export default function TambolaPage() {
 
         {/* Sidebar */}
         <div className="space-y-6">
+          {/* Players Card */}
+          {currentGame && (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="text-primary" /> Players ({currentGame.playerIds?.length || 0})
+                  </CardTitle>
+                  {isGameAdmin && (
+                    <Dialog open={isInviteDialogOpen} onOpenChange={setIsInviteDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button size="sm" variant="outline">
+                          <UserPlus className="h-4 w-4 mr-1" /> Invite
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-[500px]">
+                        <DialogHeader>
+                          <DialogTitle>Invite Players to Tambola Game</DialogTitle>
+                          <CardDescription>
+                            Search for users by name or city to add them to your game.
+                          </CardDescription>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4">
+                          <div className="relative">
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                              placeholder="Search by name or city..."
+                              value={searchTerm}
+                              onChange={(e) => setSearchTerm(e.target.value)}
+                              className="pl-10"
+                            />
+                          </div>
+                          
+                          {isSearching && (
+                            <div className="flex items-center justify-center py-8">
+                              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                            </div>
+                          )}
+
+                          {!isSearching && searchResults.length > 0 && (
+                            <ScrollArea className="h-[300px]">
+                              <div className="space-y-2">
+                                {searchResults.map((player) => (
+                                  <div
+                                    key={player.id}
+                                    className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                                  >
+                                    <div className="flex items-center gap-3">
+                                      <Avatar className="h-10 w-10">
+                                        <AvatarImage src={player.avatar} alt={player.name} />
+                                        <AvatarFallback>
+                                          {player.name.split(' ').map(n => n[0]).join('')}
+                                        </AvatarFallback>
+                                      </Avatar>
+                                      <div>
+                                        <p className="font-medium">{player.name}</p>
+                                        {player.city && (
+                                          <p className="text-xs text-muted-foreground">{player.city}</p>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <Button
+                                      size="sm"
+                                      onClick={() => handleAddPlayer(player.id, player.name)}
+                                      disabled={isAddingPlayer === player.id}
+                                    >
+                                      {isAddingPlayer === player.id ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                      ) : (
+                                        <>
+                                          <UserPlus className="h-4 w-4 mr-1" />
+                                          Add
+                                        </>
+                                      )}
+                                    </Button>
+                                  </div>
+                                ))}
+                              </div>
+                            </ScrollArea>
+                          )}
+
+                          {!isSearching && searchTerm && searchResults.length === 0 && (
+                            <div className="text-center py-8 text-muted-foreground">
+                              <p>No users found matching &quot;{searchTerm}&quot;</p>
+                            </div>
+                          )}
+
+                          {!isSearching && !searchTerm && (
+                            <div className="text-center py-8 text-muted-foreground">
+                              <Search className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                              <p>Start typing to search for users</p>
+                            </div>
+                          )}
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent>
+                {players && players.length > 0 ? (
+                  <div className="space-y-2">
+                    {players.map((player) => (
+                      <div key={player.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={player.avatar} alt={player.name} />
+                          <AvatarFallback>
+                            {player.name.split(' ').map(n => n[0]).join('')}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium">{player.name}</p>
+                          {player.id === currentGame.adminId && (
+                            <p className="text-xs text-muted-foreground">Admin</p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    No players yet. {isGameAdmin && 'Invite players to join!'}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -362,8 +610,8 @@ export default function TambolaPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-2 gap-4">
-              <Button onClick={handleStartGame} disabled={gameStatus === 'running'}>Pay ₹99 & Start Game</Button>
-              <Button onClick={handleNextNumber} disabled={gameStatus !== 'running'}>Next Number</Button>
+              <Button onClick={handleStartGame} disabled={gameStatus === 'running' || !!currentGame}>Pay ₹99 & Start Game</Button>
+              <Button onClick={handleNextNumber} disabled={gameStatus !== 'running' || !isGameAdmin}>Next Number</Button>
               <Button variant="outline" disabled={gameStatus !== 'running'}>Pause Game</Button>
               <Button variant="destructive" onClick={resetGame} disabled={gameStatus === 'idle'}>End Game</Button>
             </CardContent>

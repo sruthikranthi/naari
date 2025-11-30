@@ -46,9 +46,14 @@ import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { CameraCapture } from '@/components/camera-capture';
+import { useFirestore, useUser } from '@/firebase';
+import { doc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { searchUsers } from '@/lib/search';
+import { Loader2, Search, UserPlus } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 //
 // 🔥 REAL FIRESTORE USER TYPE (working with your Firestore schema)
@@ -84,6 +89,7 @@ type KittyGroupClientProps = {
   groupMembers: FirestoreUser[];
   upcomingEvent: UpcomingEvent;
   currentUser: FirestoreUser;
+  groupId: string; // Add groupId to update Firestore
 };
 
 type LiveChatMessage = {
@@ -97,15 +103,23 @@ const initialMessages: LiveChatMessage[] = [
   { id: 'msg2', author: 'Meera Das', text: 'Looking good, Anjali! 🎉' }
 ];
 
-export function KittyGroupClient({ group, groupMembers, upcomingEvent, currentUser }: KittyGroupClientProps) {
+export function KittyGroupClient({ group, groupMembers, upcomingEvent, currentUser, groupId }: KittyGroupClientProps) {
   const { toast } = useToast();
+  const firestore = useFirestore();
+  const { user: authUser } = useUser();
   const [isPartyDialogOpen, setIsPartyDialogOpen] = useState(false);
+  const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
   const [isLive, setIsLive] = useState(false);
   const [liveMessages, setLiveMessages] = useState<LiveChatMessage[]>(initialMessages);
   const [newMessage, setNewMessage] = useState('');
   const [activeReaction, setActiveReaction] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchResults, setSearchResults] = useState<FirestoreUser[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [isAddingMember, setIsAddingMember] = useState<string | null>(null);
 
   const isHost = currentUser.name === group.nextTurn;
+  const isGroupAdmin = group.memberIds && group.memberIds.length > 0 && group.memberIds[0] === currentUser.id;
 
   const handleAction = (title: string, description: string) => {
     toast({ title, description });
@@ -156,19 +170,180 @@ export function KittyGroupClient({ group, groupMembers, upcomingEvent, currentUs
     setTimeout(() => setActiveReaction(null), 500);
   };
 
+  // Search for users to invite
+  useEffect(() => {
+    if (!searchTerm.trim() || !firestore) {
+      setSearchResults([]);
+      return;
+    }
+
+    const searchTimeout = setTimeout(async () => {
+      setIsSearching(true);
+      try {
+        const { results } = await searchUsers(searchTerm);
+        // Filter out users who are already members
+        const existingMemberIds = new Set(group.memberIds || []);
+        const filteredResults = results
+          .filter(result => result.type === 'user' && !existingMemberIds.has(result.id))
+          .map(result => ({
+            id: result.id,
+            name: result.title,
+            avatar: result.image || '',
+            city: result.metadata?.city || '',
+          } as FirestoreUser));
+        setSearchResults(filteredResults);
+      } catch (error) {
+        console.error('Error searching users:', error);
+        toast({
+          title: 'Search Error',
+          description: 'Failed to search for users',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsSearching(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(searchTimeout);
+  }, [searchTerm, group.memberIds, firestore, toast]);
+
+  const handleAddMember = async (userId: string, userName: string) => {
+    if (!firestore || !groupId) {
+      toast({
+        title: 'Error',
+        description: 'Unable to add member. Please try again.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsAddingMember(userId);
+    try {
+      const groupRef = doc(firestore, 'kitty_groups', groupId);
+      await updateDoc(groupRef, {
+        memberIds: arrayUnion(userId),
+      });
+      
+      toast({
+        title: 'Member Added!',
+        description: `${userName} has been added to the group.`,
+      });
+      
+      // Remove from search results
+      setSearchResults(prev => prev.filter(u => u.id !== userId));
+      setSearchTerm('');
+    } catch (error: any) {
+      console.error('Error adding member:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to add member. You may not have permission.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsAddingMember(null);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <PageHeader title={group.name} description="Let the fun begin!" />
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            onClick={() =>
-              handleAction('Invite Sent!', 'An invitation link has been sent.')
-            }
-          >
-            <Plus className="mr-2 h-4 w-4" /> Invite
-          </Button>
+          {isGroupAdmin && (
+            <Dialog open={isInviteDialogOpen} onOpenChange={setIsInviteDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline">
+                  <Plus className="mr-2 h-4 w-4" /> Invite Members
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[500px]">
+                <DialogHeader>
+                  <DialogTitle>Invite Members to {group.name}</DialogTitle>
+                  <DialogDescription>
+                    Search for users by name or city to add them to your kitty group.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search by name or city..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                  
+                  {isSearching && (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    </div>
+                  )}
+
+                  {!isSearching && searchResults.length > 0 && (
+                    <ScrollArea className="h-[300px]">
+                      <div className="space-y-2">
+                        {searchResults.map((user) => (
+                          <div
+                            key={user.id}
+                            className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                          >
+                            <div className="flex items-center gap-3">
+                              <Avatar className="h-10 w-10">
+                                <AvatarImage src={user.avatar} alt={user.name} />
+                                <AvatarFallback>
+                                  {user.name.split(' ').map(n => n[0]).join('')}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <p className="font-medium">{user.name}</p>
+                                {user.city && (
+                                  <p className="text-xs text-muted-foreground">{user.city}</p>
+                                )}
+                              </div>
+                            </div>
+                            <Button
+                              size="sm"
+                              onClick={() => handleAddMember(user.id, user.name)}
+                              disabled={isAddingMember === user.id}
+                            >
+                              {isAddingMember === user.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <>
+                                  <UserPlus className="h-4 w-4 mr-1" />
+                                  Add
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  )}
+
+                  {!isSearching && searchTerm && searchResults.length === 0 && (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <p>No users found matching &quot;{searchTerm}&quot;</p>
+                      <p className="text-xs mt-2">Try searching by name or city</p>
+                    </div>
+                  )}
+
+                  {!isSearching && !searchTerm && (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Search className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                      <p>Start typing to search for users</p>
+                    </div>
+                  )}
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsInviteDialogOpen(false)}>
+                    Close
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          )}
 
           <Button
             variant="outline"

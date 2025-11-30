@@ -236,8 +236,48 @@ service cloud.firestore {
       // Allow list queries where the user is a member, or if they are a super admin.
       allow list: if isSignedIn() && (request.auth.uid in resource.data.memberIds || isSuperAdmin());
       allow create: if isSignedIn() && isMember(request.resource.data, 'memberIds');
-      allow update: if isSuperAdmin(); // Allow super admin to update groups.
+      // Allow group creator (first member in memberIds) to update memberIds to add new members
+      // Allow super admin to update groups
+      allow update: if isSuperAdmin() || 
+        (isSignedIn() && 
+         resource.data.memberIds.size() > 0 && 
+         resource.data.memberIds[0] == request.auth.uid &&
+         // Only allow updating memberIds array (adding members)
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberIds']));
       allow delete: if isSuperAdmin(); // Allow super admin to delete groups.
+    }
+
+    // -------------------------------------------------------------------------
+    // Tambola Games (/tambola_games)
+    // -------------------------------------------------------------------------
+    
+    /**
+     * @description Tambola games are created by admins who pay for them. Only the admin can add players and control the game.
+     * @path /tambola_games/{gameId}
+     * @allow (get) Players can read games they are part of, or admins can read their own games.
+     * @allow (create) Authenticated users can create games (after payment).
+     * @allow (update) Game admin can update playerIds and game state.
+     */
+    match /tambola_games/{gameId} {
+      allow get: if isSignedIn() && (
+        request.auth.uid in resource.data.playerIds || 
+        resource.data.adminId == request.auth.uid ||
+        isSuperAdmin()
+      );
+      allow list: if isSignedIn() && (
+        request.auth.uid in resource.data.playerIds || 
+        resource.data.adminId == request.auth.uid ||
+        isSuperAdmin()
+      );
+      allow create: if isSignedIn() && request.resource.data.adminId == request.auth.uid;
+      // Allow admin to update playerIds (add players) and game state
+      allow update: if isSignedIn() && (
+        isSuperAdmin() ||
+        (resource.data.adminId == request.auth.uid &&
+         // Only allow updating playerIds, calledNumbers, currentNumber, and status
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['playerIds', 'calledNumbers', 'currentNumber', 'status']))
+      );
+      allow delete: if isSuperAdmin() || (isSignedIn() && resource.data.adminId == request.auth.uid);
     }
 
     // -------------------------------------------------------------------------

@@ -93,6 +93,18 @@ export type KittyGroup = {
     memberIds: string[];
 }
 
+export type TambolaGame = {
+    id: string;
+    adminId: string; // User who created/paid for the game
+    playerIds: string[]; // Array of player user IDs
+    calledNumbers: number[]; // Numbers that have been called
+    currentNumber: number | null; // Current number being called
+    status: 'idle' | 'running' | 'paused' | 'ended';
+    createdAt: any; // Timestamp
+    orderId?: string; // Payment order ID
+    paymentId?: string; // Payment ID
+}
+
 export type Review = {
     id: string;
     author: string;

@@ -67,6 +67,7 @@ export default function KittyGroupDetailPage() {
       groupMembers={groupMembers || []}
       upcomingEvent={upcomingEvent}
       currentUser={currentUser}
+      groupId={id as string}
     />
   );
 }
