@@ -703,6 +703,7 @@ export default function TambolaPage() {
                         </div>
                       </DialogContent>
                     </Dialog>
+                    </>
                   )}
                 </div>
               </CardHeader>
