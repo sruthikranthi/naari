@@ -1,7 +1,7 @@
 // Service Worker for offline support and push notifications
 // Update cache version when service worker changes to force cache refresh
-const CACHE_NAME = 'sakhi-circle-v2';
-const RUNTIME_CACHE = 'sakhi-circle-runtime-v2';
+const CACHE_NAME = 'naarimani-pwa-v3';
+const RUNTIME_CACHE = 'naarimani-runtime-v3';
 
 // Assets to cache on install
 const STATIC_ASSETS = [
@@ -50,22 +50,20 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(event.request.url);
 
-  // Don't cache Next.js static assets (CSS, JS, fonts) - they're versioned and should always be fresh
-  // These files have hashes in their names and should never be cached by service worker
+  // Completely bypass service worker for Next.js static assets
+  // These files are versioned and should always be fetched directly from network
+  // Don't intercept them at all to avoid errors
   if (
     url.pathname.startsWith('/_next/static/') ||
     url.pathname.startsWith('/_next/image') ||
+    url.pathname.startsWith('/_next/webpack') ||
     url.pathname.includes('/_next/static/css/') ||
     url.pathname.includes('/_next/static/chunks/') ||
-    url.pathname.includes('/_next/static/media/')
+    url.pathname.includes('/_next/static/media/') ||
+    url.pathname.includes('/_next/static/buildManifest') ||
+    url.pathname.includes('/_next/static/ssgManifest')
   ) {
-    // Network-first for Next.js static assets - always fetch fresh
-    event.respondWith(
-      fetch(event.request).catch(() => {
-        // Only use cache if network fails completely
-        return caches.match(event.request);
-      })
-    );
+    // Don't intercept - let browser handle directly
     return;
   }
 
