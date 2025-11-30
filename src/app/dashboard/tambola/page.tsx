@@ -357,6 +357,33 @@ export default function TambolaPage() {
           </Card>
 
         </div>
+
+        {/* Payment Dialog for Tambola Game */}
+        <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Complete Payment to Start Tambola Game</DialogTitle>
+              <CardDescription>
+                Pay ₹99 to start a new Tambola game
+              </CardDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <CashfreePayment
+                amount={99}
+                currency="INR"
+                description="Tambola Game - Single Game Payment"
+                onSuccess={handlePaymentSuccess}
+                onError={handlePaymentError}
+                metadata={{
+                  subscriptionType: 'tambola',
+                  type: 'tambola_game',
+                  duration: 'per game',
+                }}
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
+
       </div>
     </div>
   );
