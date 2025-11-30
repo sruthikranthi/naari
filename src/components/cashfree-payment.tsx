@@ -97,6 +97,19 @@ export function CashfreePayment({
         authToken || undefined
       );
 
+      // Log the full response for debugging
+      console.log('✅ Payment API Response:', {
+        paymentId: response.paymentId,
+        orderId: response.orderId,
+        paymentUrl: response.paymentUrl,
+        paymentSessionId: response.paymentSessionId,
+        orderToken: response.orderToken,
+        hasPaymentUrl: !!response.paymentUrl,
+        hasPaymentSessionId: !!response.paymentSessionId,
+        hasOrderToken: !!response.orderToken,
+        fullResponse: response,
+      });
+
       setPaymentData({
         paymentId: response.paymentId,
         orderId: response.orderId,
@@ -105,18 +118,26 @@ export function CashfreePayment({
 
       // If payment URL is provided, redirect to Cashfree payment page
       if (response.paymentUrl) {
+        console.log('Redirecting to payment URL:', response.paymentUrl);
         window.location.href = response.paymentUrl;
         return;
       }
 
       // If payment session ID is provided, use Cashfree Checkout.js
       if (response.paymentSessionId && response.orderToken) {
+        console.log('Using Cashfree Checkout.js with session:', response.paymentSessionId);
         // Load Cashfree Checkout.js script
         await loadCashfreeCheckout(response.paymentSessionId, response.orderToken);
       } else {
+        console.error('❌ Missing payment data:', {
+          hasPaymentUrl: !!response.paymentUrl,
+          hasPaymentSessionId: !!response.paymentSessionId,
+          hasOrderToken: !!response.orderToken,
+          response: response,
+        });
         toast({
           title: 'Payment Error',
-          description: 'Payment URL not available. Please try again.',
+          description: `Payment URL not available. Missing: ${!response.paymentUrl ? 'paymentUrl' : ''} ${!response.paymentSessionId ? 'paymentSessionId' : ''} ${!response.orderToken ? 'orderToken' : ''}`,
           variant: 'destructive',
         });
         setPaymentStatus('failed');
