@@ -541,9 +541,9 @@ export default function TambolaPage() {
                       <DialogContent className="sm:max-w-[500px]">
                         <DialogHeader>
                           <DialogTitle>Invite Players to Tambola Game</DialogTitle>
-                          <CardDescription>
+                          <DialogDescription>
                             Search for users by name or city to add them to your game.
-                          </CardDescription>
+                          </DialogDescription>
                         </DialogHeader>
                         <div className="space-y-4 py-4">
                           <div className="relative">
