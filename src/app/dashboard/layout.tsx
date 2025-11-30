@@ -24,6 +24,7 @@ import { CartSheet } from '@/components/cart-sheet';
 import { NotificationsNav } from '@/components/notifications-nav';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { SearchModal } from '@/components/search-modal';
+import { PWAInstallButton } from '@/components/pwa-install-button';
 import { PageTransition } from '@/components/page-transition';
 import { MobileBottomNav } from '@/components/mobile-bottom-nav';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
@@ -189,6 +190,7 @@ function Layout({ children }: { children: ReactNode }) {
             </Button>
           </div>
           <div className="flex items-center gap-4">
+            <PWAInstallButton />
             <NotificationsNav />
             <CartSheet />
             <ThemeToggle />
