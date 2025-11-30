@@ -268,21 +268,37 @@ export async function processCashfreePayment(
   metadata?: Record<string, any>,
   authToken?: string // Pass token from component
 ): Promise<CashfreeOrderResponse> {
+  // Ensure we're sending the exact format the backend expects
+  const requestBody = {
+    amount, // NOT order_amount
+    currency,
+    userId, // NOT customer_id
+    description,
+    customerDetails: {
+      name: customerDetails.name, // NOT customer_name
+      email: customerDetails.email || '', // NOT customer_email
+      phone: customerDetails.phone || '', // NOT customer_phone
+    },
+    metadata: metadata || {},
+    ...(authToken && { authToken }),
+  };
+
+  // Log the request body for debugging (remove in production if needed)
+  console.log('Sending payment request:', {
+    amount: requestBody.amount,
+    userId: requestBody.userId,
+    hasCustomerDetails: !!requestBody.customerDetails,
+    customerName: requestBody.customerDetails.name,
+    customerEmail: requestBody.customerDetails.email,
+  });
+
   const response = await fetch('/api/payments/cashfree/create-order', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       ...(authToken && { 'Authorization': `Bearer ${authToken}` }),
     },
-    body: JSON.stringify({
-      amount,
-      currency,
-      description,
-      userId,
-      customerDetails,
-      metadata,
-      authToken, // Also send in body as fallback
-    }),
+    body: JSON.stringify(requestBody),
   });
 
   if (!response.ok) {
