@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Crown, Ticket, Users, Clock, PartyPopper, Award, HelpCircle } from 'lucide-react';
+import { Crown, Ticket, Users, Clock, PartyPopper, Award, HelpCircle, Share2, Copy, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -484,12 +484,57 @@ export default function TambolaPage() {
                     <Users className="text-primary" /> Players ({currentGame.playerIds?.length || 0})
                   </CardTitle>
                   {isGameAdmin && (
-                    <Dialog open={isInviteDialogOpen} onOpenChange={setIsInviteDialogOpen}>
-                      <DialogTrigger asChild>
-                        <Button size="sm" variant="outline">
-                          <UserPlus className="h-4 w-4 mr-1" /> Invite
-                        </Button>
-                      </DialogTrigger>
+                    <div className="flex gap-2">
+                      <Dialog open={isShareDialogOpen} onOpenChange={setIsShareDialogOpen}>
+                        <DialogTrigger asChild>
+                          <Button size="sm" variant="outline">
+                            <Share2 className="h-4 w-4 mr-1" /> Share
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[500px]">
+                          <DialogHeader>
+                            <DialogTitle>Share Tambola Game</DialogTitle>
+                            <CardDescription>
+                              Share this link to invite players. Anyone with this link can join your game.
+                            </CardDescription>
+                          </DialogHeader>
+                          <div className="space-y-4 py-4">
+                            <div className="flex items-center gap-2">
+                              <Input
+                                value={shareLink}
+                                readOnly
+                                className="flex-1 font-mono text-sm"
+                              />
+                              <Button
+                                onClick={handleCopyLink}
+                                variant={linkCopied ? 'default' : 'outline'}
+                                size="icon"
+                              >
+                                {linkCopied ? (
+                                  <Check className="h-4 w-4" />
+                                ) : (
+                                  <Copy className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button onClick={handleShareWhatsApp} className="flex-1" variant="outline">
+                                <Share2 className="mr-2 h-4 w-4" /> Share via WhatsApp
+                              </Button>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              💡 Tip: Share this link on WhatsApp, social media, or any platform. Players can join instantly by clicking the link!
+                            </p>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+
+                      <Dialog open={isInviteDialogOpen} onOpenChange={setIsInviteDialogOpen}>
+                        <DialogTrigger asChild>
+                          <Button size="sm" variant="outline">
+                            <UserPlus className="h-4 w-4 mr-1" /> Invite
+                          </Button>
+                        </DialogTrigger>
                       <DialogContent className="sm:max-w-[500px]">
                         <DialogHeader>
                           <DialogTitle>Invite Players to Tambola Game</DialogTitle>

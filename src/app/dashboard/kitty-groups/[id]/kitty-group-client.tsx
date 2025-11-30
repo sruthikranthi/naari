@@ -17,6 +17,9 @@ import {
   ThumbsUp,
   Laugh,
   Send,
+  Share2,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/page-header';
@@ -117,9 +120,40 @@ export function KittyGroupClient({ group, groupMembers, upcomingEvent, currentUs
   const [searchResults, setSearchResults] = useState<FirestoreUser[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isAddingMember, setIsAddingMember] = useState<string | null>(null);
+  const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const isHost = currentUser.name === group.nextTurn;
   const isGroupAdmin = group.memberIds && group.memberIds.length > 0 && group.memberIds[0] === currentUser.id;
+
+  const shareLink = typeof window !== 'undefined' 
+    ? `${window.location.origin}/dashboard/kitty-groups/join?groupId=${groupId}`
+    : '';
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(shareLink);
+      setLinkCopied(true);
+      toast({
+        title: 'Link Copied!',
+        description: 'Share this link via WhatsApp or any other platform to invite members.',
+      });
+      setTimeout(() => setLinkCopied(false), 2000);
+    } catch (error) {
+      console.error('Failed to copy link:', error);
+      toast({
+        title: 'Failed to Copy',
+        description: 'Could not copy the link to your clipboard.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleShareWhatsApp = () => {
+    const message = `Join my Kitty Group "${group.name}" on Naarimani!\n\n${shareLink}`;
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
+  };
 
   const handleAction = (title: string, description: string) => {
     toast({ title, description });
@@ -250,12 +284,57 @@ export function KittyGroupClient({ group, groupMembers, upcomingEvent, currentUs
         <PageHeader title={group.name} description="Let the fun begin!" />
         <div className="flex items-center gap-2">
           {isGroupAdmin && (
-            <Dialog open={isInviteDialogOpen} onOpenChange={setIsInviteDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline">
-                  <Plus className="mr-2 h-4 w-4" /> Invite Members
-                </Button>
-              </DialogTrigger>
+            <>
+              <Dialog open={isShareDialogOpen} onOpenChange={setIsShareDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline">
+                    <Share2 className="mr-2 h-4 w-4" /> Share Link
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[500px]">
+                  <DialogHeader>
+                    <DialogTitle>Share Kitty Group</DialogTitle>
+                    <DialogDescription>
+                      Share this link to invite members. Anyone with this link can join your group.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={shareLink}
+                        readOnly
+                        className="flex-1 font-mono text-sm"
+                      />
+                      <Button
+                        onClick={handleCopyLink}
+                        variant={linkCopied ? 'default' : 'outline'}
+                        size="icon"
+                      >
+                        {linkCopied ? (
+                          <Check className="h-4 w-4" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button onClick={handleShareWhatsApp} className="flex-1" variant="outline">
+                        <Share2 className="mr-2 h-4 w-4" /> Share via WhatsApp
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      💡 Tip: Share this link on WhatsApp, social media, or any platform. Members can join instantly by clicking the link!
+                    </p>
+                  </div>
+                </DialogContent>
+              </Dialog>
+
+              <Dialog open={isInviteDialogOpen} onOpenChange={setIsInviteDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline">
+                    <Plus className="mr-2 h-4 w-4" /> Invite Members
+                  </Button>
+                </DialogTrigger>
               <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
                   <DialogTitle>Invite Members to {group.name}</DialogTitle>
