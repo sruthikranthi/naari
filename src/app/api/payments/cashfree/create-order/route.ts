@@ -298,11 +298,20 @@ export async function POST(request: NextRequest) {
         order_id: cashfreeData.order_id,
         payment_session_id: cashfreeData.payment_session_id,
         order_token: cashfreeData.order_token,
+        orderToken: cashfreeData.orderToken, // Check alternative field name
+        token: cashfreeData.token, // Check alternative field name
         payment_link: cashfreeData.payment_link,
         payment_url: cashfreeData.payment_url,
         allKeys: Object.keys(cashfreeData),
         fullResponse: JSON.stringify(cashfreeData, null, 2),
       });
+      
+      // Cashfree might return order_token or orderToken - check both
+      const orderToken = cashfreeData.order_token || cashfreeData.orderToken || cashfreeData.token;
+      
+      if (!orderToken) {
+        console.warn('⚠️ order_token not found in Cashfree response. Available keys:', Object.keys(cashfreeData));
+      }
     } catch (parseError: any) {
       console.error('Failed to parse Cashfree response:', parseError);
       return NextResponse.json(
@@ -329,10 +338,13 @@ export async function POST(request: NextRequest) {
       // Continue even if update fails, as payment is created
     }
 
+    // Extract order_token (check multiple possible field names)
+    const orderToken = cashfreeData.order_token || cashfreeData.orderToken || cashfreeData.token;
+    
     // Cashfree returns payment_link or payment_url, or we can construct from session_id and token
     const paymentUrl = cashfreeData.payment_link || 
                        cashfreeData.payment_url || 
-                       (cashfreeData.payment_session_id && cashfreeData.order_token 
+                       (cashfreeData.payment_session_id && orderToken 
                          ? `https://payments.cashfree.com/forms/v2/${cashfreeData.payment_session_id}` 
                          : null);
 
@@ -340,7 +352,8 @@ export async function POST(request: NextRequest) {
       paymentId: paymentDoc.id,
       orderId: cashfreeData.order_id || cashfreeOrderData.order_id,
       paymentSessionId: cashfreeData.payment_session_id,
-      orderToken: cashfreeData.order_token,
+      orderToken: orderToken,
+      hasOrderToken: !!orderToken,
       paymentUrl: paymentUrl,
       hasPaymentUrl: !!paymentUrl,
     });
@@ -350,7 +363,7 @@ export async function POST(request: NextRequest) {
       paymentId: paymentDoc.id,
       orderId: cashfreeData.order_id || cashfreeOrderData.order_id,
       paymentSessionId: cashfreeData.payment_session_id,
-      orderToken: cashfreeData.order_token,
+      orderToken: orderToken, // Use extracted orderToken
       paymentUrl: paymentUrl,
     });
   } catch (error: any) {
