@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { initializeFirebaseServer } from '@/firebase/server';
+import admin from 'firebase-admin';
 
 const CASHFREE_APP_ID = process.env.CASHFREE_APP_ID || '';
 const CASHFREE_SECRET_KEY = process.env.CASHFREE_SECRET_KEY || '';
@@ -84,7 +85,7 @@ export async function POST(request: NextRequest) {
     await firestore.collection('payments').doc(paymentDoc.id).update({
       status: paymentStatus,
       transactionId: verifyData.payment_details?.cf_payment_id || null,
-      updatedAt: firestore.Timestamp.now(),
+      updatedAt: admin.firestore.Timestamp.now(),
       metadata: {
         ...paymentData?.metadata,
         cashfree_order_status: verifyData.order_status,

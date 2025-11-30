@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { initializeFirebaseServer } from '@/firebase/server';
+import admin from 'firebase-admin';
 
 // Initialize Cashfree SDK (you'll need to install: npm install cashfree-pg)
 // For now, we'll use direct API calls
@@ -74,8 +75,8 @@ export async function POST(request: NextRequest) {
         paymentMethod: 'cashfree',
         description: description || 'Payment via Cashfree',
         metadata: metadata || {},
-        createdAt: firestore.Timestamp.now(),
-        updatedAt: firestore.Timestamp.now(),
+        createdAt: admin.firestore.Timestamp.now(),
+        updatedAt: admin.firestore.Timestamp.now(),
       };
       
       paymentDoc = await firestore.collection('payments').add(paymentData);
@@ -162,7 +163,7 @@ export async function POST(request: NextRequest) {
         try {
           await firestore.collection('payments').doc(paymentDoc.id).update({
             status: 'failed',
-            updatedAt: firestore.Timestamp.now(),
+            updatedAt: admin.firestore.Timestamp.now(),
             metadata: { error: errorData.message || 'Failed to create order' },
           });
         } catch (updateError) {
@@ -179,9 +180,9 @@ export async function POST(request: NextRequest) {
       console.error('Cashfree API fetch error:', fetchError);
       if (paymentDoc && firestore) {
         try {
-          await updateDoc(doc(firestore, 'payments', paymentDoc.id), {
+          await firestore.collection('payments').doc(paymentDoc.id).update({
             status: 'failed',
-            updatedAt: serverTimestamp(),
+            updatedAt: admin.firestore.Timestamp.now(),
             metadata: { error: fetchError.message || 'Network error' },
           });
         } catch (updateError) {
@@ -214,7 +215,7 @@ export async function POST(request: NextRequest) {
           cashfree_order_id: cashfreeData.order_id,
           payment_session_id: cashfreeData.payment_session_id,
         },
-        updatedAt: firestore.Timestamp.now(),
+        updatedAt: admin.firestore.Timestamp.now(),
       });
     } catch (updateError: any) {
       console.error('Failed to update payment with Cashfree data:', updateError);

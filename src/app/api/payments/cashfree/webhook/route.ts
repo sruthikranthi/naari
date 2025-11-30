@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { initializeFirebaseServer } from '@/firebase/server';
+import admin from 'firebase-admin';
 
 const CASHFREE_SECRET_KEY = process.env.CASHFREE_SECRET_KEY || '';
 
@@ -73,7 +74,7 @@ export async function POST(request: NextRequest) {
     await firestore.collection('payments').doc(paymentDoc.id).update({
       status: paymentStatus,
       transactionId: paymentDetails?.cf_payment_id || paymentData?.transactionId || null,
-      updatedAt: firestore.Timestamp.now(),
+      updatedAt: admin.firestore.Timestamp.now(),
       metadata: {
         ...paymentData?.metadata,
         cashfree_order_status: orderStatus,
@@ -88,7 +89,7 @@ export async function POST(request: NextRequest) {
       orderStatus,
       paymentStatus,
       payload: body,
-      receivedAt: firestore.Timestamp.now(),
+      receivedAt: admin.firestore.Timestamp.now(),
     });
 
     return NextResponse.json({ success: true, message: 'Webhook processed' });
