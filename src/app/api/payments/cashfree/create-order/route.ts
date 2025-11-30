@@ -26,6 +26,7 @@ export async function POST(request: NextRequest) {
 
     // Validate required fields
     if (!amount || !userId || !customerDetails) {
+      console.error('Missing required fields:', { amount: !!amount, userId: !!userId, customerDetails: !!customerDetails });
       return NextResponse.json(
         { error: 'Missing required fields: amount, userId, customerDetails' },
         { status: 400 }
@@ -33,6 +34,10 @@ export async function POST(request: NextRequest) {
     }
 
     if (!CASHFREE_APP_ID || !CASHFREE_SECRET_KEY) {
+      console.error('Cashfree credentials missing:', { 
+        hasAppId: !!CASHFREE_APP_ID, 
+        hasSecretKey: !!CASHFREE_SECRET_KEY 
+      });
       return NextResponse.json(
         { error: 'Cashfree credentials not configured. Please set CASHFREE_APP_ID and CASHFREE_SECRET_KEY environment variables.' },
         { status: 500 }
@@ -40,23 +45,35 @@ export async function POST(request: NextRequest) {
     }
 
     // Create payment record in Firestore first
-    const { firestore } = initializeFirebase();
-    const paymentsRef = collection(firestore, 'payments');
-    
-    const orderId = `order_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-    
-    const paymentDoc = await addDoc(paymentsRef, {
-      userId,
-      orderId,
-      amount: parseFloat(amount),
-      currency,
-      status: 'pending',
-      paymentMethod: 'cashfree',
-      description: description || 'Payment via Cashfree',
-      metadata: metadata || {},
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
+    let firestore;
+    let paymentDoc;
+    let orderId;
+    try {
+      const firebaseInit = initializeFirebase();
+      firestore = firebaseInit.firestore;
+      const paymentsRef = collection(firestore, 'payments');
+      
+      orderId = `order_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+      
+      paymentDoc = await addDoc(paymentsRef, {
+        userId,
+        orderId,
+        amount: parseFloat(amount),
+        currency,
+        status: 'pending',
+        paymentMethod: 'cashfree',
+        description: description || 'Payment via Cashfree',
+        metadata: metadata || {},
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+    } catch (firestoreError: any) {
+      console.error('Firestore error:', firestoreError);
+      return NextResponse.json(
+        { error: 'Failed to create payment record', message: firestoreError.message },
+        { status: 500 }
+      );
+    }
 
     // Create order in Cashfree
     const cashfreeOrderData = {
@@ -78,59 +95,110 @@ export async function POST(request: NextRequest) {
     };
 
     // Call Cashfree API to create order
-    const cashfreeResponse = await fetch(`${CASHFREE_BASE_URL}/orders`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-client-id': CASHFREE_APP_ID,
-        'x-client-secret': CASHFREE_SECRET_KEY,
-        'x-api-version': '2022-09-01',
-      },
-      body: JSON.stringify(cashfreeOrderData),
-    });
-
-    if (!cashfreeResponse.ok) {
-      const errorData = await cashfreeResponse.json();
-      console.error('Cashfree API Error:', errorData);
-      
-      // Update payment status to failed
-      await updateDoc(doc(firestore, 'payments', paymentDoc.id), {
-        status: 'failed',
-        updatedAt: serverTimestamp(),
-        metadata: { error: errorData.message || 'Failed to create order' },
+    let cashfreeResponse;
+    try {
+      console.log('Calling Cashfree API:', { url: `${CASHFREE_BASE_URL}/orders`, orderId: cashfreeOrderData.order_id });
+      cashfreeResponse = await fetch(`${CASHFREE_BASE_URL}/orders`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-client-id': CASHFREE_APP_ID,
+          'x-client-secret': CASHFREE_SECRET_KEY,
+          'x-api-version': '2022-09-01',
+        },
+        body: JSON.stringify(cashfreeOrderData),
       });
 
+      if (!cashfreeResponse.ok) {
+        let errorData;
+        try {
+          errorData = await cashfreeResponse.json();
+        } catch (e) {
+          errorData = { message: `HTTP ${cashfreeResponse.status}: ${cashfreeResponse.statusText}` };
+        }
+        console.error('Cashfree API Error:', errorData);
+        
+        // Update payment status to failed
+        if (paymentDoc && firestore) {
+          try {
+            await updateDoc(doc(firestore, 'payments', paymentDoc.id), {
+              status: 'failed',
+              updatedAt: serverTimestamp(),
+              metadata: { error: errorData.message || 'Failed to create order' },
+            });
+          } catch (updateError) {
+            console.error('Failed to update payment status:', updateError);
+          }
+        }
+
+        return NextResponse.json(
+          { error: 'Failed to create Cashfree order', details: errorData },
+          { status: cashfreeResponse.status }
+        );
+      }
+    } catch (fetchError: any) {
+      console.error('Cashfree API fetch error:', fetchError);
+      if (paymentDoc && firestore) {
+        try {
+          await updateDoc(doc(firestore, 'payments', paymentDoc.id), {
+            status: 'failed',
+            updatedAt: serverTimestamp(),
+            metadata: { error: fetchError.message || 'Network error' },
+          });
+        } catch (updateError) {
+          console.error('Failed to update payment status:', updateError);
+        }
+      }
       return NextResponse.json(
-        { error: 'Failed to create Cashfree order', details: errorData },
-        { status: cashfreeResponse.status }
+        { error: 'Failed to connect to Cashfree', message: fetchError.message },
+        { status: 500 }
       );
     }
 
-    const cashfreeData = await cashfreeResponse.json();
+    let cashfreeData;
+    try {
+      cashfreeData = await cashfreeResponse.json();
+    } catch (parseError: any) {
+      console.error('Failed to parse Cashfree response:', parseError);
+      return NextResponse.json(
+        { error: 'Invalid response from Cashfree', message: parseError.message },
+        { status: 500 }
+      );
+    }
 
     // Update payment record with Cashfree order details
-    await updateDoc(doc(firestore, 'payments', paymentDoc.id), {
-      orderId: cashfreeData.order_id || orderId,
-      metadata: {
-        ...metadata,
-        cashfree_order_id: cashfreeData.order_id,
-        payment_session_id: cashfreeData.payment_session_id,
-      },
-      updatedAt: serverTimestamp(),
-    });
+    try {
+      await updateDoc(doc(firestore, 'payments', paymentDoc.id), {
+        orderId: cashfreeData.order_id || cashfreeOrderData.order_id,
+        metadata: {
+          ...metadata,
+          cashfree_order_id: cashfreeData.order_id,
+          payment_session_id: cashfreeData.payment_session_id,
+        },
+        updatedAt: serverTimestamp(),
+      });
+    } catch (updateError: any) {
+      console.error('Failed to update payment with Cashfree data:', updateError);
+      // Continue even if update fails, as payment is created
+    }
 
     return NextResponse.json({
       success: true,
       paymentId: paymentDoc.id,
-      orderId: cashfreeData.order_id || orderId,
+      orderId: cashfreeData.order_id || cashfreeOrderData.order_id,
       paymentSessionId: cashfreeData.payment_session_id,
       orderToken: cashfreeData.order_token,
       paymentUrl: cashfreeData.payment_link || null,
     });
   } catch (error: any) {
-    console.error('Error creating Cashfree order:', error);
+    console.error('Unexpected error creating Cashfree order:', error);
+    console.error('Error stack:', error.stack);
     return NextResponse.json(
-      { error: 'Internal server error', message: error.message },
+      { 
+        error: 'Internal server error', 
+        message: error.message,
+        details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      },
       { status: 500 }
     );
   }
