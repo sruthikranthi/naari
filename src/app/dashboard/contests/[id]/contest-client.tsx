@@ -22,7 +22,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { type Contest, type Nominee, type Nomination } from '@/lib/contests-data';
 import { useFirestore, useStorage, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, addDoc, serverTimestamp, query, where, getDocs, updateDoc, doc, increment } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, where, getDocs, updateDoc, doc, increment, getDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import {
   Card,
@@ -43,6 +43,7 @@ import { useDashboard } from '../../layout';
 import type { Post } from '@/lib/mock-data';
 import { useUser } from '@/firebase';
 import { NominationCongratulations } from '@/components/nomination-congratulations';
+import { NomineeCommentsDialog } from '@/components/nominee-comments-dialog';
 
 type ContestClientProps = {
   contest: Contest;
@@ -61,6 +62,8 @@ export function ContestClient({ contest }: ContestClientProps) {
   const [nominationImage, setNominationImage] = useState<File | null>(null);
   const [nominationImagePreview, setNominationImagePreview] = useState<string | null>(null);
   const [showCongratulations, setShowCongratulations] = useState(false);
+  const [commentDialogOpen, setCommentDialogOpen] = useState(false);
+  const [selectedNomineeForComment, setSelectedNomineeForComment] = useState<{ id: string; name: string } | null>(null);
   const prevContestIdRef = useRef<string | undefined>(contest.id);
 
   // Check if user has an approved nomination
@@ -308,52 +311,105 @@ export function ContestClient({ contest }: ContestClientProps) {
   };
   
   const handleComment = (nomineeId: string) => {
-    setNominees(
-      nominees.map((n) =>
-        n.id === nomineeId
-          ? { ...n, comments: n.comments + 1 }
-          : n
-      )
-    );
-    toast({
-      title: 'Commenting coming soon!',
-      description: 'You will be able to comment on nominees here.',
-    });
+    const nominee = nominees.find(n => n.id === nomineeId);
+    if (nominee) {
+      setSelectedNomineeForComment({ id: nomineeId, name: nominee.name });
+      setCommentDialogOpen(true);
+    }
   }
-  
-  const handleShare = (nomineeId: string, nomineeName: string) => {
-     if (!currentUser) {
-        toast({ variant: 'destructive', title: 'Please log in to share.' });
-        return;
-     }
 
-     setNominees(
-      nominees.map((n) =>
-        n.id === nomineeId
-          ? { ...n, shares: n.shares + 1 }
-          : n
-      )
-    );
+  const handleCommentAdded = useCallback(() => {
+    if (selectedNomineeForComment) {
+      setNominees(
+        nominees.map((n) =>
+          n.id === selectedNomineeForComment.id
+            ? { ...n, comments: n.comments + 1 }
+            : n
+        )
+      );
+    }
+  }, [nominees, selectedNomineeForComment]);
+  
+  const handleShare = async (nomineeId: string, nomineeName: string) => {
+    if (!currentUser || !firestore) {
+      toast({ variant: 'destructive', title: 'Please log in to share.' });
+      return;
+    }
+
+    const shareUrl = `${window.location.origin}/dashboard/contests/${contest.id}?nominee=${nomineeId}`;
+    const shareText = `🎉 I'm supporting ${nomineeName} in the "${contest.title}" contest on Naarimani! Show them some love! ${shareUrl}`;
+
+    // Try to use Web Share API if available
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Support ${nomineeName} in ${contest.title}`,
+          text: shareText,
+          url: shareUrl,
+        });
+        
+        // Update share count in Firestore
+        await updateShareCount(nomineeId);
+      } catch (error: any) {
+        // User cancelled or error occurred, fall back to clipboard
+        if (error.name !== 'AbortError') {
+          await copyToClipboard(shareUrl, nomineeId);
+        }
+      }
+    } else {
+      // Fall back to clipboard
+      await copyToClipboard(shareUrl, nomineeId);
+    }
+  }
+
+  const copyToClipboard = async (url: string, nomineeId: string) => {
+    try {
+      await navigator.clipboard.writeText(url);
+      toast({
+        title: 'Link Copied!',
+        description: 'Share this link with your friends!',
+      });
+      await updateShareCount(nomineeId);
+    } catch (err) {
+      console.error('Failed to copy link:', err);
+      toast({
+        variant: 'destructive',
+        title: 'Failed to copy',
+        description: 'Could not copy the link to your clipboard.',
+      });
+    }
+  }
+
+  const updateShareCount = async (nomineeId: string) => {
+    if (!firestore) return;
     
-    const newPost: Post = {
-        id: `post-${Date.now()}`,
-        author: {
-          id: currentUser.uid,
-          name: currentUser.displayName || 'A Sakhi',
-          avatar: currentUser.photoURL || `https://picsum.photos/seed/${currentUser.uid}/100/100`,
-        },
-        content: `I'm supporting ${nomineeName} in the "${contest.title}" contest! Show them some love! #SakhiContest`,
-        timestamp: serverTimestamp(),
-        likes: 0,
-        comments: 0,
-        isAnonymous: false,
-    };
-    addPost(newPost);
-    
-     toast({
-      title: 'Shared!',
-      description: `A post to support ${nomineeName} has been created on your feed.`,
-    });
+    try {
+      const contestRef = doc(firestore, 'contests', contest.id);
+      const contestDoc = await getDoc(contestRef);
+      const contestData = contestDoc.data();
+      
+      if (contestData?.nominees) {
+        const updatedNominees = contestData.nominees.map((nominee: any) =>
+          nominee.id === nomineeId
+            ? { ...nominee, shares: (nominee.shares || 0) + 1 }
+            : nominee
+        );
+        await updateDoc(contestRef, {
+          nominees: updatedNominees,
+        });
+        
+        // Update local state
+        setNominees(
+          nominees.map((n) =>
+            n.id === nomineeId
+              ? { ...n, shares: n.shares + 1 }
+              : n
+          )
+        );
+      }
+    } catch (error) {
+      console.error('Error updating share count:', error);
+    }
   }
 
   const handleNominate = async () => {
@@ -855,6 +911,19 @@ export function ContestClient({ contest }: ContestClientProps) {
           )}
         </div>
       </div>
+      
+      {/* Comment Dialog */}
+      {selectedNomineeForComment && (
+        <NomineeCommentsDialog
+          contestId={contest.id}
+          nomineeId={selectedNomineeForComment.id}
+          nomineeName={selectedNomineeForComment.name}
+          isOpen={commentDialogOpen}
+          onOpenChange={setCommentDialogOpen}
+          currentCommentCount={nominees.find(n => n.id === selectedNomineeForComment.id)?.comments || 0}
+          onCommentAdded={handleCommentAdded}
+        />
+      )}
     </div>
     </>
   );

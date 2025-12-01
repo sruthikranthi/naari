@@ -369,6 +369,16 @@ service cloud.firestore {
           allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
           allow update, delete: if false; // Votes are immutable once created
         }
+        
+        // Nominee comments subcollection
+        match /nominees/{nomineeId}/comments/{commentId} {
+          // Anyone signed in can read comments
+          allow get, list: if isSignedIn();
+          // Users can create comments
+          allow create: if isSignedIn() && request.resource.data.author.id == request.auth.uid;
+          // Only super admin can update/delete comments
+          allow update, delete: if isSuperAdmin();
+        }
     }
 
     // -------------------------------------------------------------------------
