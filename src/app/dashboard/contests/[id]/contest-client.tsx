@@ -1,6 +1,6 @@
 
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import {
   Award,
@@ -50,13 +50,18 @@ export function ContestClient({ contest }: ContestClientProps) {
   const { addPost } = useDashboard();
   const { user: currentUser } = useUser();
   const [searchTerm, setSearchTerm] = useState('');
-  const [nominees, setNominees] = useState<Nominee[]>(contest.nominees);
+  const [nominees, setNominees] = useState<Nominee[]>(contest.nominees || []);
   const [isNominationOpen, setIsNominationOpen] = useState(false);
+  const prevContestIdRef = useRef<string | undefined>(contest.id);
 
-  // Sync nominees when contest prop changes
+  // Sync nominees when contest ID changes (not just the nominees array)
   useEffect(() => {
-    setNominees(contest.nominees || []);
-  }, [contest.nominees]);
+    if (prevContestIdRef.current !== contest.id) {
+      prevContestIdRef.current = contest.id;
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Need to sync local state when contest changes
+      setNominees(contest.nominees || []);
+    }
+  }, [contest.id, contest.nominees]);
 
   const handleVote = (nomineeId: string) => {
     setNominees(
