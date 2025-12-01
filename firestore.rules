@@ -237,10 +237,13 @@ service cloud.firestore {
      */
     match /kitty_groups/{kittyGroupId} {
       allow get: if isMember(resource.data, 'memberIds') || isSuperAdmin() || (isSignedIn() && 'orderId' in resource.data && resource.data.orderId != null);
-      // Allow list queries for authenticated users
-      // Documents are filtered: user sees groups they're a member of OR groups with orderId
-      // This allows the upcoming page to show discoverable paid groups
-      allow list: if isSignedIn();
+      // Allow list queries where user is a member OR group has orderId OR user is super admin
+      // Firestore evaluates this per document, so users only see groups they have access to
+      allow list: if isSignedIn() && (
+        request.auth.uid in resource.data.memberIds || 
+        ('orderId' in resource.data && resource.data.orderId != null && resource.data.orderId != '') ||
+        isSuperAdmin()
+      );
       allow create: if isSignedIn() && isMember(request.resource.data, 'memberIds');
       // Allow group creator (first member in memberIds) to update memberIds to add new members
       // Allow users to add themselves via join link (using arrayUnion)
@@ -275,13 +278,17 @@ service cloud.firestore {
       allow get: if isSignedIn() && (
         request.auth.uid in resource.data.playerIds || 
         resource.data.adminId == request.auth.uid ||
-        ('orderId' in resource.data && resource.data.orderId != null) ||
+        ('orderId' in resource.data && resource.data.orderId != null && resource.data.orderId != '') ||
         isSuperAdmin()
       );
-      // Allow list queries for authenticated users
-      // Documents are filtered: user sees games they're a player/admin of OR games with orderId
-      // This allows the upcoming page to show discoverable paid games
-      allow list: if isSignedIn();
+      // Allow list queries where user is a player/admin OR game has orderId OR user is super admin
+      // Firestore evaluates this per document, so users only see games they have access to
+      allow list: if isSignedIn() && (
+        request.auth.uid in resource.data.playerIds || 
+        resource.data.adminId == request.auth.uid ||
+        ('orderId' in resource.data && resource.data.orderId != null && resource.data.orderId != '') ||
+        isSuperAdmin()
+      );
       allow create: if isSignedIn() && request.resource.data.adminId == request.auth.uid;
       // Allow admin to update playerIds (add players) and game state
       // Allow users to add themselves via join link (using arrayUnion)
