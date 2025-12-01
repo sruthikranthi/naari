@@ -188,17 +188,48 @@ export function ContestClient({ contest }: ContestClientProps) {
           return;
         }
 
+        // If payment session ID is available, use Cashfree Checkout.js
+        if (paymentResponse.paymentSessionId) {
+          // Load Cashfree SDK and redirect
+          const script = document.createElement('script');
+          script.src = 'https://sdk.cashfree.com/js/v3/cashfree.js';
+          script.async = true;
+          script.onload = () => {
+            const isProduction = process.env.NODE_ENV === 'production' || 
+                                window.location.hostname !== 'localhost';
+            const cashfree = new (window as any).Cashfree({ 
+              mode: isProduction ? 'production' : 'sandbox' 
+            });
+            cashfree.checkout({
+              paymentSessionId: paymentResponse.paymentSessionId,
+              redirectTarget: '_self',
+            });
+          };
+          document.body.appendChild(script);
+          return;
+        }
+
         toast({
           variant: 'destructive',
           title: 'Payment Error',
-          description: 'Could not initiate payment. Please try again.'
+          description: 'Payment URL not available. Please try again.'
         });
       } catch (error: any) {
         console.error('Error initiating payment:', error);
+        // Extract more detailed error message
+        let errorMessage = 'Failed to initiate payment. Please try again.';
+        if (error.message) {
+          errorMessage = error.message;
+        } else if (error.error) {
+          errorMessage = error.error;
+        } else if (typeof error === 'string') {
+          errorMessage = error;
+        }
+        
         toast({
           variant: 'destructive',
           title: 'Payment Error',
-          description: error.message || 'Failed to initiate payment. Please try again.'
+          description: errorMessage
         });
       }
       return;
