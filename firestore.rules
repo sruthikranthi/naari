@@ -280,11 +280,13 @@ service cloud.firestore {
       allow get: if isSignedIn() && (
         request.auth.uid in resource.data.playerIds || 
         resource.data.adminId == request.auth.uid ||
+        'orderId' in resource.data ||
         isSuperAdmin()
       );
       allow list: if isSignedIn() && (
         request.auth.uid in resource.data.playerIds || 
         resource.data.adminId == request.auth.uid ||
+        'orderId' in resource.data ||
         isSuperAdmin()
       );
       allow create: if isSignedIn() && request.resource.data.adminId == request.auth.uid;
