@@ -22,7 +22,7 @@ export default function UpcomingPage() {
     () => (firestore ? collection(firestore, 'kitty_groups') : null),
     [firestore]
   );
-  const { data: allKittyGroups, isLoading: areKittyGroupsLoading } = useCollection<KittyGroup & { orderId?: string; paymentId?: string; isConfigured?: boolean }>(allKittyGroupsQuery);
+  const { data: allKittyGroups, isLoading: areKittyGroupsLoading } = useCollection<KittyGroup>(allKittyGroupsQuery);
 
   // Query all tambola games (we'll filter client-side for those with orderId)
   const allTambolaGamesQuery = useMemoFirebase(
@@ -75,7 +75,12 @@ export default function UpcomingPage() {
                         </Badge>
                       </div>
                       <CardDescription>
-                        Created {group.createdAt ? formatDistanceToNow(new Date(group.createdAt), { addSuffix: true }) : 'recently'}
+                        Created {group.createdAt ? formatDistanceToNow(
+                          typeof group.createdAt === 'string' 
+                            ? new Date(group.createdAt) 
+                            : (group.createdAt as any)?.toDate?.() || new Date(group.createdAt),
+                          { addSuffix: true }
+                        ) : 'recently'}
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-3">
@@ -213,7 +218,12 @@ export default function UpcomingPage() {
                       </Badge>
                     </div>
                     <CardDescription>
-                      Created {group.createdAt ? formatDistanceToNow(new Date(group.createdAt), { addSuffix: true }) : 'recently'}
+                      Created {group.createdAt ? formatDistanceToNow(
+                        typeof group.createdAt === 'string' 
+                          ? new Date(group.createdAt) 
+                          : (group.createdAt as any)?.toDate?.() || new Date(group.createdAt),
+                        { addSuffix: true }
+                      ) : 'recently'}
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">

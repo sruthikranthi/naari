@@ -91,6 +91,10 @@ export type KittyGroup = {
     nextTurn: string;
     nextDate: string;
     memberIds: string[];
+    createdAt?: string | any; // ISO string or Firestore Timestamp
+    orderId?: string;
+    paymentId?: string;
+    isConfigured?: boolean;
 }
 
 export type TambolaGame = {
