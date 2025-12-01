@@ -879,7 +879,8 @@ export default function TambolaPage() {
                             </DialogContent>
                         </Dialog>
                       </div>
-                  ))}
+                    );
+                  })}
               </CardContent>
           </Card>
 
