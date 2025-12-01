@@ -236,11 +236,12 @@ service cloud.firestore {
      * @principle Enforces strict membership-based access for highly sensitive collaborative data.
      */
     match /kitty_groups/{kittyGroupId} {
-      allow get: if isMember(resource.data, 'memberIds') || isSuperAdmin() || (isSignedIn() && 'orderId' in resource.data && resource.data.orderId != null);
+      allow get: if isMember(resource.data, 'memberIds') || isSuperAdmin() || (isSignedIn() && 'orderId' in resource.data && resource.data.orderId != null && resource.data.orderId != '');
       // Allow list queries where user is a member OR group has orderId OR user is super admin
       // Firestore evaluates this per document, so users only see groups they have access to
+      // Check field existence before accessing to avoid errors
       allow list: if isSignedIn() && (
-        request.auth.uid in resource.data.memberIds || 
+        ('memberIds' in resource.data && request.auth.uid in resource.data.memberIds) || 
         ('orderId' in resource.data && resource.data.orderId != null && resource.data.orderId != '') ||
         isSuperAdmin()
       );
@@ -276,16 +277,17 @@ service cloud.firestore {
      */
     match /tambola_games/{gameId} {
       allow get: if isSignedIn() && (
-        request.auth.uid in resource.data.playerIds || 
-        resource.data.adminId == request.auth.uid ||
+        ('playerIds' in resource.data && request.auth.uid in resource.data.playerIds) || 
+        ('adminId' in resource.data && resource.data.adminId == request.auth.uid) ||
         ('orderId' in resource.data && resource.data.orderId != null && resource.data.orderId != '') ||
         isSuperAdmin()
       );
       // Allow list queries where user is a player/admin OR game has orderId OR user is super admin
       // Firestore evaluates this per document, so users only see games they have access to
+      // Check field existence before accessing to avoid errors
       allow list: if isSignedIn() && (
-        request.auth.uid in resource.data.playerIds || 
-        resource.data.adminId == request.auth.uid ||
+        ('playerIds' in resource.data && request.auth.uid in resource.data.playerIds) || 
+        ('adminId' in resource.data && resource.data.adminId == request.auth.uid) ||
         ('orderId' in resource.data && resource.data.orderId != null && resource.data.orderId != '') ||
         isSuperAdmin()
       );
