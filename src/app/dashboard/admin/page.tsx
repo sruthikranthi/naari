@@ -216,7 +216,13 @@ export default function AdminPanelPage() {
       if(contest) {
           setManagingContest(contest);
           // Reset winners state or load existing winners
-          setWinners(contest.winners || { specialNomination: '', first: '', second: '', third: '' });
+          const existingWinners = contest.winners;
+          setWinners({
+            specialNomination: existingWinners?.specialNomination || '',
+            first: existingWinners?.first || '',
+            second: existingWinners?.second || '',
+            third: existingWinners?.third || '',
+          });
       }
   }
 
