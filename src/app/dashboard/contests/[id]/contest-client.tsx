@@ -109,7 +109,14 @@ export function ContestClient({ contest }: ContestClientProps) {
   );
   const { data: userVotes } = useCollection<{ userId: string; nomineeId: string }>(userVotesQuery);
 
-  // Update nominees with vote counts and voted status
+  // Load all nominee comments to calculate comment counts
+  const nomineeCommentsQuery = useMemoFirebase(
+    () => (firestore ? query(collection(firestore, 'nominee_comments'), where('contestId', '==', contest.id)) : null),
+    [firestore, contest.id]
+  );
+  const { data: nomineeComments } = useCollection<{ contestId: string; nomineeId: string }>(nomineeCommentsQuery);
+
+  // Update nominees with vote counts, comment counts, and voted status
   useEffect(() => {
     if (contest.nominees) {
       // Calculate vote counts from Firestore
@@ -120,19 +127,28 @@ export function ContestClient({ contest }: ContestClientProps) {
         });
       }
 
+      // Calculate comment counts from Firestore
+      const commentCounts = new Map<string, number>();
+      if (nomineeComments) {
+        nomineeComments.forEach(comment => {
+          commentCounts.set(comment.nomineeId, (commentCounts.get(comment.nomineeId) || 0) + 1);
+        });
+      }
+
       // Mark which nominees the user has voted for
       const votedNomineeIds = new Set(userVotes?.map(v => v.nomineeId) || []);
 
-      // Update nominees with vote counts and voted status
+      // Update nominees with vote counts, comment counts, and voted status
       const updatedNominees = contest.nominees.map(n => ({
         ...n,
         votes: voteCounts.get(n.id) || n.votes || 0,
+        comments: commentCounts.get(n.id) || n.comments || 0,
         hasVoted: votedNomineeIds.has(n.id)
       }));
 
       setNominees(updatedNominees);
     }
-  }, [contest.nominees, allVotes, userVotes]);
+  }, [contest.nominees, allVotes, userVotes, nomineeComments]);
 
   const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -319,16 +335,9 @@ export function ContestClient({ contest }: ContestClientProps) {
   }
 
   const handleCommentAdded = useCallback(() => {
-    if (selectedNomineeForComment) {
-      setNominees(
-        nominees.map((n) =>
-          n.id === selectedNomineeForComment.id
-            ? { ...n, comments: n.comments + 1 }
-            : n
-        )
-      );
-    }
-  }, [nominees, selectedNomineeForComment]);
+    // Comment counts are calculated dynamically from Firestore, no manual update needed
+    // The nomineeComments query will automatically refresh and update the counts
+  }, []);
   
   const handleShare = async (nomineeId: string, nomineeName: string) => {
     if (!currentUser || !firestore) {

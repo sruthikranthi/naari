@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { collection, query, orderBy, addDoc, serverTimestamp, updateDoc, doc, getDoc } from 'firebase/firestore';
+import { collection, query, orderBy, addDoc, serverTimestamp, where } from 'firebase/firestore';
 import { useCollection, useFirestore, useUser, useMemoFirebase } from '@/firebase';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -49,11 +49,16 @@ export function NomineeCommentsDialog({
   const [commentText, setCommentText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Fetch comments for this nominee
+  // Fetch comments for this nominee from flat collection
   const commentsQuery = useMemoFirebase(
     () =>
       firestore
-        ? query(collection(firestore, 'contests', contestId, 'nominees', nomineeId, 'comments'), orderBy('timestamp', 'asc'))
+        ? query(
+            collection(firestore, 'nominee_comments'),
+            where('contestId', '==', contestId),
+            where('nomineeId', '==', nomineeId),
+            orderBy('timestamp', 'asc')
+          )
         : null,
     [firestore, contestId, nomineeId]
   );
@@ -90,9 +95,11 @@ export function NomineeCommentsDialog({
 
     setIsSubmitting(true);
     try {
-      // Add comment to subcollection
-      const commentsRef = collection(firestore, 'contests', contestId, 'nominees', nomineeId, 'comments');
+      // Add comment to flat collection
+      const commentsRef = collection(firestore, 'nominee_comments');
       await addDoc(commentsRef, {
+        contestId,
+        nomineeId,
         author: {
           id: user.uid,
           name: user.displayName || 'Anonymous Sakhi',
@@ -101,22 +108,6 @@ export function NomineeCommentsDialog({
         content: sanitizedContent,
         timestamp: serverTimestamp(),
       });
-
-      // Update comment count in the contest document
-      const contestRef = doc(firestore, 'contests', contestId);
-      const contestDoc = await getDoc(contestRef);
-      const contestData = contestDoc.data();
-      
-      if (contestData?.nominees) {
-        const updatedNominees = contestData.nominees.map((nominee: any) =>
-          nominee.id === nomineeId
-            ? { ...nominee, comments: (nominee.comments || 0) + 1 }
-            : nominee
-        );
-        await updateDoc(contestRef, {
-          nominees: updatedNominees,
-        });
-      }
 
       setCommentText('');
       toast({
