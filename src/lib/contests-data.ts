@@ -21,6 +21,23 @@ export type Nominee = {
   };
 };
 
+export type Nomination = {
+  id: string;
+  contestId: string;
+  userId: string;
+  userName: string;
+  userAvatar: string;
+  story: {
+    text: string;
+    image?: string;
+  };
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: Timestamp;
+  approvedAt?: Timestamp;
+  paymentId?: string;
+  orderId?: string;
+};
+
 export type JuryMember = {
   name: string;
   title: string;

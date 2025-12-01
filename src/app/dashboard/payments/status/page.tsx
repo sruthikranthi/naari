@@ -79,8 +79,16 @@ export default function PaymentStatusPage() {
           const pendingNomination = localStorage.getItem('pending_contest_nomination');
           if (pendingNomination) {
             try {
-              const { orderId: storedOrderId, contestId } = JSON.parse(pendingNomination);
+              const { orderId: storedOrderId, contestId, story, imageFile } = JSON.parse(pendingNomination);
               if (storedOrderId === orderId || storedOrderId === paymentId) {
+                // Store nomination data for the contest page to handle
+                localStorage.setItem('pending_nomination_submit', JSON.stringify({
+                  contestId,
+                  orderId: orderId || storedOrderId,
+                  paymentId: paymentId || storedOrderId,
+                  story,
+                  imageFile,
+                }));
                 // Redirect to contest page after successful payment
                 setTimeout(() => {
                   router.push(`/dashboard/contests/${contestId}?nominationComplete=true`);

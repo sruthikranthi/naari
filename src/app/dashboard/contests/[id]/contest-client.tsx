@@ -20,7 +20,10 @@ import {
   CalendarClock,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { type Contest, type Nominee } from '@/lib/contests-data';
+import { type Contest, type Nominee, type Nomination } from '@/lib/contests-data';
+import { useFirestore, useStorage } from '@/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import {
   Card,
   CardContent,
@@ -49,10 +52,34 @@ export function ContestClient({ contest }: ContestClientProps) {
   const { toast } = useToast();
   const { addPost } = useDashboard();
   const { user: currentUser } = useUser();
+  const firestore = useFirestore();
+  const storage = useStorage();
   const [searchTerm, setSearchTerm] = useState('');
   const [nominees, setNominees] = useState<Nominee[]>(contest.nominees || []);
   const [isNominationOpen, setIsNominationOpen] = useState(false);
+  const [nominationStory, setNominationStory] = useState('');
+  const [nominationImage, setNominationImage] = useState<File | null>(null);
+  const [nominationImagePreview, setNominationImagePreview] = useState<string | null>(null);
+  const [showCongratulations, setShowCongratulations] = useState(false);
   const prevContestIdRef = useRef<string | undefined>(contest.id);
+
+  // Check if user has an approved nomination
+  const userNominationsQuery = useMemoFirebase(
+    () => (firestore && currentUser ? query(collection(firestore, 'nominations'), where('contestId', '==', contest.id), where('userId', '==', currentUser.uid), where('status', '==', 'approved')) : null),
+    [firestore, currentUser, contest.id]
+  );
+  const { data: userNominations } = useCollection<Nomination>(userNominationsQuery);
+
+  // Show congratulations if user has approved nomination and hasn't seen it yet
+  useEffect(() => {
+    if (userNominations && userNominations.length > 0) {
+      const hasSeenCongratulations = localStorage.getItem(`congratulations_seen_${contest.id}_${currentUser?.uid}`);
+      if (!hasSeenCongratulations) {
+        setShowCongratulations(true);
+        localStorage.setItem(`congratulations_seen_${contest.id}_${currentUser?.uid}`, 'true');
+      }
+    }
+  }, [userNominations, contest.id, currentUser?.uid]);
 
   // Sync nominees when contest ID changes (not just the nominees array)
   useEffect(() => {
@@ -62,6 +89,26 @@ export function ContestClient({ contest }: ContestClientProps) {
       setNominees(contest.nominees || []);
     }
   }, [contest.id, contest.nominees]);
+
+  // Handle pending nomination submission after payment
+  useEffect(() => {
+    if (!currentUser || !firestore) return;
+    
+    const pendingSubmit = localStorage.getItem('pending_nomination_submit');
+    if (pendingSubmit) {
+      try {
+        const { contestId, orderId, paymentId, story, imageFile } = JSON.parse(pendingSubmit);
+        if (contestId === contest.id) {
+          // Submit the nomination
+          submitNomination(orderId, paymentId, story, imageFile).then(() => {
+            localStorage.removeItem('pending_nomination_submit');
+          });
+        }
+      } catch (e) {
+        console.error('Error processing pending nomination submit:', e);
+      }
+    }
+  }, [currentUser, firestore, contest.id]);
 
   const handleVote = (nomineeId: string) => {
     setNominees(
@@ -173,12 +220,14 @@ export function ContestClient({ contest }: ContestClientProps) {
           authToken || undefined
         );
 
-        // Store pending nomination in localStorage
+        // Store pending nomination in localStorage with story data
         if (typeof window !== 'undefined') {
           localStorage.setItem('pending_contest_nomination', JSON.stringify({
             orderId: paymentResponse.orderId,
             paymentId: paymentResponse.paymentId,
             contestId: contest.id,
+            story: nominationStory,
+            imageFile: nominationImage ? await fileToBase64(nominationImage) : null,
           }));
         }
 
@@ -235,12 +284,95 @@ export function ContestClient({ contest }: ContestClientProps) {
       return;
     }
 
-    // If no fee, just submit the nomination
-    setIsNominationOpen(false);
-    toast({
-        title: 'Participation Submitted!',
-        description: 'Your entry is under review. You are now a nominee! Good luck!'
+    // If no fee, submit the nomination directly
+    await submitNomination();
+  }
+
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = error => reject(error);
     });
+  };
+
+
+  const submitNomination = async (paymentOrderId?: string, paymentId?: string, storyText?: string, imageData?: string) => {
+    if (!currentUser || !firestore) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Unable to submit nomination. Please try again.'
+      });
+      return;
+    }
+
+    try {
+      // Upload image if provided
+      let imageUrl = '';
+      const storyToUse = storyText || nominationStory;
+      
+      if (imageData || nominationImage) {
+        if (!storage) {
+          throw new Error('Storage not available');
+        }
+        
+        const timestamp = Date.now();
+        const fileName = `nominations/${contest.id}/${currentUser.uid}/${timestamp}.jpg`;
+        const storageRef = ref(storage, fileName);
+        
+        // Convert base64 to blob if needed
+        let blob: Blob;
+        if (nominationImage) {
+          blob = nominationImage;
+        } else if (imageData) {
+          // It's base64 data
+          const response = await fetch(imageData);
+          blob = await response.blob();
+        } else {
+          throw new Error('No image data provided');
+        }
+        
+        await uploadBytes(storageRef, blob);
+        imageUrl = await getDownloadURL(storageRef);
+      }
+
+      // Create nomination document
+      const nominationData: Omit<Nomination, 'id'> = {
+        contestId: contest.id,
+        userId: currentUser.uid,
+        userName: currentUser.displayName || 'User',
+        userAvatar: currentUser.photoURL || `https://picsum.photos/seed/${currentUser.uid}/100/100`,
+        story: {
+          text: storyToUse || 'No story provided',
+          image: imageUrl || undefined,
+        },
+        status: 'pending',
+        createdAt: serverTimestamp(),
+        ...(paymentOrderId && { orderId: paymentOrderId }),
+        ...(paymentId && { paymentId }),
+      };
+
+      await addDoc(collection(firestore, 'nominations'), nominationData);
+
+      setIsNominationOpen(false);
+      setNominationStory('');
+      setNominationImage(null);
+      setNominationImagePreview(null);
+      
+      toast({
+        title: 'Nomination Submitted!',
+        description: 'Your nomination has been sent for approval. You will be notified once it\'s reviewed.'
+      });
+    } catch (error: any) {
+      console.error('Error submitting nomination:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error.message || 'Failed to submit nomination. Please try again.'
+      });
+    }
   }
 
   const filteredNominees = nominees
@@ -248,6 +380,13 @@ export function ContestClient({ contest }: ContestClientProps) {
     .sort((a, b) => b.votes - a.votes);
 
   return (
+    <>
+      {showCongratulations && (
+        <NominationCongratulations 
+          contest={contest} 
+          onClose={() => setShowCongratulations(false)}
+        />
+      )}
     <div className="space-y-8">
       {/* Header */}
       <div className="relative h-56 w-full overflow-hidden rounded-lg md:h-72">
@@ -323,11 +462,42 @@ export function ContestClient({ contest }: ContestClientProps) {
                         <div className="space-y-4 py-4">
                             <div>
                                 <Label htmlFor="story">Your Story / Achievement</Label>
-                                <Textarea id="story" placeholder="Tell us why you should win..." rows={5} />
+                                <Textarea 
+                                  id="story" 
+                                  placeholder="Tell us why you should win..." 
+                                  rows={5}
+                                  value={nominationStory}
+                                  onChange={(e) => setNominationStory(e.target.value)}
+                                />
                             </div>
                              <div>
                                 <Label htmlFor="image-upload">Upload a supporting image</Label>
-                                <Input id="image-upload" type="file" accept="image/*" />
+                                <Input 
+                                  id="image-upload" 
+                                  type="file" 
+                                  accept="image/*"
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) {
+                                      setNominationImage(file);
+                                      const reader = new FileReader();
+                                      reader.onloadend = () => {
+                                        setNominationImagePreview(reader.result as string);
+                                      };
+                                      reader.readAsDataURL(file);
+                                    }
+                                  }}
+                                />
+                                {nominationImagePreview && (
+                                  <div className="mt-2 relative w-full h-48 rounded-lg overflow-hidden">
+                                    <Image
+                                      src={nominationImagePreview}
+                                      alt="Preview"
+                                      fill
+                                      className="object-cover"
+                                    />
+                                  </div>
+                                )}
                             </div>
                             {contest.nominationFee > 0 && (
                                 <div className="rounded-lg border bg-secondary/50 p-3 text-center">
@@ -336,8 +506,13 @@ export function ContestClient({ contest }: ContestClientProps) {
                             )}
                         </div>
                         <DialogFooter>
-                            <Button variant="ghost" onClick={() => setIsNominationOpen(false)}>Cancel</Button>
-                            <Button onClick={handleNominate}>Submit Entry</Button>
+                            <Button variant="ghost" onClick={() => {
+                              setIsNominationOpen(false);
+                              setNominationStory('');
+                              setNominationImage(null);
+                              setNominationImagePreview(null);
+                            }}>Cancel</Button>
+                            <Button onClick={handleNominate} disabled={!nominationStory.trim()}>Submit Entry</Button>
                         </DialogFooter>
                     </DialogContent>
                 </Dialog>
@@ -589,5 +764,6 @@ export function ContestClient({ contest }: ContestClientProps) {
         </div>
       </div>
     </div>
+    </>
   );
 }

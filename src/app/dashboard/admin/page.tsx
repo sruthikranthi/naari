@@ -70,9 +70,9 @@ import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import type { Contest, JuryMember } from '@/lib/contests-data';
+import type { Contest, JuryMember, Nomination } from '@/lib/contests-data';
 import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, doc, setDoc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, setDoc, updateDoc, deleteDoc, serverTimestamp, arrayUnion } from 'firebase/firestore';
 import type { ProfessionalApplication } from '@/lib/applications';
 
 type UserWithRole = User & { role: 'User' | 'Professional' | 'Creator'; status: 'Active' | 'Inactive' | 'Pending' };
@@ -105,6 +105,9 @@ export default function AdminPanelPage() {
   const applicationsQuery = useMemoFirebase(() => (firestore ? collection(firestore, 'professional_applications') : null), [firestore]);
   const { data: applications, isLoading: areAppsLoading } = useCollection<ProfessionalApplication>(applicationsQuery);
 
+  const nominationsQuery = useMemoFirebase(() => (firestore ? collection(firestore, 'nominations') : null), [firestore]);
+  const { data: allNominations, isLoading: areNominationsLoading } = useCollection<Nomination>(nominationsQuery);
+
 
   // Component State
   const [users, setUsers] = useState<UserWithRole[]>([]);
@@ -125,6 +128,7 @@ export default function AdminPanelPage() {
     second: '',
     third: '',
   });
+  const [selectedNominations, setSelectedNominations] = useState<string[]>([]);
 
   const isSuperAdmin = user?.uid === SUPER_ADMIN_ID;
 
@@ -306,6 +310,77 @@ export default function AdminPanelPage() {
       });
     }
   }
+
+  const handleApproveNominations = async (nominationIds: string[]) => {
+    if (!firestore || nominationIds.length === 0) return;
+    
+    try {
+      for (const nominationId of nominationIds) {
+        const nomination = allNominations?.find(n => n.id === nominationId);
+        if (!nomination || nomination.status !== 'pending') continue;
+        
+        const nominationRef = doc(firestore, 'nominations', nominationId);
+        await updateDoc(nominationRef, {
+          status: 'approved',
+          approvedAt: serverTimestamp(),
+        });
+        
+        // Add nominee to contest
+        const contestRef = doc(firestore, 'contests', nomination.contestId);
+        const newNominee = {
+          id: nomination.userId,
+          name: nomination.userName,
+          avatar: nomination.userAvatar,
+          votes: 0,
+          comments: 0,
+          shares: 0,
+          story: nomination.story,
+        };
+        await updateDoc(contestRef, {
+          nominees: arrayUnion(newNominee),
+        });
+      }
+      
+      setSelectedNominations([]);
+      toast({
+        title: 'Nominations Approved!',
+        description: `${nominationIds.length} nomination(s) have been approved and added to the contest.`
+      });
+    } catch (e) {
+      console.error('Error approving nominations:', e);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Could not approve nominations. Please try again.'
+      });
+    }
+  };
+
+  const handleRejectNominations = async (nominationIds: string[]) => {
+    if (!firestore || nominationIds.length === 0) return;
+    
+    try {
+      for (const nominationId of nominationIds) {
+        const nominationRef = doc(firestore, 'nominations', nominationId);
+        await updateDoc(nominationRef, {
+          status: 'rejected',
+        });
+      }
+      
+      setSelectedNominations([]);
+      toast({
+        title: 'Nominations Rejected',
+        description: `${nominationIds.length} nomination(s) have been rejected.`
+      });
+    } catch (e) {
+      console.error('Error rejecting nominations:', e);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Could not reject nominations. Please try again.'
+      });
+    }
+  };
 
   const handleUpdateContestDetail = async (field: keyof Contest, value: string | number) => {
     if(!managingContest || !firestore) return;
@@ -889,10 +964,111 @@ export default function AdminPanelPage() {
                     </div>
 
                     {/* Right Column */}
-                    <div className="md:col-span-2">
+                    <div className="md:col-span-2 space-y-6">
+                        {/* Pending Nominations */}
+                        {allNominations && allNominations.filter(n => n.contestId === managingContest.id && n.status === 'pending').length > 0 && (
+                            <Card>
+                                <CardHeader>
+                                    <div className="flex items-center justify-between">
+                                        <CardTitle>Pending Nominations ({allNominations.filter(n => n.contestId === managingContest.id && n.status === 'pending').length})</CardTitle>
+                                        {selectedNominations.length > 0 && (
+                                            <div className="flex gap-2">
+                                                <Button 
+                                                    size="sm" 
+                                                    variant="outline"
+                                                    onClick={() => handleRejectNominations(selectedNominations)}
+                                                >
+                                                    Reject Selected ({selectedNominations.length})
+                                                </Button>
+                                                <Button 
+                                                    size="sm"
+                                                    onClick={() => handleApproveNominations(selectedNominations)}
+                                                >
+                                                    Approve Selected ({selectedNominations.length})
+                                                </Button>
+                                            </div>
+                                        )}
+                                    </div>
+                                </CardHeader>
+                                <CardContent>
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead className="w-12">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={selectedNominations.length === allNominations.filter(n => n.contestId === managingContest.id && n.status === 'pending').length && allNominations.filter(n => n.contestId === managingContest.id && n.status === 'pending').length > 0}
+                                                        onChange={(e) => {
+                                                            if (e.target.checked) {
+                                                                setSelectedNominations(allNominations.filter(n => n.contestId === managingContest.id && n.status === 'pending').map(n => n.id));
+                                                            } else {
+                                                                setSelectedNominations([]);
+                                                            }
+                                                        }}
+                                                    />
+                                                </TableHead>
+                                                <TableHead>User</TableHead>
+                                                <TableHead>Story</TableHead>
+                                                <TableHead>Actions</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {allNominations
+                                                .filter(n => n.contestId === managingContest.id && n.status === 'pending')
+                                                .map(nomination => (
+                                                    <TableRow key={nomination.id}>
+                                                        <TableCell>
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={selectedNominations.includes(nomination.id)}
+                                                                onChange={(e) => {
+                                                                    if (e.target.checked) {
+                                                                        setSelectedNominations([...selectedNominations, nomination.id]);
+                                                                    } else {
+                                                                        setSelectedNominations(selectedNominations.filter(id => id !== nomination.id));
+                                                                    }
+                                                                }}
+                                                            />
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <div className="flex items-center gap-2">
+                                                                <Avatar className="h-8 w-8">
+                                                                    <AvatarImage src={nomination.userAvatar} />
+                                                                    <AvatarFallback>{nomination.userName.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                                                                </Avatar>
+                                                                <span className="font-medium">{nomination.userName}</span>
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <p className="text-sm text-muted-foreground line-clamp-2">{nomination.story.text}</p>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <div className="flex gap-2">
+                                                                <Button 
+                                                                    size="sm" 
+                                                                    variant="outline"
+                                                                    onClick={() => handleRejectNominations([nomination.id])}
+                                                                >
+                                                                    Reject
+                                                                </Button>
+                                                                <Button 
+                                                                    size="sm"
+                                                                    onClick={() => handleApproveNominations([nomination.id])}
+                                                                >
+                                                                    Approve
+                                                                </Button>
+                                                            </div>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))}
+                                        </TableBody>
+                                    </Table>
+                                </CardContent>
+                            </Card>
+                        )}
                         <Card>
                             <CardHeader>
-                                <CardTitle>Nominees ({(managingContest.nominees || []).length})</CardTitle>
+                                <CardTitle>Approved Nominees ({(managingContest.nominees || []).length})</CardTitle>
                             </CardHeader>
                             <CardContent>
                                 <Table>

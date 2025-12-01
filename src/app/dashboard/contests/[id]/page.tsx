@@ -26,14 +26,28 @@ export default function ContestDetailPage() {
   useEffect(() => {
     const nominationComplete = searchParams.get('nominationComplete');
     if (nominationComplete === 'true') {
-      toast({
-        title: 'Nomination Fee Paid!',
-        description: 'Your nomination has been submitted successfully. Good luck!'
-      });
+      // Get pending nomination data from localStorage
+      const pendingSubmit = localStorage.getItem('pending_nomination_submit');
+      if (pendingSubmit) {
+        try {
+          const { contestId, orderId, paymentId, story, imageFile } = JSON.parse(pendingSubmit);
+          if (contestId === id) {
+            // The ContestClient component will handle the submission
+            // Just show a message and clean up
+            toast({
+              title: 'Payment Successful!',
+              description: 'Your nomination is being submitted...'
+            });
+            localStorage.removeItem('pending_nomination_submit');
+          }
+        } catch (e) {
+          console.error('Error processing nomination submit:', e);
+        }
+      }
       // Clean up URL
       window.history.replaceState({}, '', window.location.pathname);
     }
-  }, [searchParams, toast]);
+  }, [searchParams, toast, id]);
 
   if (isLoading) {
     return (
