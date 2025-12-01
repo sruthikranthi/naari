@@ -1,6 +1,6 @@
 
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import {
   Award,
@@ -41,7 +41,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useDashboard } from '../../layout';
 import type { Post } from '@/lib/mock-data';
-import { useUser } from '@/firebase';
+import { useUser, useCollection, useMemoFirebase } from '@/firebase';
+import { query, where } from 'firebase/firestore';
+import { NominationCongratulations } from '@/components/nomination-congratulations';
 
 type ContestClientProps = {
   contest: Contest;
@@ -89,6 +91,92 @@ export function ContestClient({ contest }: ContestClientProps) {
     }
   }, [contest.id, contest.nominees]);
 
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = error => reject(error);
+    });
+  };
+
+  const submitNomination = useCallback(async (paymentOrderId?: string, paymentId?: string, storyText?: string, imageData?: string) => {
+    if (!currentUser || !firestore) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Unable to submit nomination. Please try again.'
+      });
+      return;
+    }
+
+    try {
+      // Upload image if provided
+      let imageUrl = '';
+      const storyToUse = storyText || nominationStory;
+      
+      if (imageData || nominationImage) {
+        if (!storage) {
+          throw new Error('Storage not available');
+        }
+        
+        const timestamp = Date.now();
+        const fileName = `nominations/${contest.id}/${currentUser.uid}/${timestamp}.jpg`;
+        const storageRef = ref(storage, fileName);
+        
+        // Convert base64 to blob if needed
+        let blob: Blob;
+        if (nominationImage) {
+          blob = nominationImage;
+        } else if (imageData) {
+          // It's base64 data
+          const response = await fetch(imageData);
+          blob = await response.blob();
+        } else {
+          throw new Error('No image data provided');
+        }
+        
+        await uploadBytes(storageRef, blob);
+        imageUrl = await getDownloadURL(storageRef);
+      }
+
+      // Create nomination document
+      const nominationData: Omit<Nomination, 'id'> = {
+        contestId: contest.id,
+        userId: currentUser.uid,
+        userName: currentUser.displayName || 'User',
+        userAvatar: currentUser.photoURL || `https://picsum.photos/seed/${currentUser.uid}/100/100`,
+        story: {
+          text: storyToUse || 'No story provided',
+          image: imageUrl || undefined,
+        },
+        status: 'pending',
+        createdAt: serverTimestamp(),
+        ...(paymentOrderId && { orderId: paymentOrderId }),
+        ...(paymentId && { paymentId }),
+      };
+
+      await addDoc(collection(firestore, 'nominations'), nominationData);
+
+      setIsNominationOpen(false);
+      setNominationStory('');
+      setNominationImage(null);
+      setNominationImagePreview(null);
+      
+      toast({
+        title: 'Nomination Submitted!',
+        description: 'Your nomination has been sent for approval. You will be notified once it\'s reviewed.'
+      });
+    } catch (error: any) {
+      console.error('Error submitting nomination:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error.message || 'Failed to submit nomination. Please try again.'
+      });
+    }
+  }, [currentUser, firestore, storage, contest.id, nominationStory, nominationImage, toast]);
+
   // Handle pending nomination submission after payment
   useEffect(() => {
     if (!currentUser || !firestore) return;
@@ -107,7 +195,7 @@ export function ContestClient({ contest }: ContestClientProps) {
         console.error('Error processing pending nomination submit:', e);
       }
     }
-  }, [currentUser, firestore, contest.id]);
+  }, [currentUser, firestore, contest.id, submitNomination]);
 
   const handleVote = (nomineeId: string) => {
     setNominees(
@@ -295,84 +383,6 @@ export function ContestClient({ contest }: ContestClientProps) {
       reader.onerror = error => reject(error);
     });
   };
-
-
-  const submitNomination = async (paymentOrderId?: string, paymentId?: string, storyText?: string, imageData?: string) => {
-    if (!currentUser || !firestore) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Unable to submit nomination. Please try again.'
-      });
-      return;
-    }
-
-    try {
-      // Upload image if provided
-      let imageUrl = '';
-      const storyToUse = storyText || nominationStory;
-      
-      if (imageData || nominationImage) {
-        if (!storage) {
-          throw new Error('Storage not available');
-        }
-        
-        const timestamp = Date.now();
-        const fileName = `nominations/${contest.id}/${currentUser.uid}/${timestamp}.jpg`;
-        const storageRef = ref(storage, fileName);
-        
-        // Convert base64 to blob if needed
-        let blob: Blob;
-        if (nominationImage) {
-          blob = nominationImage;
-        } else if (imageData) {
-          // It's base64 data
-          const response = await fetch(imageData);
-          blob = await response.blob();
-        } else {
-          throw new Error('No image data provided');
-        }
-        
-        await uploadBytes(storageRef, blob);
-        imageUrl = await getDownloadURL(storageRef);
-      }
-
-      // Create nomination document
-      const nominationData: Omit<Nomination, 'id'> = {
-        contestId: contest.id,
-        userId: currentUser.uid,
-        userName: currentUser.displayName || 'User',
-        userAvatar: currentUser.photoURL || `https://picsum.photos/seed/${currentUser.uid}/100/100`,
-        story: {
-          text: storyToUse || 'No story provided',
-          image: imageUrl || undefined,
-        },
-        status: 'pending',
-        createdAt: serverTimestamp(),
-        ...(paymentOrderId && { orderId: paymentOrderId }),
-        ...(paymentId && { paymentId }),
-      };
-
-      await addDoc(collection(firestore, 'nominations'), nominationData);
-
-      setIsNominationOpen(false);
-      setNominationStory('');
-      setNominationImage(null);
-      setNominationImagePreview(null);
-      
-      toast({
-        title: 'Nomination Submitted!',
-        description: 'Your nomination has been sent for approval. You will be notified once it\'s reviewed.'
-      });
-    } catch (error: any) {
-      console.error('Error submitting nomination:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: error.message || 'Failed to submit nomination. Please try again.'
-      });
-    }
-  }
 
   const filteredNominees = nominees
     .filter((n) => n.name.toLowerCase().includes(searchTerm.toLowerCase()))
