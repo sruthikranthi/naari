@@ -108,21 +108,25 @@ service cloud.firestore {
       allow list: if isSignedIn(); // Allow listing for chat participant resolution and admin panel
       allow create: if isOwner(userId) && request.resource.data.id == userId;
       // Allow a user to update their own profile, including their followingIds.
-      // Allow other users to add themselves to this user's followerIds (for follow functionality).
-      // When updating followerIds, allow if:
-      //   1. User is updating their own profile and not changing followerIds, OR
-      //   2. Another user is adding themselves to followerIds (follow functionality)
+      // Allow other users to add/remove themselves from this user's followerIds (for follow/unfollow functionality).
       allow update: if isRelationalIdImmutable('id')
                     && (
                       // User updating their own profile (can update followingIds, but not followerIds directly)
                       (isExistingOwner(userId) && (!('followerIds' in request.resource.data) || request.resource.data.followerIds == resource.data.followerIds))
                       ||
-                      // Another user adding themselves to followerIds (follow functionality)
-                      // Allow if: followerIds is being updated, auth.uid is in the new array, and it's only adding (not removing)
+                      // Another user modifying followerIds (follow/unfollow functionality)
+                      // Allow if: followerIds is being updated and only the current user's presence is changing
                       (isSignedIn() 
                        && 'followerIds' in request.resource.data
-                       && request.auth.uid in request.resource.data.followerIds
-                       && (!('followerIds' in resource.data) || request.resource.data.followerIds.size() >= resource.data.followerIds.size()))
+                       && (
+                         // Follow: User is in new array but wasn't in old array (or old array didn't exist)
+                         (!('followerIds' in resource.data) && request.auth.uid in request.resource.data.followerIds)
+                         ||
+                         (request.auth.uid in request.resource.data.followerIds && !(request.auth.uid in resource.data.followerIds))
+                         ||
+                         // Unfollow: User is not in new array but was in old array
+                         (!(request.auth.uid in request.resource.data.followerIds) && 'followerIds' in resource.data && request.auth.uid in resource.data.followerIds)
+                       ))
                     );
       allow delete: if isExistingOwner(userId);
     }
