@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Crown, Ticket, Users, Clock, PartyPopper, Award, HelpCircle, Share2, Copy, Check } from 'lucide-react';
+import { Crown, Ticket, Users, Clock, PartyPopper, Award, HelpCircle, Share2, Copy, Check, Calendar } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -31,6 +31,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Loader2, Search, UserPlus } from 'lucide-react';
+import { TambolaSetupDialog } from '@/components/tambola-setup-dialog';
 
 // A more robust function to generate a valid Tambola ticket
 const generateTicket = (): (number | null)[][] => {
@@ -127,6 +128,8 @@ export default function TambolaPage() {
   const [isAddingPlayer, setIsAddingPlayer] = useState<string | null>(null);
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [isSetupDialogOpen, setIsSetupDialogOpen] = useState(false);
+  const [pendingGameData, setPendingGameData] = useState<{ orderId: string; paymentId: string } | null>(null);
 
   // Fetch current game if gameId is in localStorage
   const gameIdFromStorage = typeof window !== 'undefined' ? localStorage.getItem('current_tambola_game_id') : null;
@@ -212,56 +215,79 @@ export default function TambolaPage() {
         try {
           const { orderId: storedOrderId, paymentId } = JSON.parse(pendingTambola);
           if (storedOrderId === orderId) {
-            // Create game in Firestore
-            const createGame = async () => {
-              if (!firestore) return;
-              try {
-                const newGame = {
-                  adminId: user.uid,
-                  playerIds: [user.uid], // Admin is first player
-                  calledNumbers: [],
-                  currentNumber: null,
-                  status: 'idle' as const,
-                  createdAt: serverTimestamp(),
-                  orderId: storedOrderId,
-                  paymentId: paymentId,
-                };
-                const gameDoc = await addDoc(collection(firestore, 'tambola_games'), newGame);
-                setCurrentGameId(gameDoc.id);
-                if (typeof window !== 'undefined') {
-                  localStorage.setItem('current_tambola_game_id', gameDoc.id);
-                }
-                
-                // Start the game locally
-                resetGame();
-                setGameStatus('running');
-                setTimeout(() => {
-                  handleNextNumber();
-                }, 100);
-                
-                toast({ 
-                  title: 'Payment Successful!', 
-                  description: 'Game created! You can now invite players.' 
-                });
-                localStorage.removeItem('pending_tambola_game');
-                router.replace('/dashboard/tambola');
-              } catch (error: any) {
-                console.error('Error creating game:', error);
-                toast({
-                  title: 'Error',
-                  description: 'Failed to create game. Please try again.',
-                  variant: 'destructive',
-                });
-              }
-            };
-            createGame();
+            // Store pending game data and open setup dialog
+            setPendingGameData({ orderId: storedOrderId, paymentId });
+            setIsSetupDialogOpen(true);
+            router.replace('/dashboard/tambola');
           }
         } catch (e) {
           console.error('Error processing pending tambola game:', e);
         }
       }
     }
-  }, [searchParams, toast, router, handleNextNumber, user, firestore]);
+  }, [searchParams, router, user]);
+
+  // Handle game setup completion
+  const handleSetupComplete = async (config: {
+    prizes: {
+      corners?: number;
+      topLine?: number;
+      middleLine?: number;
+      bottomLine?: number;
+      fullHouse?: number;
+      houses?: number[];
+    };
+    scheduledDate: string;
+    scheduledTime: string;
+  }) => {
+    if (!firestore || !user || !pendingGameData) return;
+
+    try {
+      const shareLink = `${window.location.origin}/dashboard/tambola?join=${pendingGameData.orderId}`;
+      
+      const newGame = {
+        adminId: user.uid,
+        playerIds: [user.uid], // Admin is first player
+        calledNumbers: [],
+        currentNumber: null,
+        status: 'idle' as const,
+        createdAt: serverTimestamp(),
+        orderId: pendingGameData.orderId,
+        paymentId: pendingGameData.paymentId,
+        prizes: config.prizes,
+        scheduledDate: config.scheduledDate,
+        scheduledTime: config.scheduledTime,
+        isConfigured: true,
+        shareLink: shareLink,
+      };
+      
+      const gameDoc = await addDoc(collection(firestore, 'tambola_games'), newGame);
+      setCurrentGameId(gameDoc.id);
+      
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('current_tambola_game_id', gameDoc.id);
+        localStorage.removeItem('pending_tambola_game');
+      }
+      
+      setIsSetupDialogOpen(false);
+      setPendingGameData(null);
+      
+      // Show social share dialog
+      setIsShareDialogOpen(true);
+      
+      toast({ 
+        title: 'Game Created Successfully!', 
+        description: 'Share the game link to invite players.' 
+      });
+    } catch (error: any) {
+      console.error('Error creating game:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to create game. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
 
   // Sync game state with Firestore
   useEffect(() => {
@@ -349,9 +375,9 @@ export default function TambolaPage() {
     }
   };
 
-  const shareLink = typeof window !== 'undefined' && currentGameId
-    ? `${window.location.origin}/dashboard/tambola/join?gameId=${currentGameId}`
-    : '';
+  const shareLink = currentGame?.shareLink || (typeof window !== 'undefined' && currentGameId
+    ? `${window.location.origin}/dashboard/tambola?join=${currentGameId}`
+    : '');
 
   const handleCopyLink = async () => {
     if (!shareLink) return;
@@ -375,9 +401,25 @@ export default function TambolaPage() {
 
   const handleShareWhatsApp = () => {
     if (!shareLink) return;
-    const message = `Join my Tambola game on Naarimani! Let's play together! 🎲\n\n${shareLink}`;
-    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
-    window.open(whatsappUrl, '_blank');
+    const prizeInfo = currentGame?.prizes ? 
+      `\n💰 Prizes:\n${currentGame.prizes.corners ? `Four Corners: ₹${currentGame.prizes.corners}\n` : ''}${currentGame.prizes.topLine ? `Top Line: ₹${currentGame.prizes.topLine}\n` : ''}${currentGame.prizes.middleLine ? `Middle Line: ₹${currentGame.prizes.middleLine}\n` : ''}${currentGame.prizes.bottomLine ? `Bottom Line: ₹${currentGame.prizes.bottomLine}\n` : ''}${currentGame.prizes.fullHouse ? `Full House: ₹${currentGame.prizes.fullHouse}\n` : ''}${currentGame.prizes.houses?.map((h, i) => `House ${i + 1}: ₹${h}`).join('\n') || ''}` : '';
+    const scheduleInfo = currentGame?.scheduledDate && currentGame?.scheduledTime ?
+      `\n📅 Scheduled: ${new Date(currentGame.scheduledDate).toLocaleDateString()} at ${currentGame.scheduledTime}` : '';
+    const message = `🎲 Join my Tambola game on Naarimani!${prizeInfo}${scheduleInfo}\n\n${shareLink}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+  };
+
+  const handleShareFacebook = () => {
+    if (!shareLink) return;
+    const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareLink)}`;
+    window.open(url, '_blank');
+  };
+
+  const handleShareTwitter = () => {
+    if (!shareLink) return;
+    const text = `🎲 Join my Tambola game on Naarimani! ${shareLink}`;
+    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(shareLink)}`;
+    window.open(url, '_blank');
   };
 
   const handleStartGame = async () => {
@@ -604,9 +646,15 @@ export default function TambolaPage() {
                                 )}
                               </Button>
                             </div>
-                            <div className="flex gap-2">
-                              <Button onClick={handleShareWhatsApp} className="flex-1" variant="outline">
+                            <div className="grid grid-cols-1 gap-2">
+                              <Button onClick={handleShareWhatsApp} className="w-full bg-green-500 hover:bg-green-600 text-white" variant="outline">
                                 <Share2 className="mr-2 h-4 w-4" /> Share via WhatsApp
+                              </Button>
+                              <Button onClick={handleShareFacebook} className="w-full bg-blue-600 hover:bg-blue-700 text-white" variant="outline">
+                                <Share2 className="mr-2 h-4 w-4" /> Share on Facebook
+                              </Button>
+                              <Button onClick={handleShareTwitter} className="w-full bg-blue-400 hover:bg-blue-500 text-white" variant="outline">
+                                <Share2 className="mr-2 h-4 w-4" /> Share on Twitter
                               </Button>
                             </div>
                             <p className="text-xs text-muted-foreground">
@@ -802,11 +850,16 @@ export default function TambolaPage() {
                   <CardTitle>Prizes to Claim</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                  {prizes.map(prize => (
+                  {prizes.map(prize => {
+                    const prizeAmount = currentGame?.prizes?.[prize.id as keyof typeof currentGame.prizes] as number | undefined;
+                    return (
                       <div key={prize.id} className="flex items-center justify-between rounded-lg border p-3">
-                        <div>
+                        <div className="flex-1">
                             <p className="font-semibold">{prize.name}</p>
                             <p className="text-xs text-muted-foreground">{prize.description}</p>
+                            {prizeAmount !== undefined && prizeAmount > 0 && (
+                              <p className="text-sm font-bold text-primary mt-1">₹{prizeAmount.toLocaleString()}</p>
+                            )}
                         </div>
                         <Dialog>
                             <DialogTrigger asChild>
@@ -833,6 +886,16 @@ export default function TambolaPage() {
         </div>
 
       </div>
+
+      {/* Setup Dialog */}
+      <TambolaSetupDialog
+        isOpen={isSetupDialogOpen}
+        onClose={() => {
+          setIsSetupDialogOpen(false);
+          setPendingGameData(null);
+        }}
+        onComplete={handleSetupComplete}
+      />
     </div>
   );
 }

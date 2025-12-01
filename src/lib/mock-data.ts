@@ -103,6 +103,19 @@ export type TambolaGame = {
     createdAt: any; // Timestamp
     orderId?: string; // Payment order ID
     paymentId?: string; // Payment ID
+    // Game configuration
+    prizes?: {
+        corners?: number; // Prize money for four corners
+        topLine?: number; // Prize money for top line
+        middleLine?: number; // Prize money for middle line
+        bottomLine?: number; // Prize money for bottom line
+        fullHouse?: number; // Prize money for full house
+        houses?: number[]; // Prize money for multiple houses (1st house, 2nd house, etc.)
+    };
+    scheduledDate?: string; // ISO date string
+    scheduledTime?: string; // Time string (HH:MM format)
+    isConfigured?: boolean; // Whether host has completed setup
+    shareLink?: string; // Social share link
 }
 
 export type Review = {
