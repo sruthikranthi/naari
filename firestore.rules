@@ -365,6 +365,38 @@ service cloud.firestore {
     }
 
     // -------------------------------------------------------------------------
+    // Nominations (/nominations)
+    // -------------------------------------------------------------------------
+
+    /**
+     * @description Users can create nominations for contests. Users can read their own nominations. Admins can read/list all nominations and update their status.
+     * @path /nominations/{nominationId}
+     * @allow (create) User creating a nomination for themselves (userId matches auth.uid).
+     * @allow (get, list) User reading their own nominations OR super admin reading any nomination.
+     * @allow (update) Super admin updating nomination status (approve/reject).
+     * @deny (read) Regular user trying to read another user's nomination.
+     * @principle Enforces ownership on creation and admin-only access for review and status updates.
+     */
+    match /nominations/{nominationId} {
+      // Users can read their own nominations, admins can read all
+      allow get: if isSignedIn() && (
+        resource.data.userId == request.auth.uid || 
+        isSuperAdmin()
+      );
+      // Users can list their own nominations, admins can list all
+      allow list: if isSignedIn() && (
+        resource.data.userId == request.auth.uid || 
+        isSuperAdmin()
+      );
+      // Users can create nominations for themselves
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      // Only super admin can update nominations (for approval/rejection)
+      allow update: if isSuperAdmin();
+      // Only super admin can delete nominations
+      allow delete: if isSuperAdmin();
+    }
+
+    // -------------------------------------------------------------------------
     // Events (/events)
     // -------------------------------------------------------------------------
 
