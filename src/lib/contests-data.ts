@@ -1,5 +1,5 @@
 import { PlaceHolderImages } from './placeholder-images';
-import type { Timestamp } from 'firebase/firestore';
+import type { Timestamp, FieldValue } from 'firebase/firestore';
 
 const findImage = (id: string, hint: string) => {
     const img = PlaceHolderImages.find(p => p.id === id);
@@ -32,8 +32,8 @@ export type Nomination = {
     image?: string;
   };
   status: 'pending' | 'approved' | 'rejected';
-  createdAt: Timestamp;
-  approvedAt?: Timestamp;
+  createdAt: Timestamp | FieldValue;
+  approvedAt?: Timestamp | FieldValue;
   paymentId?: string;
   orderId?: string;
 };
