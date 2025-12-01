@@ -362,6 +362,13 @@ service cloud.firestore {
         allow get, list: if isSignedIn();
         allow create: if isSignedIn();
         allow update, delete: if isSuperAdmin();
+        
+        // Votes subcollection for tracking user votes
+        match /votes/{voteId} {
+          allow get, list: if isSignedIn();
+          allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+          allow update, delete: if false; // Votes are immutable once created
+        }
     }
 
     // -------------------------------------------------------------------------

@@ -21,8 +21,8 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { type Contest, type Nominee, type Nomination } from '@/lib/contests-data';
-import { useFirestore, useStorage } from '@/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { useFirestore, useStorage, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, addDoc, serverTimestamp, query, where, getDocs, updateDoc, doc, increment } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import {
   Card,
@@ -41,8 +41,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useDashboard } from '../../layout';
 import type { Post } from '@/lib/mock-data';
-import { useUser, useCollection, useMemoFirebase } from '@/firebase';
-import { query, where } from 'firebase/firestore';
+import { useUser } from '@/firebase';
 import { NominationCongratulations } from '@/components/nomination-congratulations';
 
 type ContestClientProps = {
@@ -82,14 +81,55 @@ export function ContestClient({ contest }: ContestClientProps) {
     }
   }, [userNominations, contest.id, currentUser?.uid]);
 
-  // Sync nominees when contest ID changes (not just the nominees array)
+  // Sync nominees when contest data changes
   useEffect(() => {
+    if (contest.nominees) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Need to sync local state when contest changes
+      setNominees(contest.nominees);
+    }
     if (prevContestIdRef.current !== contest.id) {
       prevContestIdRef.current = contest.id;
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- Need to sync local state when contest changes
-      setNominees(contest.nominees || []);
     }
   }, [contest.id, contest.nominees]);
+
+  // Load all votes for this contest to get accurate vote counts
+  const allVotesQuery = useMemoFirebase(
+    () => (firestore ? query(collection(firestore, 'contests', contest.id, 'votes')) : null),
+    [firestore, contest.id]
+  );
+  const { data: allVotes } = useCollection<{ userId: string; nomineeId: string }>(allVotesQuery);
+
+  // Load user votes to check if they've voted
+  const userVotesQuery = useMemoFirebase(
+    () => (firestore && currentUser ? query(collection(firestore, 'contests', contest.id, 'votes'), where('userId', '==', currentUser.uid)) : null),
+    [firestore, currentUser, contest.id]
+  );
+  const { data: userVotes } = useCollection<{ userId: string; nomineeId: string }>(userVotesQuery);
+
+  // Update nominees with vote counts and voted status
+  useEffect(() => {
+    if (contest.nominees) {
+      // Calculate vote counts from Firestore
+      const voteCounts = new Map<string, number>();
+      if (allVotes) {
+        allVotes.forEach(vote => {
+          voteCounts.set(vote.nomineeId, (voteCounts.get(vote.nomineeId) || 0) + 1);
+        });
+      }
+
+      // Mark which nominees the user has voted for
+      const votedNomineeIds = new Set(userVotes?.map(v => v.nomineeId) || []);
+
+      // Update nominees with vote counts and voted status
+      const updatedNominees = contest.nominees.map(n => ({
+        ...n,
+        votes: voteCounts.get(n.id) || n.votes || 0,
+        hasVoted: votedNomineeIds.has(n.id)
+      }));
+
+      setNominees(updatedNominees);
+    }
+  }, [contest.nominees, allVotes, userVotes]);
 
   const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -208,20 +248,61 @@ export function ContestClient({ contest }: ContestClientProps) {
     }
   }, [currentUser, firestore, contest.id, submitNomination]);
 
-  const handleVote = (nomineeId: string) => {
-    setNominees(
-      nominees.map((n) =>
-        n.id === nomineeId && !n.hasVoted
-          ? { ...n, votes: n.votes + 1, hasVoted: true }
-          : n
-      )
-    );
-    if (!nominees.find(n => n.id === nomineeId)?.hasVoted) {
+  const handleVote = async (nomineeId: string) => {
+    if (!currentUser || !firestore) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'You must be logged in to vote.'
+      });
+      return;
+    }
+
+    const nominee = nominees.find(n => n.id === nomineeId);
+    if (!nominee || nominee.hasVoted) {
+      return;
+    }
+
+    try {
+      // Check if user has already voted
+      const existingVoteQuery = query(
+        collection(firestore, 'contests', contest.id, 'votes'),
+        where('userId', '==', currentUser.uid),
+        where('nomineeId', '==', nomineeId)
+      );
+      const existingVotes = await getDocs(existingVoteQuery);
+      
+      if (!existingVotes.empty) {
+        toast({
+          variant: 'destructive',
+          title: 'Already Voted',
+          description: 'You have already voted for this nominee.'
+        });
+        return;
+      }
+
+      // Create vote document
+      await addDoc(collection(firestore, 'contests', contest.id, 'votes'), {
+        userId: currentUser.uid,
+        nomineeId: nomineeId,
+        timestamp: serverTimestamp(),
+      });
+
+      // Update local state - vote count will be recalculated from Firestore
+      setNominees(prev => prev.map(n =>
+        n.id === nomineeId ? { ...n, hasVoted: true } : n
+      ));
+
       toast({
         title: 'Vote Cast!',
-        description: `You have successfully voted for ${
-          nominees.find((n) => n.id === nomineeId)?.name
-        }.`,
+        description: `You have successfully voted for ${nominee.name}.`,
+      });
+    } catch (error: any) {
+      console.error('Error casting vote:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error.message || 'Failed to cast vote. Please try again.'
       });
     }
   };

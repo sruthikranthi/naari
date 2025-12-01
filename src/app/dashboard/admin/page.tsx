@@ -72,7 +72,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Textarea } from '@/components/ui/textarea';
 import type { Contest, JuryMember, Nomination } from '@/lib/contests-data';
 import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, doc, setDoc, updateDoc, deleteDoc, serverTimestamp, arrayUnion } from 'firebase/firestore';
+import { collection, doc, setDoc, updateDoc, deleteDoc, serverTimestamp, arrayUnion, getDoc, addDoc } from 'firebase/firestore';
 import type { ProfessionalApplication } from '@/lib/applications';
 
 type UserWithRole = User & { role: 'User' | 'Professional' | 'Creator'; status: 'Active' | 'Inactive' | 'Pending' };
@@ -327,6 +327,9 @@ export default function AdminPanelPage() {
         
         // Add nominee to contest
         const contestRef = doc(firestore, 'contests', nomination.contestId);
+        const contestDoc = await getDoc(contestRef);
+        const contestData = contestDoc.data();
+        
         const newNominee = {
           id: nomination.userId,
           name: nomination.userName,
@@ -339,6 +342,27 @@ export default function AdminPanelPage() {
         await updateDoc(contestRef, {
           nominees: arrayUnion(newNominee),
         });
+        
+        // Create a feed post for the approved nomination
+        const nominationPost: any = {
+          author: {
+            id: nomination.userId,
+            name: nomination.userName,
+            avatar: nomination.userAvatar,
+          },
+          content: `🎉 I've been nominated for the "${contestData?.title || 'Contest'}" contest! ${nomination.story.text}`,
+          timestamp: serverTimestamp(),
+          likes: 0,
+          comments: 0,
+          isAnonymous: false,
+          nominationId: nominationId,
+          contestId: nomination.contestId,
+        };
+        // Only include image if it exists
+        if (nomination.story.image) {
+          nominationPost.image = nomination.story.image;
+        }
+        await addDoc(collection(firestore, 'posts'), nominationPost);
       }
       
       setSelectedNominations([]);
