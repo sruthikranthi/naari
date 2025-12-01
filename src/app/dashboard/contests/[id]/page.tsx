@@ -5,7 +5,6 @@ import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import type { Contest } from '@/lib/contests-data';
 import { ContestClient } from './contest-client';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 
 export default function ContestDetailPage() {
@@ -21,18 +20,19 @@ export default function ContestDetailPage() {
 
   if (isLoading) {
     return (
-        <div className="space-y-8">
-            <Skeleton className="h-72 w-full rounded-lg" />
+        <div className="space-y-8 animate-pulse">
+            <div className="relative h-56 w-full overflow-hidden rounded-lg md:h-72 bg-muted" />
             <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
                 <div className="space-y-6 md:col-span-1">
-                    <Skeleton className="h-64 w-full" />
-                    <Skeleton className="h-48 w-full" />
+                    <div className="h-64 w-full rounded-lg bg-muted" />
+                    <div className="h-48 w-full rounded-lg bg-muted" />
+                    <div className="h-64 w-full rounded-lg bg-muted" />
                 </div>
                 <div className="space-y-6 md:col-span-3">
-                    <Skeleton className="h-10 w-48" />
+                    <div className="h-10 w-48 bg-muted rounded" />
                     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                        <Skeleton className="h-80 w-full" />
-                        <Skeleton className="h-80 w-full" />
+                        <div className="h-80 w-full rounded-lg bg-muted" />
+                        <div className="h-80 w-full rounded-lg bg-muted" />
                     </div>
                 </div>
             </div>

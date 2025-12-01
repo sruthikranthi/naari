@@ -1,6 +1,6 @@
 
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import {
   Award,
@@ -13,6 +13,11 @@ import {
   Plus,
   MessageSquare,
   Share2,
+  FileText,
+  UserCheck,
+  GraduationCap,
+  Users2,
+  CalendarClock,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { type Contest, type Nominee } from '@/lib/contests-data';
@@ -47,6 +52,11 @@ export function ContestClient({ contest }: ContestClientProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [nominees, setNominees] = useState<Nominee[]>(contest.nominees);
   const [isNominationOpen, setIsNominationOpen] = useState(false);
+
+  // Sync nominees when contest prop changes
+  useEffect(() => {
+    setNominees(contest.nominees || []);
+  }, [contest.nominees]);
 
   const handleVote = (nomineeId: string) => {
     setNominees(
@@ -179,6 +189,15 @@ export function ContestClient({ contest }: ContestClientProps) {
                   </p>
                 </div>
               </div>
+              {contest.nominationFee > 0 && (
+                <div className="flex items-center gap-3">
+                  <Award className="h-5 w-5 text-primary" />
+                  <div>
+                    <p className="font-semibold">Entry Fee</p>
+                    <p className="text-muted-foreground">₹{contest.nominationFee}</p>
+                  </div>
+                </div>
+              )}
                <div className="pt-4">
                  <Dialog open={isNominationOpen} onOpenChange={setIsNominationOpen}>
                     <DialogTrigger asChild>
@@ -215,6 +234,73 @@ export function ContestClient({ contest }: ContestClientProps) {
                </div>
             </CardContent>
           </Card>
+          
+          {/* Contest Rules and Eligibility */}
+          {(contest.rules || contest.eligibility || contest.ageRange || contest.education || contest.maxNominees || contest.nominationEndDate) && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Rules & Eligibility</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4 text-sm">
+                {contest.rules && (
+                  <div className="flex items-start gap-3">
+                    <FileText className="h-5 w-5 mt-0.5 text-primary flex-shrink-0" />
+                    <div>
+                      <p className="font-semibold mb-1">Rules</p>
+                      <p className="text-muted-foreground whitespace-pre-wrap">{contest.rules}</p>
+                    </div>
+                  </div>
+                )}
+                {contest.eligibility && (
+                  <div className="flex items-start gap-3">
+                    <UserCheck className="h-5 w-5 mt-0.5 text-primary flex-shrink-0" />
+                    <div>
+                      <p className="font-semibold mb-1">Eligibility</p>
+                      <p className="text-muted-foreground whitespace-pre-wrap">{contest.eligibility}</p>
+                    </div>
+                  </div>
+                )}
+                {contest.ageRange && (
+                  <div className="flex items-center gap-3">
+                    <Calendar className="h-5 w-5 text-primary" />
+                    <div>
+                      <p className="font-semibold">Age Range</p>
+                      <p className="text-muted-foreground">{contest.ageRange}</p>
+                    </div>
+                  </div>
+                )}
+                {contest.education && (
+                  <div className="flex items-center gap-3">
+                    <GraduationCap className="h-5 w-5 text-primary" />
+                    <div>
+                      <p className="font-semibold">Education</p>
+                      <p className="text-muted-foreground">{contest.education}</p>
+                    </div>
+                  </div>
+                )}
+                {contest.maxNominees && (
+                  <div className="flex items-center gap-3">
+                    <Users2 className="h-5 w-5 text-primary" />
+                    <div>
+                      <p className="font-semibold">Max Nominees</p>
+                      <p className="text-muted-foreground">
+                        {contest.maxNominees === 'Unlimited' ? 'Unlimited' : contest.maxNominees}
+                      </p>
+                    </div>
+                  </div>
+                )}
+                {contest.nominationEndDate && (
+                  <div className="flex items-center gap-3">
+                    <CalendarClock className="h-5 w-5 text-primary" />
+                    <div>
+                      <p className="font-semibold">Nomination Deadline</p>
+                      <p className="text-muted-foreground">{contest.nominationEndDate}</p>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
           <Card>
             <CardHeader>
               <CardTitle>Jury Panel</CardTitle>
