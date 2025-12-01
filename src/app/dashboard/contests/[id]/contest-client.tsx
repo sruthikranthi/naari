@@ -42,7 +42,6 @@ import { Label } from '@/components/ui/label';
 import { useDashboard } from '../../layout';
 import type { Post } from '@/lib/mock-data';
 import { useUser } from '@/firebase';
-import { serverTimestamp } from 'firebase/firestore';
 
 type ContestClientProps = {
   contest: Contest;
