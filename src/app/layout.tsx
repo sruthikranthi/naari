@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { cn } from '@/lib/utils';
@@ -8,19 +8,20 @@ import { ErrorBoundary } from '@/components/error-boundary';
 import { OfflineIndicator } from '@/components/offline-indicator';
 import { ServiceWorkerRegistration } from '@/components/service-worker-registration';
 
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
+  viewportFit: 'cover',
+  themeColor: '#e91e63',
+};
+
 export const metadata: Metadata = {
   title: 'Naarimani - India\'s First Women-Only Social Platform',
   description:
     'India\'s first women-only social platform for safety, friendship, learning, support & empowerment.',
   manifest: '/manifest.json',
-  themeColor: '#e91e63',
-  viewport: {
-    width: 'device-width',
-    initialScale: 1,
-    maximumScale: 5,
-    userScalable: true,
-    viewportFit: 'cover',
-  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
