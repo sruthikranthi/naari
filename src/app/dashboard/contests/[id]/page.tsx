@@ -1,22 +1,39 @@
 
 'use client';
-import { notFound, useParams } from 'next/navigation';
+import { notFound, useParams, useSearchParams } from 'next/navigation';
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import type { Contest } from '@/lib/contests-data';
 import { ContestClient } from './contest-client';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
+import { useEffect } from 'react';
 
 export default function ContestDetailPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const { id } = params;
   const firestore = useFirestore();
+  const { toast } = useToast();
 
   const contestRef = useMemoFirebase(
     () => (firestore && id ? doc(firestore, 'contests', id as string) : null),
     [firestore, id]
   );
   const { data: contest, isLoading, error } = useDoc<Contest>(contestRef);
+
+  // Handle nomination completion after payment
+  useEffect(() => {
+    const nominationComplete = searchParams.get('nominationComplete');
+    if (nominationComplete === 'true') {
+      toast({
+        title: 'Nomination Fee Paid!',
+        description: 'Your nomination has been submitted successfully. Good luck!'
+      });
+      // Clean up URL
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, [searchParams, toast]);
 
   if (isLoading) {
     return (

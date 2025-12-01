@@ -307,15 +307,35 @@ export default function AdminPanelPage() {
     }
   }
 
-  const handleUpdateContestDetail = (field: keyof Contest, value: string | number) => {
-    if(!managingContest) return;
-    const updatedContest = { ...managingContest, [field]: value };
-    setManagingContest(updatedContest);
-    setContests(prev => prev.map(c => c.id === managingContest.id ? updatedContest : c));
-    toast({
-        title: 'Contest Updated',
-        description: `The ${String(field)} has been updated.`
-    })
+  const handleUpdateContestDetail = async (field: keyof Contest, value: string | number) => {
+    if(!managingContest || !firestore) return;
+    try {
+      const updatedContest = { ...managingContest, [field]: value };
+      const contestRef = doc(firestore, 'contests', managingContest.id);
+      
+      // Convert value to appropriate type for Firestore
+      const updateData: any = { [field]: value };
+      // Handle maxNominees - convert string to number if needed
+      if (field === 'maxNominees') {
+        updateData[field] = value === 'Unlimited' || value === '' ? 'Unlimited' : Number(value);
+      }
+      
+      await updateDoc(contestRef, updateData);
+      
+      setManagingContest(updatedContest);
+      setContests(prev => prev.map(c => c.id === managingContest.id ? updatedContest : c));
+      toast({
+          title: 'Contest Updated',
+          description: `The ${String(field)} has been saved successfully.`
+      });
+    } catch (e) {
+      console.error('Error updating contest detail:', e);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: `Could not save ${String(field)}. Please try again.`
+      });
+    }
   }
 
   const handleApplicationStatus = async (app: ProfessionalApplication, newStatus: 'approved' | 'rejected') => {
@@ -1016,6 +1036,11 @@ export default function AdminPanelPage() {
 function ContestDetailItem({ icon: Icon, label, value, onEdit }: { icon: React.ElementType, label: string, value: string, onEdit: (newValue: string) => void }) {
     const [isEditing, setIsEditing] = useState(false);
     const [editValue, setEditValue] = useState(value);
+
+    // Sync editValue when value prop changes
+    useEffect(() => {
+        setEditValue(value);
+    }, [value]);
 
     const handleSave = () => {
         onEdit(editValue);

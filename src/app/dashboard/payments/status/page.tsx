@@ -74,6 +74,23 @@ export default function PaymentStatusPage() {
               console.error('Error processing pending tambola game:', e);
             }
           }
+
+          // Check for pending contest nomination
+          const pendingNomination = localStorage.getItem('pending_contest_nomination');
+          if (pendingNomination) {
+            try {
+              const { orderId: storedOrderId, contestId } = JSON.parse(pendingNomination);
+              if (storedOrderId === orderId || storedOrderId === paymentId) {
+                // Redirect to contest page after successful payment
+                setTimeout(() => {
+                  router.push(`/dashboard/contests/${contestId}?nominationComplete=true`);
+                }, 2000);
+                localStorage.removeItem('pending_contest_nomination');
+              }
+            } catch (e) {
+              console.error('Error processing pending contest nomination:', e);
+            }
+          }
         }
       } else if (result.status === 'pending') {
         setStatus('pending');

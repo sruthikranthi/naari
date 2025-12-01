@@ -130,7 +130,81 @@ export function ContestClient({ contest }: ContestClientProps) {
     });
   }
 
-  const handleNominate = () => {
+  const handleNominate = async () => {
+    if (!currentUser) {
+      toast({
+        variant: 'destructive',
+        title: 'Authentication Required',
+        description: 'Please log in to participate in contests.'
+      });
+      return;
+    }
+
+    // If there's a nomination fee, redirect to payment
+    if (contest.nominationFee > 0) {
+      try {
+        // Get Firebase Auth token
+        const { getAuth } = await import('firebase/auth');
+        const { initializeFirebase } = await import('@/firebase');
+        const auth = initializeFirebase().auth;
+        let authToken: string | null = null;
+        
+        if (auth.currentUser) {
+          authToken = await auth.currentUser.getIdToken();
+        }
+
+        // Create payment order
+        const { processCashfreePayment } = await import('@/lib/payments');
+        const paymentResponse = await processCashfreePayment(
+          contest.nominationFee,
+          'INR',
+          `Contest Nomination Fee - ${contest.title}`,
+          currentUser.uid,
+          {
+            name: currentUser.displayName || 'User',
+            email: currentUser.email || '',
+            phone: '9999999999',
+          },
+          {
+            type: 'contest_nomination',
+            contestId: contest.id,
+            contestTitle: contest.title,
+          },
+          authToken || undefined
+        );
+
+        // Store pending nomination in localStorage
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('pending_contest_nomination', JSON.stringify({
+            orderId: paymentResponse.orderId,
+            paymentId: paymentResponse.paymentId,
+            contestId: contest.id,
+          }));
+        }
+
+        // Redirect to payment URL if available
+        if (paymentResponse.paymentUrl) {
+          window.location.href = paymentResponse.paymentUrl;
+          return;
+        }
+
+        toast({
+          variant: 'destructive',
+          title: 'Payment Error',
+          description: 'Could not initiate payment. Please try again.'
+        });
+      } catch (error: any) {
+        console.error('Error initiating payment:', error);
+        toast({
+          variant: 'destructive',
+          title: 'Payment Error',
+          description: error.message || 'Failed to initiate payment. Please try again.'
+        });
+      }
+      return;
+    }
+
+    // If no fee, just submit the nomination
     setIsNominationOpen(false);
     toast({
         title: 'Participation Submitted!',
