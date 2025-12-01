@@ -45,7 +45,7 @@ export default function ContestDetailPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
         <p className="text-lg font-semibold">Error loading contest</p>
-        <p className="text-sm text-muted-foreground">The contest you're looking for may not exist or has been removed.</p>
+        <p className="text-sm text-muted-foreground">The contest you&apos;re looking for may not exist or has been removed.</p>
         <Button onClick={() => window.history.back()}>Go Back</Button>
       </div>
     );
@@ -56,7 +56,7 @@ export default function ContestDetailPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
         <p className="text-lg font-semibold">Contest Not Found</p>
-        <p className="text-sm text-muted-foreground">The contest you're looking for doesn't exist or has been removed.</p>
+        <p className="text-sm text-muted-foreground">The contest you&apos;re looking for doesn&apos;t exist or has been removed.</p>
         <Button onClick={() => window.location.href = '/dashboard/contests'}>View All Contests</Button>
       </div>
     );
