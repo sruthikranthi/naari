@@ -22,19 +22,33 @@ export default function UpcomingPage() {
   const [joiningGameId, setJoiningGameId] = useState<string | null>(null);
   const [joiningGroupId, setJoiningGroupId] = useState<string | null>(null);
 
-  // Query all kitty groups (we'll filter client-side for those with orderId)
-  const allKittyGroupsQuery = useMemoFirebase(
-    () => (firestore ? collection(firestore, 'kitty_groups') : null),
-    [firestore]
+  // Query kitty groups with orderId (paid groups that are discoverable)
+  // Also query groups where user is a member
+  const kittyGroupsWithOrderIdQuery = useMemoFirebase(
+    () => (firestore && user ? query(collection(firestore, 'kitty_groups'), where('orderId', '!=', null)) : null),
+    [firestore, user]
   );
-  const { data: allKittyGroups, isLoading: areKittyGroupsLoading } = useCollection<KittyGroup>(allKittyGroupsQuery);
+  const { data: kittyGroupsWithOrderId, isLoading: areKittyGroupsWithOrderIdLoading } = useCollection<KittyGroup>(kittyGroupsWithOrderIdQuery);
 
-  // Query all tambola games (we'll filter client-side for those with orderId)
-  const allTambolaGamesQuery = useMemoFirebase(
-    () => (firestore ? collection(firestore, 'tambola_games') : null),
-    [firestore]
+  const userKittyGroupsQuery = useMemoFirebase(
+    () => (firestore && user ? query(collection(firestore, 'kitty_groups'), where('memberIds', 'array-contains', user.uid)) : null),
+    [firestore, user]
   );
-  const { data: allTambolaGames, isLoading: areTambolaGamesLoading } = useCollection<TambolaGame & { orderId?: string; paymentId?: string; isConfigured?: boolean; prizes?: any; scheduledDate?: string; scheduledTime?: string }>(allTambolaGamesQuery);
+  const { data: userKittyGroups, isLoading: areUserKittyGroupsLoading } = useCollection<KittyGroup>(userKittyGroupsQuery);
+
+  // Query tambola games with orderId (paid games that are discoverable)
+  // Also query games where user is a player or admin
+  const tambolaGamesWithOrderIdQuery = useMemoFirebase(
+    () => (firestore && user ? query(collection(firestore, 'tambola_games'), where('orderId', '!=', null)) : null),
+    [firestore, user]
+  );
+  const { data: tambolaGamesWithOrderId, isLoading: areTambolaGamesWithOrderIdLoading } = useCollection<TambolaGame & { orderId?: string; paymentId?: string; isConfigured?: boolean; prizes?: any; scheduledDate?: string; scheduledTime?: string }>(tambolaGamesWithOrderIdQuery);
+
+  const userTambolaGamesQuery = useMemoFirebase(
+    () => (firestore && user ? query(collection(firestore, 'tambola_games'), where('playerIds', 'array-contains', user.uid)) : null),
+    [firestore, user]
+  );
+  const { data: userTambolaGames, isLoading: areUserTambolaGamesLoading } = useCollection<TambolaGame & { orderId?: string; paymentId?: string; isConfigured?: boolean; prizes?: any; scheduledDate?: string; scheduledTime?: string }>(userTambolaGamesQuery);
 
   // Filter kitty groups that are not fully started (can add more criteria)
   const upcomingKittyGroups = allKittyGroups?.filter(group => 
