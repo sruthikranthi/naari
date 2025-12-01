@@ -1,11 +1,12 @@
 
 'use client';
-import { notFound, useParams } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { useDoc, useFirestore, useUser, useMemoFirebase, useCollection } from '@/firebase';
 import { doc, query, collection, where } from 'firebase/firestore';
 import type { User, KittyGroup } from '@/lib/mock-data';
 import { KittyGroupClient } from './kitty-group-client';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 
 
 export default function KittyGroupDetailPage() {
@@ -51,7 +52,20 @@ export default function KittyGroupDetailPage() {
   }
 
   if (!group || !currentUser || !currentAuthUser) {
-    notFound();
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
+        <p className="text-lg font-semibold">Kitty Group Not Found</p>
+        <p className="text-sm text-muted-foreground">
+          The kitty group you&apos;re looking for doesn&apos;t exist or you don&apos;t have access to it.
+        </p>
+        <div className="flex gap-2">
+          <Button onClick={() => window.history.back()}>Go Back</Button>
+          <Button variant="outline" onClick={() => window.location.href = '/dashboard/kitty-groups'}>
+            View All Groups
+          </Button>
+        </div>
+      </div>
+    );
   }
   
   const upcomingEvent = {

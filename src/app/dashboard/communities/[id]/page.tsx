@@ -1,12 +1,13 @@
 
 'use client';
-import { notFound, useParams } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { useDoc, useFirestore, useMemoFirebase, useCollection } from '@/firebase';
 import { collection, doc, query, where, orderBy } from 'firebase/firestore';
 
 import { CommunityClient } from './community-client';
 import type { Community, Post, User as UserType } from '@/lib/mock-data';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 
 const communityEvents = [
   {
@@ -80,11 +81,37 @@ function CommunityDetailPageContent() {
     
     if (communityError) {
         console.error("Error fetching community:", communityError);
-        return <p>Error loading community.</p>;
+        return (
+          <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
+            <p className="text-lg font-semibold">Error Loading Community</p>
+            <p className="text-sm text-muted-foreground">
+              There was an error loading the community. Please try again later.
+            </p>
+            <div className="flex gap-2">
+              <Button onClick={() => window.history.back()}>Go Back</Button>
+              <Button variant="outline" onClick={() => window.location.href = '/dashboard/communities'}>
+                View All Communities
+              </Button>
+            </div>
+          </div>
+        );
     }
 
     if (!community) {
-        notFound();
+        return (
+          <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
+            <p className="text-lg font-semibold">Community Not Found</p>
+            <p className="text-sm text-muted-foreground">
+              The community you&apos;re looking for doesn&apos;t exist or has been removed.
+            </p>
+            <div className="flex gap-2">
+              <Button onClick={() => window.history.back()}>Go Back</Button>
+              <Button variant="outline" onClick={() => window.location.href = '/dashboard/communities'}>
+                View All Communities
+              </Button>
+            </div>
+          </div>
+        );
     }
 
     // For now, we show all posts. Filtering by community would be a future step.

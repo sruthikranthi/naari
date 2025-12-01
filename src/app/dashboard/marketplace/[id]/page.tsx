@@ -1,11 +1,12 @@
 
 'use client';
-import { notFound, useParams } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { ProductClient } from './product-client';
 import type { Product } from '@/lib/mock-data';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 
 function ProductDetailPageContent() {
     const params = useParams();
@@ -45,12 +46,37 @@ function ProductDetailPageContent() {
     
     if (error) {
         console.error("Error fetching product:", error);
-        // This could be a more user-friendly error component
-        return <p>Error loading product. It may have been removed or you may not have permission to view it.</p>;
+        return (
+          <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
+            <p className="text-lg font-semibold">Error Loading Product</p>
+            <p className="text-sm text-muted-foreground">
+              There was an error loading the product. It may have been removed or you may not have permission to view it.
+            </p>
+            <div className="flex gap-2">
+              <Button onClick={() => window.history.back()}>Go Back</Button>
+              <Button variant="outline" onClick={() => window.location.href = '/dashboard/marketplace'}>
+                View Marketplace
+              </Button>
+            </div>
+          </div>
+        );
     }
 
     if (!product) {
-        notFound();
+        return (
+          <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
+            <p className="text-lg font-semibold">Product Not Found</p>
+            <p className="text-sm text-muted-foreground">
+              The product you&apos;re looking for doesn&apos;t exist or has been removed.
+            </p>
+            <div className="flex gap-2">
+              <Button onClick={() => window.history.back()}>Go Back</Button>
+              <Button variant="outline" onClick={() => window.location.href = '/dashboard/marketplace'}>
+                View Marketplace
+              </Button>
+            </div>
+          </div>
+        );
     }
 
     return <ProductClient product={product} />;
