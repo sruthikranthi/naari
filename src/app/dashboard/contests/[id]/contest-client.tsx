@@ -141,20 +141,31 @@ export function ContestClient({ contest }: ContestClientProps) {
       }
 
       // Create nomination document
-      const nominationData: Omit<Nomination, 'id'> = {
+      const storyData: { text: string; image?: string } = {
+        text: storyToUse || 'No story provided',
+      };
+      // Only include image if it exists (Firestore doesn't accept undefined)
+      if (imageUrl) {
+        storyData.image = imageUrl;
+      }
+
+      const nominationData: any = {
         contestId: contest.id,
         userId: currentUser.uid,
         userName: currentUser.displayName || 'User',
         userAvatar: currentUser.photoURL || `https://picsum.photos/seed/${currentUser.uid}/100/100`,
-        story: {
-          text: storyToUse || 'No story provided',
-          image: imageUrl || undefined,
-        },
+        story: storyData,
         status: 'pending',
         createdAt: serverTimestamp(),
-        ...(paymentOrderId && { orderId: paymentOrderId }),
-        ...(paymentId && { paymentId }),
       };
+
+      // Only add optional fields if they exist
+      if (paymentOrderId) {
+        nominationData.orderId = paymentOrderId;
+      }
+      if (paymentId) {
+        nominationData.paymentId = paymentId;
+      }
 
       await addDoc(collection(firestore, 'nominations'), nominationData);
 
