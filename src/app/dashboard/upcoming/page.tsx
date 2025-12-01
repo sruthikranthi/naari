@@ -6,16 +6,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
+import { collection, doc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Users, Calendar, IndianRupee, Trophy, Clock, ArrowRight } from 'lucide-react';
+import { Users, Calendar, IndianRupee, Trophy, Clock, ArrowRight, UserPlus, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import type { KittyGroup, TambolaGame } from '@/lib/mock-data';
 import { formatDistanceToNow } from 'date-fns';
+import { useToast } from '@/hooks/use-toast';
 
 export default function UpcomingPage() {
   const firestore = useFirestore();
+  const { user } = useUser();
+  const { toast } = useToast();
+  const [joiningGameId, setJoiningGameId] = useState<string | null>(null);
+  const [joiningGroupId, setJoiningGroupId] = useState<string | null>(null);
 
   // Query all kitty groups (we'll filter client-side for those with orderId)
   const allKittyGroupsQuery = useMemoFirebase(
@@ -44,6 +49,74 @@ export default function UpcomingPage() {
   ) || [];
 
   const isLoading = areKittyGroupsLoading || areTambolaGamesLoading;
+
+  // Handle joining tambola game
+  const handleJoinTambola = async (gameId: string) => {
+    if (!user || !firestore) {
+      toast({
+        variant: 'destructive',
+        title: 'Not Logged In',
+        description: 'Please log in to join the game.',
+      });
+      return;
+    }
+
+    setJoiningGameId(gameId);
+    try {
+      const gameRef = doc(firestore, 'tambola_games', gameId);
+      await updateDoc(gameRef, {
+        playerIds: arrayUnion(user.uid),
+      });
+      
+      toast({
+        title: 'Successfully Joined!',
+        description: 'You have joined the Tambola game.',
+      });
+    } catch (error: any) {
+      console.error('Error joining game:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error.message || 'Failed to join the game. Please try again.',
+      });
+    } finally {
+      setJoiningGameId(null);
+    }
+  };
+
+  // Handle joining kitty group
+  const handleJoinKittyGroup = async (groupId: string) => {
+    if (!user || !firestore) {
+      toast({
+        variant: 'destructive',
+        title: 'Not Logged In',
+        description: 'Please log in to join the group.',
+      });
+      return;
+    }
+
+    setJoiningGroupId(groupId);
+    try {
+      const groupRef = doc(firestore, 'kitty_groups', groupId);
+      await updateDoc(groupRef, {
+        memberIds: arrayUnion(user.uid),
+      });
+      
+      toast({
+        title: 'Successfully Joined!',
+        description: 'You have joined the kitty group.',
+      });
+    } catch (error: any) {
+      console.error('Error joining group:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error.message || 'Failed to join the group. Please try again.',
+      });
+    } finally {
+      setJoiningGroupId(null);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -104,7 +177,24 @@ export default function UpcomingPage() {
                           <span>{new Date(group.nextDate).toLocaleDateString()}</span>
                         </div>
                       )}
-                      <div className="pt-2 border-t">
+                      <div className="pt-2 border-t space-y-2">
+                        {user && group.memberIds?.includes(user.uid) ? (
+                          <Button variant="secondary" className="w-full" size="sm" disabled>
+                            <CheckCircle2 className="mr-2 h-4 w-4" />
+                            Already Joined
+                          </Button>
+                        ) : (
+                          <Button 
+                            variant="default" 
+                            className="w-full" 
+                            size="sm"
+                            onClick={() => handleJoinKittyGroup(group.id)}
+                            disabled={joiningGroupId === group.id}
+                          >
+                            <UserPlus className="mr-2 h-4 w-4" />
+                            {joiningGroupId === group.id ? 'Joining...' : 'Join Group'}
+                          </Button>
+                        )}
                         <Link href={`/dashboard/kitty-groups/${group.id}`}>
                           <Button variant="outline" className="w-full" size="sm">
                             View Details <ArrowRight className="ml-2 h-4 w-4" />
@@ -165,10 +255,27 @@ export default function UpcomingPage() {
                         <Clock className="h-4 w-4 text-muted-foreground" />
                         <span>Status: {game.status || 'idle'}</span>
                       </div>
-                      <div className="pt-2 border-t">
+                      <div className="pt-2 border-t space-y-2">
+                        {user && game.playerIds?.includes(user.uid) ? (
+                          <Button variant="secondary" className="w-full" size="sm" disabled>
+                            <CheckCircle2 className="mr-2 h-4 w-4" />
+                            Already Joined
+                          </Button>
+                        ) : (
+                          <Button 
+                            variant="default" 
+                            className="w-full" 
+                            size="sm"
+                            onClick={() => game.id && handleJoinTambola(game.id)}
+                            disabled={!game.id || joiningGameId === game.id}
+                          >
+                            <UserPlus className="mr-2 h-4 w-4" />
+                            {joiningGameId === game.id ? 'Joining...' : 'Join Game'}
+                          </Button>
+                        )}
                         <Link href={`/dashboard/tambola${game.id ? `?gameId=${game.id}` : ''}`}>
                           <Button variant="outline" className="w-full" size="sm">
-                            {game.status === 'idle' ? 'Start Game' : 'View Game'} <ArrowRight className="ml-2 h-4 w-4" />
+                            View Game <ArrowRight className="ml-2 h-4 w-4" />
                           </Button>
                         </Link>
                       </div>
@@ -235,7 +342,24 @@ export default function UpcomingPage() {
                       <IndianRupee className="h-4 w-4 text-muted-foreground" />
                       <span>₹{group.contribution?.toLocaleString() || 0} per member</span>
                     </div>
-                    <div className="pt-2 border-t">
+                    <div className="pt-2 border-t space-y-2">
+                      {user && group.memberIds?.includes(user.uid) ? (
+                        <Button variant="secondary" className="w-full" size="sm" disabled>
+                          <CheckCircle2 className="mr-2 h-4 w-4" />
+                          Already Joined
+                        </Button>
+                      ) : (
+                        <Button 
+                          variant="default" 
+                          className="w-full" 
+                          size="sm"
+                          onClick={() => handleJoinKittyGroup(group.id)}
+                          disabled={joiningGroupId === group.id}
+                        >
+                          <UserPlus className="mr-2 h-4 w-4" />
+                          {joiningGroupId === group.id ? 'Joining...' : 'Join Group'}
+                        </Button>
+                      )}
                       <Link href={`/dashboard/kitty-groups/${group.id}`}>
                         <Button variant="outline" className="w-full" size="sm">
                           View Details <ArrowRight className="ml-2 h-4 w-4" />
@@ -300,10 +424,27 @@ export default function UpcomingPage() {
                         </span>
                       </div>
                     )}
-                    <div className="pt-2 border-t">
+                    <div className="pt-2 border-t space-y-2">
+                      {user && game.playerIds?.includes(user.uid) ? (
+                        <Button variant="secondary" className="w-full" size="sm" disabled>
+                          <CheckCircle2 className="mr-2 h-4 w-4" />
+                          Already Joined
+                        </Button>
+                      ) : (
+                        <Button 
+                          variant="default" 
+                          className="w-full" 
+                          size="sm"
+                          onClick={() => game.id && handleJoinTambola(game.id)}
+                          disabled={!game.id || joiningGameId === game.id}
+                        >
+                          <UserPlus className="mr-2 h-4 w-4" />
+                          {joiningGameId === game.id ? 'Joining...' : 'Join Game'}
+                        </Button>
+                      )}
                       <Link href={`/dashboard/tambola${game.id ? `?gameId=${game.id}` : ''}`}>
                         <Button variant="outline" className="w-full" size="sm">
-                          {game.status === 'idle' ? 'Start Game' : 'View Game'} <ArrowRight className="ml-2 h-4 w-4" />
+                          View Game <ArrowRight className="ml-2 h-4 w-4" />
                         </Button>
                       </Link>
                     </div>
