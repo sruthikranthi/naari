@@ -908,6 +908,7 @@ export default function TambolaPage() {
                   <CardTitle>Prizes to Claim</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
+                  {/* Display all standard prizes */}
                   {prizes.map(prize => {
                     const prizeAmount = currentGame?.prizes?.[prize.id as keyof typeof currentGame.prizes] as number | undefined;
                     return (
@@ -939,6 +940,47 @@ export default function TambolaPage() {
                       </div>
                     );
                   })}
+                  
+                  {/* Display multiple houses if configured */}
+                  {currentGame?.prizes?.houses && currentGame.prizes.houses.length > 0 && (
+                    <>
+                      {currentGame.prizes.houses.map((houseAmount, index) => {
+                        const houseId = `house_${index + 1}`;
+                        return (
+                          <div key={houseId} className="flex items-center justify-between rounded-lg border p-3">
+                            <div className="flex-1">
+                                <p className="font-semibold">House {index + 1}</p>
+                                <p className="text-xs text-muted-foreground">Complete all 15 numbers on your ticket</p>
+                                {houseAmount > 0 && (
+                                  <p className="text-sm font-bold text-primary mt-1">₹{houseAmount.toLocaleString()}</p>
+                                )}
+                            </div>
+                            <Dialog>
+                                <DialogTrigger asChild>
+                                    <Button 
+                                      size="sm" 
+                                      variant={claimedPrizes.includes(houseId) ? 'secondary' : 'default'} 
+                                      disabled={gameStatus !== 'running' || claimedPrizes.includes(houseId)}
+                                    >
+                                        <Award className="mr-2 h-4 w-4" />
+                                        {claimedPrizes.includes(houseId) ? 'Claimed' : 'Claim'}
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <DialogHeader>
+                                        <DialogTitle>Confirm Claim for &quot;House {index + 1}&quot;?</DialogTitle>
+                                    </DialogHeader>
+                                    <div className="py-4">
+                                      <p>The system will verify if you have completed all 15 numbers on your ticket. False claims may lead to disqualification.</p>
+                                    </div>
+                                    <Button onClick={() => checkPrize('full_house')}>Yes, Check My Ticket!</Button>
+                                </DialogContent>
+                            </Dialog>
+                          </div>
+                        );
+                      })}
+                    </>
+                  )}
               </CardContent>
           </Card>
 
