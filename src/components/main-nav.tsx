@@ -15,6 +15,7 @@ import {
   Shield,
   Award,
   Crown,
+  Calendar,
 } from 'lucide-react';
 
 import {
@@ -57,6 +58,11 @@ const navItems = [
     href: '/dashboard/subscriptions',
     icon: Crown,
     label: 'Subscriptions',
+  },
+  {
+    href: '/dashboard/upcoming',
+    icon: Calendar,
+    label: 'Upcoming',
   },
 ];
 

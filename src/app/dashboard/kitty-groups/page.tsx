@@ -50,7 +50,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Controller } from 'react-hook-form';
 import { useCollection, useFirestore, useUser, useMemoFirebase } from '@/firebase';
-import { collection, addDoc, query, where } from 'firebase/firestore';
+import { collection, addDoc, query, where, getDocs } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from 'next/navigation';
 
@@ -237,44 +237,83 @@ export default function KittyGroupsPage() {
   useEffect(() => {
     const completePayment = searchParams.get('completePayment');
     const orderId = searchParams.get('orderId');
+    const paymentId = searchParams.get('paymentId');
     
-    if (completePayment === 'true' && orderId && user && firestore) {
-      // Get pending group data from localStorage
+    if (completePayment === 'true' && user && firestore) {
+      // Get pending group data from localStorage or use URL params
       const pendingKittyGroup = localStorage.getItem('pending_kitty_group');
+      
+      let gameOrderId = orderId;
+      let gamePaymentId = paymentId;
+      
       if (pendingKittyGroup) {
         try {
-          const { groupData } = JSON.parse(pendingKittyGroup);
+          const { orderId: storedOrderId, paymentId: storedPaymentId, groupData } = JSON.parse(pendingKittyGroup);
+          // Use stored values if URL params are missing
+          if (!gameOrderId) gameOrderId = storedOrderId;
+          if (!gamePaymentId) gamePaymentId = storedPaymentId;
           
-          const newGroup = {
-            name: groupData.name,
-            contribution: groupData.contribution,
-            nextTurn: 'TBD',
-            nextDate: 'TBD',
-            memberIds: [user.uid],
-            orderId: orderId,
-            createdAt: new Date().toISOString(),
-          };
+          // Check if group already exists for this orderId
+          const checkExistingGroup = async () => {
+            if (!gameOrderId) return;
+            
+            try {
+              const groupsQuery = query(
+                collection(firestore, 'kitty_groups'),
+                where('orderId', '==', gameOrderId)
+              );
+              const groupsSnapshot = await getDocs(groupsQuery);
+              
+              if (!groupsSnapshot.empty) {
+                // Group already exists, just redirect
+                const existingGroup = groupsSnapshot.docs[0];
+                localStorage.removeItem('pending_kitty_group');
+                router.replace('/dashboard/kitty-groups');
+                toast({
+                  title: 'Group Found',
+                  description: 'Your kitty group has been loaded.',
+                });
+                return;
+              }
+              
+              // Group doesn't exist, create it
+              const newGroup = {
+                name: groupData.name,
+                contribution: groupData.contribution,
+                nextTurn: 'TBD',
+                nextDate: 'TBD',
+                memberIds: [user.uid],
+                orderId: gameOrderId,
+                paymentId: gamePaymentId || '',
+                createdAt: new Date().toISOString(),
+                isConfigured: true,
+              };
 
-          addDoc(collection(firestore, 'kitty_groups'), newGroup)
-            .then(() => {
+              await addDoc(collection(firestore, 'kitty_groups'), newGroup);
               toast({
                 title: 'Kitty Group Created!',
                 description: `The group "${groupData.name}" has been successfully created.`,
               });
               localStorage.removeItem('pending_kitty_group');
               router.replace('/dashboard/kitty-groups');
-            })
-            .catch((e) => {
-              console.error("Error creating kitty group: ", e);
-              toast({ variant: 'destructive', title: 'Error', description: 'Could not create kitty group.' });
-            });
+            } catch (e) {
+              console.error('Error creating kitty group:', e);
+              toast({ 
+                variant: 'destructive', 
+                title: 'Error', 
+                description: 'Could not create kitty group. Please try again.' 
+              });
+            }
+          };
+          
+          checkExistingGroup();
         } catch (e) {
           console.error('Error processing pending kitty group:', e);
         }
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, firestore, toast, router]);
+  }, [user, firestore, toast, router, searchParams]);
 
   return (
     <div>

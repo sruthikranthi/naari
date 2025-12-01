@@ -45,13 +45,13 @@ export default function PaymentStatusPage() {
           const pendingKittyGroup = localStorage.getItem('pending_kitty_group');
           if (pendingKittyGroup) {
             try {
-              const { orderId: storedOrderId, groupData } = JSON.parse(pendingKittyGroup);
-              if (storedOrderId === orderId || storedOrderId === paymentId) {
+              const { orderId: storedOrderId, paymentId: storedPaymentId, groupData } = JSON.parse(pendingKittyGroup);
+              if (storedOrderId === orderId || storedOrderId === paymentId || storedPaymentId === paymentId) {
                 // Redirect to kitty groups page to complete creation
+                // Don't remove localStorage here - let kitty groups page handle it after creation
                 setTimeout(() => {
-                  router.push(`/dashboard/kitty-groups?completePayment=true&orderId=${orderId}`);
+                  router.push(`/dashboard/kitty-groups?completePayment=true&orderId=${orderId || storedOrderId}&paymentId=${paymentId || storedPaymentId}`);
                 }, 2000);
-                localStorage.removeItem('pending_kitty_group');
               }
             } catch (e) {
               console.error('Error processing pending kitty group:', e);
