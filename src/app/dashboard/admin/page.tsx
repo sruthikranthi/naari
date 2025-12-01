@@ -118,6 +118,13 @@ export default function AdminPanelPage() {
   });
   const [isBroadcastOpen, setIsBroadcastOpen] = useState(false);
   const [managingContest, setManagingContest] = useState<Contest | null>(null);
+  const [isDeclareWinnersOpen, setIsDeclareWinnersOpen] = useState(false);
+  const [winners, setWinners] = useState({
+    specialNomination: '',
+    first: '',
+    second: '',
+    third: '',
+  });
 
   const isSuperAdmin = user?.uid === SUPER_ADMIN_ID;
 
@@ -208,24 +215,90 @@ export default function AdminPanelPage() {
       const contest = contests.find(c => c.id === contestId);
       if(contest) {
           setManagingContest(contest);
+          // Reset winners state or load existing winners
+          setWinners(contest.winners || { specialNomination: '', first: '', second: '', third: '' });
       }
   }
 
-  const handleAddJuror = (contestId: string, jurorName: string) => {
-    if (!jurorName.trim()) return;
+  const handleAddJuror = async (contestId: string, jurorName: string) => {
+    if (!jurorName.trim() || !firestore) return;
     const newJuror: JuryMember = {
         name: jurorName,
         title: "Industry Expert",
         avatar: `https://picsum.photos/seed/${jurorName.replace(/\s+/g, '-')}/100/100`
     };
-    setContests(prev => prev.map(c => 
-        c.id === contestId ? { ...c, jury: [...(c.jury || []), newJuror] } : c
-    ));
-     setManagingContest(prev => prev ? { ...prev, jury: [...(prev.jury || []), newJuror] } : null);
-    toast({
-        title: 'Juror Added!',
-        description: `${jurorName} has been added to the jury panel.`
-    });
+    try {
+      const contestRef = doc(firestore, 'contests', contestId);
+      const currentContest = contests.find(c => c.id === contestId);
+      const updatedJury = [...(currentContest?.jury || []), newJuror];
+      await updateDoc(contestRef, { jury: updatedJury });
+      
+      setContests(prev => prev.map(c => 
+          c.id === contestId ? { ...c, jury: updatedJury } : c
+      ));
+      setManagingContest(prev => prev ? { ...prev, jury: updatedJury } : null);
+      toast({
+          title: 'Juror Added!',
+          description: `${jurorName} has been added to the jury panel.`
+      });
+    } catch (e) {
+      console.error('Error adding juror:', e);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Could not add juror. Please try again.'
+      });
+    }
+  }
+
+  const handleRemoveJuror = async (contestId: string, jurorName: string) => {
+    if (!firestore) return;
+    try {
+      const contestRef = doc(firestore, 'contests', contestId);
+      const currentContest = contests.find(c => c.id === contestId);
+      const updatedJury = (currentContest?.jury || []).filter(j => j.name !== jurorName);
+      await updateDoc(contestRef, { jury: updatedJury });
+      
+      setContests(prev => prev.map(c => 
+          c.id === contestId ? { ...c, jury: updatedJury } : c
+      ));
+      setManagingContest(prev => prev ? { ...prev, jury: updatedJury } : null);
+      toast({
+          title: 'Juror Removed!',
+          description: `${jurorName} has been removed from the jury panel.`
+      });
+    } catch (e) {
+      console.error('Error removing juror:', e);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Could not remove juror. Please try again.'
+      });
+    }
+  }
+
+  const handleApproveContest = async (contestId: string) => {
+    if (!firestore) return;
+    try {
+      const contestRef = doc(firestore, 'contests', contestId);
+      await updateDoc(contestRef, { status: 'Live' });
+      
+      setContests(prev => prev.map(c => 
+          c.id === contestId ? { ...c, status: 'Live' } : c
+      ));
+      setManagingContest(prev => prev ? { ...prev, status: 'Live' } : null);
+      toast({
+          title: 'Contest Approved!',
+          description: 'The contest is now live and visible to all users.'
+      });
+    } catch (e) {
+      console.error('Error approving contest:', e);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Could not approve contest. Please try again.'
+      });
+    }
   }
 
   const handleUpdateContestDetail = (field: keyof Contest, value: string | number) => {
@@ -775,7 +848,14 @@ export default function AdminPanelPage() {
                                             <p className="font-semibold">{juror.name}</p>
                                             <p className="text-xs text-muted-foreground">{juror.title}</p>
                                         </div>
-                                        <Button variant="ghost" size="icon" className="ml-auto h-8 w-8 text-destructive"><XCircle className="h-4 w-4"/></Button>
+                                        <Button 
+                                          variant="ghost" 
+                                          size="icon" 
+                                          className="ml-auto h-8 w-8 text-destructive"
+                                          onClick={() => handleRemoveJuror(managingContest.id, juror.name)}
+                                        >
+                                          <XCircle className="h-4 w-4"/>
+                                        </Button>
                                     </div>
                                 ))}
                             </CardContent>
@@ -815,12 +895,106 @@ export default function AdminPanelPage() {
                     </div>
                 </div>
                 <DialogFooter>
-                    <Button variant="destructive" onClick={() => {
-                        toast({ title: 'Winner Declared!', description: 'The winner has been announced to the community.'});
-                        setManagingContest(null);
-                    }}>
-                        Declare Winner
-                    </Button>
+                    {managingContest.status === 'Pending Approval' && (
+                      <Button 
+                        onClick={() => handleApproveContest(managingContest.id)}
+                        className="bg-green-600 hover:bg-green-700"
+                      >
+                        <CheckCircle className="mr-2 h-4 w-4" />
+                        Approve Contest
+                      </Button>
+                    )}
+                    <Dialog open={isDeclareWinnersOpen} onOpenChange={setIsDeclareWinnersOpen}>
+                      <DialogTrigger asChild>
+                        <Button variant="destructive">
+                          <Award className="mr-2 h-4 w-4" />
+                          Declare Winners
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                          <DialogTitle>Declare Winners</DialogTitle>
+                          <DialogDescription>
+                            Enter the winners for {managingContest.title}
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4">
+                          <div>
+                            <Label htmlFor="special-nomination">Special Nomination</Label>
+                            <Input 
+                              id="special-nomination" 
+                              value={winners.specialNomination}
+                              onChange={(e) => setWinners(prev => ({ ...prev, specialNomination: e.target.value }))}
+                              placeholder="Enter nominee name..."
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="first-place">First Place</Label>
+                            <Input 
+                              id="first-place" 
+                              value={winners.first}
+                              onChange={(e) => setWinners(prev => ({ ...prev, first: e.target.value }))}
+                              placeholder="Enter nominee name..."
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="second-place">Second Place</Label>
+                            <Input 
+                              id="second-place" 
+                              value={winners.second}
+                              onChange={(e) => setWinners(prev => ({ ...prev, second: e.target.value }))}
+                              placeholder="Enter nominee name..."
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="third-place">Third Place</Label>
+                            <Input 
+                              id="third-place" 
+                              value={winners.third}
+                              onChange={(e) => setWinners(prev => ({ ...prev, third: e.target.value }))}
+                              placeholder="Enter nominee name..."
+                            />
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <DialogClose asChild>
+                            <Button variant="ghost">Cancel</Button>
+                          </DialogClose>
+                          <Button 
+                            variant="destructive"
+                            onClick={async () => {
+                              if (!firestore || !managingContest) return;
+                              try {
+                                // Store winners in contest document
+                                const contestRef = doc(firestore, 'contests', managingContest.id);
+                                await updateDoc(contestRef, { 
+                                  winners: winners,
+                                  status: 'Ended',
+                                  winnersDeclaredAt: serverTimestamp()
+                                });
+                                
+                                toast({ 
+                                  title: 'Winners Declared!', 
+                                  description: 'The winners have been announced to the community.'
+                                });
+                                setIsDeclareWinnersOpen(false);
+                                setWinners({ specialNomination: '', first: '', second: '', third: '' });
+                                setManagingContest(null);
+                              } catch (e) {
+                                console.error('Error declaring winners:', e);
+                                toast({
+                                  variant: 'destructive',
+                                  title: 'Error',
+                                  description: 'Could not declare winners. Please try again.'
+                                });
+                              }
+                            }}
+                          >
+                            Declare Winners
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
                     <Button onClick={() => setManagingContest(null)}>Close</Button>
                 </DialogFooter>
                 </>

@@ -6,6 +6,7 @@ import { doc } from 'firebase/firestore';
 import type { Contest } from '@/lib/contests-data';
 import { ContestClient } from './contest-client';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 
 export default function ContestDetailPage() {
   const params = useParams();
@@ -41,11 +42,24 @@ export default function ContestDetailPage() {
 
   if (error) {
     console.error("Error fetching contest:", error);
-    return <p>Error loading contest.</p>;
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
+        <p className="text-lg font-semibold">Error loading contest</p>
+        <p className="text-sm text-muted-foreground">The contest you're looking for may not exist or has been removed.</p>
+        <Button onClick={() => window.history.back()}>Go Back</Button>
+      </div>
+    );
   }
 
   if (!contest) {
-    notFound();
+    // Show better error page instead of 404
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
+        <p className="text-lg font-semibold">Contest Not Found</p>
+        <p className="text-sm text-muted-foreground">The contest you're looking for doesn't exist or has been removed.</p>
+        <Button onClick={() => window.location.href = '/dashboard/contests'}>View All Contests</Button>
+      </div>
+    );
   }
 
   return <ContestClient contest={contest} />;

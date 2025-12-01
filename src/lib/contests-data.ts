@@ -48,4 +48,11 @@ export type Contest = {
   status: 'Live' | 'Ended' | 'Pending Approval' | 'Community-run';
   likes?: number;
   commentCount?: number;
+  winners?: {
+    specialNomination?: string;
+    first?: string;
+    second?: string;
+    third?: string;
+  };
+  winnersDeclaredAt?: Timestamp;
 };
