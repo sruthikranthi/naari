@@ -17,33 +17,6 @@ import { Button } from './ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 
-// MOCK DATA INJECTION FOR DEMONSTRATION
-const addMockStories = (users: User[]): User[] => {
-  if (!users || users.length === 0) return [];
-  return users.map((user, index) => {
-    // Add stories to the first few users for demo purposes
-    if (index === 0) {
-      return {
-        ...user,
-        stories: [
-          { id: 'story1', type: 'image', url: 'https://picsum.photos/seed/story1/1080/1920', duration: 5 },
-          { id: 'story2', type: 'image', url: 'https://picsum.photos/seed/story2/1080/1920', duration: 5 },
-        ]
-      };
-    }
-    if (index === 1) {
-      return {
-        ...user,
-        stories: [
-          { id: 'story3', type: 'image', url: 'https://picsum.photos/seed/story3/1080/1920', duration: 5 },
-        ]
-      };
-    }
-    return user;
-  });
-};
-
-
 export function Stories() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isViewerOpen, setIsViewerOpen] = useState(false);
@@ -67,17 +40,15 @@ export function Stories() {
   );
   const { data: allUsers, isLoading: areUsersLoading } = useCollection<User>(usersQuery);
 
-  const usersWithMockStories = useMemo(() => addMockStories(allUsers || []), [allUsers]);
-
   // Include current user if they have stories
   const allStoryUsers = useMemo(() => {
-    const otherUsers = usersWithMockStories.filter(u => u.id !== loggedInUser?.uid && u.stories && u.stories.length > 0);
+    const otherUsers = (allUsers || []).filter(u => u.id !== loggedInUser?.uid && u.stories && u.stories.length > 0);
     const currentUser = loggedInUser ? allUsers?.find(u => u.id === loggedInUser.uid) : null;
     const currentUserWithStories = currentUser && currentUser.stories && currentUser.stories.length > 0
       ? [currentUser]
       : [];
     return [...currentUserWithStories, ...otherUsers];
-  }, [usersWithMockStories, loggedInUser, allUsers]);
+  }, [allUsers, loggedInUser]);
 
   const storyUsers = allStoryUsers || [];
   
