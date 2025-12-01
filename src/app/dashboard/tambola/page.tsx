@@ -24,7 +24,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { useUser, useFirestore, useDoc, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, doc, addDoc, updateDoc, arrayUnion, query, where, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, addDoc, updateDoc, arrayUnion, query, where, serverTimestamp, getDocs } from 'firebase/firestore';
 import type { TambolaGame, User } from '@/lib/mock-data';
 import { searchUsers } from '@/lib/search';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -207,25 +207,78 @@ export default function TambolaPage() {
   useEffect(() => {
     const startGame = searchParams.get('startGame');
     const orderId = searchParams.get('orderId');
+    const paymentId = searchParams.get('paymentId');
     
-    if (startGame === 'true' && orderId && user) {
-      // Get pending game data from localStorage
+    if (startGame === 'true' && user) {
+      // Get pending game data from localStorage or URL params
       const pendingTambola = localStorage.getItem('pending_tambola_game');
+      
+      let gameOrderId = orderId;
+      let gamePaymentId = paymentId;
+      
       if (pendingTambola) {
         try {
-          const { orderId: storedOrderId, paymentId } = JSON.parse(pendingTambola);
-          if (storedOrderId === orderId) {
-            // Store pending game data and open setup dialog
-            setPendingGameData({ orderId: storedOrderId, paymentId });
+          const { orderId: storedOrderId, paymentId: storedPaymentId } = JSON.parse(pendingTambola);
+          // Use stored values if URL params are missing
+          if (!gameOrderId) gameOrderId = storedOrderId;
+          if (!gamePaymentId) gamePaymentId = storedPaymentId;
+        } catch (e) {
+          console.error('Error parsing pending tambola game:', e);
+        }
+      }
+      
+      // If we have orderId (from URL or localStorage), proceed with setup
+      if (gameOrderId) {
+        // Check if game already exists for this orderId
+        const checkExistingGame = async () => {
+          if (!firestore) return;
+          
+          try {
+            const gamesQuery = query(
+              collection(firestore, 'tambola_games'),
+              where('orderId', '==', gameOrderId)
+            );
+            const gamesSnapshot = await getDocs(gamesQuery);
+            
+            if (!gamesSnapshot.empty) {
+              // Game already exists, load it
+              const existingGame = gamesSnapshot.docs[0];
+              setCurrentGameId(existingGame.id);
+              if (typeof window !== 'undefined') {
+                localStorage.setItem('current_tambola_game_id', existingGame.id);
+                localStorage.removeItem('pending_tambola_game');
+              }
+              router.replace('/dashboard/tambola');
+              toast({
+                title: 'Game Found',
+                description: 'Your game has been loaded.',
+              });
+              return;
+            }
+            
+            // Game doesn't exist, open setup dialog
+            setPendingGameData({ 
+              orderId: gameOrderId, 
+              paymentId: gamePaymentId || '' 
+            });
+            setIsSetupDialogOpen(true);
+            router.replace('/dashboard/tambola');
+          } catch (error) {
+            console.error('Error checking existing game:', error);
+            // Fallback: open setup dialog anyway
+            setPendingGameData({ 
+              orderId: gameOrderId, 
+              paymentId: gamePaymentId || '' 
+            });
             setIsSetupDialogOpen(true);
             router.replace('/dashboard/tambola');
           }
-        } catch (e) {
-          console.error('Error processing pending tambola game:', e);
-        }
+        };
+        
+        checkExistingGame();
       }
     }
-  }, [searchParams, router, user]);
+  }, [searchParams, router, user, firestore, toast]);
 
   // Handle game setup completion
   const handleSetupComplete = async (config: {
@@ -791,7 +844,12 @@ export default function TambolaPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-2 gap-4">
-              <Button onClick={handleStartGame} disabled={gameStatus === 'running' || !!currentGame}>Pay ₹1 & Start Game</Button>
+              <Button 
+                onClick={handleStartGame} 
+                disabled={gameStatus === 'running' || !!currentGame || isSetupDialogOpen || !!pendingGameData}
+              >
+                Pay ₹1 & Start Game
+              </Button>
               <Button onClick={handleNextNumber} disabled={gameStatus !== 'running' || !isGameAdmin}>Next Number</Button>
               <Button variant="outline" disabled={gameStatus !== 'running'}>Pause Game</Button>
               <Button variant="destructive" onClick={resetGame} disabled={gameStatus === 'idle'}>End Game</Button>

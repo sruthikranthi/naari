@@ -62,13 +62,13 @@ export default function PaymentStatusPage() {
           const pendingTambola = localStorage.getItem('pending_tambola_game');
           if (pendingTambola) {
             try {
-              const { orderId: storedOrderId } = JSON.parse(pendingTambola);
-              if (storedOrderId === orderId || storedOrderId === paymentId) {
+              const { orderId: storedOrderId, paymentId: storedPaymentId } = JSON.parse(pendingTambola);
+              if (storedOrderId === orderId || storedOrderId === paymentId || storedPaymentId === paymentId) {
                 // Redirect to tambola page to start game
+                // Don't remove localStorage here - let Tambola page handle it after game creation
                 setTimeout(() => {
-                  router.push(`/dashboard/tambola?startGame=true&orderId=${orderId}`);
+                  router.push(`/dashboard/tambola?startGame=true&orderId=${orderId || storedOrderId}&paymentId=${paymentId || storedPaymentId}`);
                 }, 2000);
-                localStorage.removeItem('pending_tambola_game');
               }
             } catch (e) {
               console.error('Error processing pending tambola game:', e);
