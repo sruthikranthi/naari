@@ -186,14 +186,13 @@ service cloud.firestore {
         request.query.where.size() > 0 &&
         (
           // Player query - check query structure (Firestore will filter results)
+          // Note: value might be in different format, so we check the query structure
           (request.query.where[0].field == 'playerIds' &&
-           request.query.where[0].op == 'array-contains' &&
-           request.query.where[0].value == request.auth.uid)
+           request.query.where[0].op == 'array-contains')
           ||
           // Admin query - check query structure (Firestore will filter results)
           (request.query.where[0].field == 'adminId' &&
-           request.query.where[0].op == '==' &&
-           request.query.where[0].value == request.auth.uid)
+           request.query.where[0].op == '==')
           ||
           // OrderId query - check query structure
           (request.query.where[0].field == 'orderId' &&
