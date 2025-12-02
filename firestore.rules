@@ -159,26 +159,25 @@ service cloud.firestore {
       );
 
       // --- FIXED LIST RULE ---
-      // Allow list queries with where clauses:
-      // 1. Player listing their games (playerIds array-contains)
-      // 2. Admin listing their games (adminId ==)
-      // 3. Games with orderId (discoverable paid games) - check per document
-      // 4. Super Admin sees all
+      // Allow list queries with where clauses OR documents with orderId
+      // Firestore evaluates this per document during list operations
       allow list: if isSignedIn() && (
-        // Player listing their games
+        // Player listing their games (query structure check)
         (
           request.query.where.size() > 0 &&
           request.query.where[0].field == 'playerIds' &&
           request.query.where[0].op == 'array-contains' &&
-          request.query.where[0].value == request.auth.uid
+          request.query.where[0].value == request.auth.uid &&
+          ('playerIds' in resource.data && request.auth.uid in resource.data.playerIds)
         )
         ||
-        // Admin listing their games
+        // Admin listing their games (query structure check)
         (
           request.query.where.size() > 0 &&
           request.query.where[0].field == 'adminId' &&
           request.query.where[0].op == '==' &&
-          request.query.where[0].value == request.auth.uid
+          request.query.where[0].value == request.auth.uid &&
+          ('adminId' in resource.data && resource.data.adminId == request.auth.uid)
         )
         ||
         // Games with orderId (discoverable) - evaluated per document
