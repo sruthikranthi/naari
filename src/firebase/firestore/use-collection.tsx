@@ -93,10 +93,16 @@ export function useCollection<T = any>(
       const queryRef = memoizedTargetRefOrQuery as unknown as InternalQuery;
       const path = queryRef._query.path.canonicalString();
       if (path === 'tambola_games' || path === 'kitty_groups') {
-        // Check if query has where clauses
-        const whereClauses = (queryRef._query as any).explicitOrderBy || (queryRef._query as any).filters || [];
-        if (!whereClauses || whereClauses.length === 0) {
+        // Check if query has where clauses by inspecting the query structure
+        // Firestore queries store filters in _query.structuredQuery.where
+        const queryObj = queryRef._query as any;
+        const structuredQuery = queryObj.structuredQuery;
+        const hasWhereClause = structuredQuery && structuredQuery.where && 
+          (structuredQuery.where.fieldFilter || structuredQuery.where.compositeFilter);
+        
+        if (!hasWhereClause) {
           console.error(`🚨 SECURITY ERROR: Query for ${path} has no where clauses. This collection requires a where clause.`);
+          console.error('Query object:', queryObj);
           console.error('Stack trace:', new Error().stack);
           setError(new Error(`Security: ${path} requires a where clause in the query`));
           setData(null);
