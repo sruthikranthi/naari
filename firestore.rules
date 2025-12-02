@@ -123,8 +123,27 @@ service cloud.firestore {
                  || (isSignedIn() && 'orderId' in resource.data && resource.data.orderId != null && resource.data.orderId != '');
 
       allow list: if isSignedIn() && (
-        ('memberIds' in resource.data && request.auth.uid in resource.data.memberIds) ||
-        ('orderId' in resource.data && resource.data.orderId != null && resource.data.orderId != '') ||
+        // Query with where clause OR document matches access conditions
+        (
+          request.query.where.size() > 0 &&
+          (
+            // Member query - check query structure AND document data
+            (request.query.where[0].field == 'memberIds' &&
+             request.query.where[0].op == 'array-contains' &&
+             request.query.where[0].value == request.auth.uid &&
+             ('memberIds' in resource.data && request.auth.uid in resource.data.memberIds))
+            ||
+            // OrderId query - check query structure AND document has orderId
+            (request.query.where[0].field == 'orderId' &&
+             request.query.where[0].op == '==' &&
+             ('orderId' in resource.data && resource.data.orderId != null && resource.data.orderId != ''))
+          )
+        )
+        ||
+        // Document has orderId (discoverable) - allows listing groups with orderId
+        ('orderId' in resource.data && resource.data.orderId != null && resource.data.orderId != '')
+        ||
+        // Super Admin sees all
         isSuperAdmin()
       );
 
@@ -182,10 +201,10 @@ service cloud.firestore {
           (request.query.where[0].field == 'orderId' &&
            request.query.where[0].op == '==' &&
            ('orderId' in resource.data && resource.data.orderId != null && resource.data.orderId != ''))
-          ||
-          // Document has orderId (discoverable) - allows listing games with orderId
-          ('orderId' in resource.data && resource.data.orderId != null && resource.data.orderId != '')
         )
+        ||
+        // Document has orderId (discoverable) - allows listing games with orderId even without orderId query
+        ('orderId' in resource.data && resource.data.orderId != null && resource.data.orderId != '')
         ||
         // Super Admin sees all (even without where clause)
         isSuperAdmin()
