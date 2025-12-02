@@ -94,28 +94,24 @@ export function useCollection<T = any>(
       const path = queryRef._query.path.canonicalString();
       if (path === 'tambola_games' || path === 'kitty_groups') {
         // Check if query has where clauses by inspecting the query structure
-        // Firestore queries store filters in _query.structuredQuery.where
+        // Firestore queries store filters in _query.filters array (not structuredQuery.where)
         const queryObj = queryRef._query as any;
+        
+        // Check for filters array - this is where Firestore stores where clauses
+        const hasFilters = queryObj.filters && Array.isArray(queryObj.filters) && queryObj.filters.length > 0;
+        
+        // Also check structuredQuery.where for compatibility
         const structuredQuery = queryObj.structuredQuery;
+        const hasStructuredWhere = structuredQuery && structuredQuery.where && 
+          (structuredQuery.where.fieldFilter || structuredQuery.where.compositeFilter);
         
-        // Check for where clauses in various possible locations
-        const hasWhereClause = structuredQuery && structuredQuery.where && 
-          (structuredQuery.where.fieldFilter || 
-           structuredQuery.where.compositeFilter ||
-           (structuredQuery.where.fields && structuredQuery.where.fields.length > 0));
-        
-        // Also check if there are any filters in the query
-        const hasFilters = queryObj._filters && queryObj._filters.length > 0;
-        
-        if (!hasWhereClause && !hasFilters) {
+        if (!hasFilters && !hasStructuredWhere) {
           console.error(`🚨 SECURITY ERROR: Query for ${path} has no where clauses. This collection requires a where clause.`);
           console.error('Query object structure:', {
-            hasStructuredQuery: !!structuredQuery,
-            hasWhere: !!(structuredQuery && structuredQuery.where),
-            hasFieldFilter: !!(structuredQuery && structuredQuery.where && structuredQuery.where.fieldFilter),
-            hasCompositeFilter: !!(structuredQuery && structuredQuery.where && structuredQuery.where.compositeFilter),
             hasFilters: hasFilters,
-            queryType: queryObj.type,
+            filtersLength: queryObj.filters ? queryObj.filters.length : 0,
+            hasStructuredQuery: !!structuredQuery,
+            hasStructuredWhere: hasStructuredWhere,
             path: path
           });
           console.error('Full query object:', JSON.stringify(queryObj, null, 2));
