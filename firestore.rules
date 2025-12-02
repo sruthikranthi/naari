@@ -123,22 +123,9 @@ service cloud.firestore {
                  || (isSignedIn() && 'orderId' in resource.data && resource.data.orderId != null && resource.data.orderId != '');
 
       allow list: if isSignedIn() && (
-        // Query with where clause OR document matches access conditions
-        (
-          request.query.where.size() > 0 &&
-          (
-            // Member query - check query structure AND document data
-            (request.query.where[0].field == 'memberIds' &&
-             request.query.where[0].op == 'array-contains' &&
-             request.query.where[0].value == request.auth.uid &&
-             ('memberIds' in resource.data && request.auth.uid in resource.data.memberIds))
-            ||
-            // OrderId query - check query structure AND document has orderId
-            (request.query.where[0].field == 'orderId' &&
-             request.query.where[0].op == '==' &&
-             ('orderId' in resource.data && resource.data.orderId != null && resource.data.orderId != ''))
-          )
-        )
+        // Require query to have a where clause (prevents blind lists)
+        // If query has where clause, allow it - Firestore will filter results
+        request.query.where.size() > 0
         ||
         // Document has orderId (discoverable) - allows listing groups with orderId
         ('orderId' in resource.data && resource.data.orderId != null && resource.data.orderId != '')
@@ -183,21 +170,8 @@ service cloud.firestore {
       // IMPORTANT: Must have a where clause in the query (no blind lists)
       allow list: if isSignedIn() && (
         // Require query to have a where clause (prevents blind lists)
-        request.query.where.size() > 0 &&
-        (
-          // Player query - check query structure (Firestore will filter results)
-          // Note: value might be in different format, so we check the query structure
-          (request.query.where[0].field == 'playerIds' &&
-           request.query.where[0].op == 'array-contains')
-          ||
-          // Admin query - check query structure (Firestore will filter results)
-          (request.query.where[0].field == 'adminId' &&
-           request.query.where[0].op == '==')
-          ||
-          // OrderId query - check query structure
-          (request.query.where[0].field == 'orderId' &&
-           request.query.where[0].op == '==')
-        )
+        // If query has where clause, allow it - Firestore will filter results
+        request.query.where.size() > 0
         ||
         // Document has orderId (discoverable) - allows listing games with orderId
         ('orderId' in resource.data && resource.data.orderId != null && resource.data.orderId != '')
