@@ -163,34 +163,31 @@ service cloud.firestore {
       // Firestore evaluates this per document during list operations
       // IMPORTANT: Must have a where clause in the query (no blind lists)
       allow list: if isSignedIn() && (
-        // Allow if query has ANY where clause (prevents blind lists)
-        // AND document matches one of the access conditions
+        // Require query to have a where clause (prevents blind lists)
+        request.query.where.size() > 0 &&
         (
-          request.query.where.size() > 0 &&
-          (
-            // Player query - document must have user as player
-            (request.query.where[0].field == 'playerIds' &&
-             request.query.where[0].op == 'array-contains' &&
-             request.query.where[0].value == request.auth.uid &&
-             ('playerIds' in resource.data && request.auth.uid in resource.data.playerIds))
-            ||
-            // Admin query - document must have user as admin
-            (request.query.where[0].field == 'adminId' &&
-             request.query.where[0].op == '==' &&
-             request.query.where[0].value == request.auth.uid &&
-             ('adminId' in resource.data && resource.data.adminId == request.auth.uid))
-            ||
-            // OrderId query - document must have orderId
-            (request.query.where[0].field == 'orderId' &&
-             request.query.where[0].op == '==' &&
-             ('orderId' in resource.data && resource.data.orderId != null && resource.data.orderId != ''))
-            ||
-            // Document has orderId (discoverable) even without orderId query
-            ('orderId' in resource.data && resource.data.orderId != null && resource.data.orderId != '')
-          )
+          // Player query - check query structure AND document data
+          (request.query.where[0].field == 'playerIds' &&
+           request.query.where[0].op == 'array-contains' &&
+           request.query.where[0].value == request.auth.uid &&
+           ('playerIds' in resource.data && request.auth.uid in resource.data.playerIds))
+          ||
+          // Admin query - check query structure AND document data
+          (request.query.where[0].field == 'adminId' &&
+           request.query.where[0].op == '==' &&
+           request.query.where[0].value == request.auth.uid &&
+           ('adminId' in resource.data && resource.data.adminId == request.auth.uid))
+          ||
+          // OrderId query - check query structure AND document has orderId
+          (request.query.where[0].field == 'orderId' &&
+           request.query.where[0].op == '==' &&
+           ('orderId' in resource.data && resource.data.orderId != null && resource.data.orderId != ''))
+          ||
+          // Document has orderId (discoverable) - allows listing games with orderId
+          ('orderId' in resource.data && resource.data.orderId != null && resource.data.orderId != '')
         )
         ||
-        // Super Admin sees all
+        // Super Admin sees all (even without where clause)
         isSuperAdmin()
       );
 
