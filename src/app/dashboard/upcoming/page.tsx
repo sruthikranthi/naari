@@ -15,7 +15,6 @@ import type { KittyGroup, TambolaGame } from '@/lib/mock-data';
 import { formatDistanceToNow } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import type { TambolaGameJoinRequest, KittyGroupJoinRequest } from '@/lib/join-requests';
-import { useCollection, useMemoFirebase } from '@/firebase';
 
 export default function UpcomingPage() {
   const firestore = useFirestore();
