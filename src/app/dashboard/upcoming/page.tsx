@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
-import { collection, doc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { collection, doc, updateDoc, arrayUnion, query, where } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Users, Calendar, IndianRupee, Trophy, Clock, ArrowRight, UserPlus, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
@@ -22,33 +22,49 @@ export default function UpcomingPage() {
   const [joiningGameId, setJoiningGameId] = useState<string | null>(null);
   const [joiningGroupId, setJoiningGroupId] = useState<string | null>(null);
 
-  // Query all kitty groups (security rules will filter based on membership or orderId)
-  const allKittyGroupsQuery = useMemoFirebase(
-    () => (firestore && user ? collection(firestore, 'kitty_groups') : null),
+  // Query kitty groups where user is a member
+  const userKittyGroupsQuery = useMemoFirebase(
+    () => (firestore && user ? query(collection(firestore, 'kitty_groups'), where('memberIds', 'array-contains', user.uid)) : null),
     [firestore, user]
   );
-  const { data: allKittyGroups, isLoading: areKittyGroupsLoading } = useCollection<KittyGroup>(allKittyGroupsQuery);
+  const { data: userKittyGroups, isLoading: areUserKittyGroupsLoading } = useCollection<KittyGroup>(userKittyGroupsQuery);
 
-  // Query all tambola games (security rules will filter based on player/admin status or orderId)
-  const allTambolaGamesQuery = useMemoFirebase(
-    () => (firestore && user ? collection(firestore, 'tambola_games') : null),
+  // Query tambola games where user is a player
+  const playerTambolaGamesQuery = useMemoFirebase(
+    () => (firestore && user ? query(collection(firestore, 'tambola_games'), where('playerIds', 'array-contains', user.uid)) : null),
     [firestore, user]
   );
-  const { data: allTambolaGames, isLoading: areTambolaGamesLoading } = useCollection<TambolaGame & { orderId?: string; paymentId?: string; isConfigured?: boolean; prizes?: any; scheduledDate?: string; scheduledTime?: string }>(allTambolaGamesQuery);
+  const { data: playerTambolaGames, isLoading: arePlayerTambolaGamesLoading } = useCollection<TambolaGame & { orderId?: string; paymentId?: string; isConfigured?: boolean; prizes?: any; scheduledDate?: string; scheduledTime?: string }>(playerTambolaGamesQuery);
+
+  // Query tambola games where user is admin/host
+  const adminTambolaGamesQuery = useMemoFirebase(
+    () => (firestore && user ? query(collection(firestore, 'tambola_games'), where('adminId', '==', user.uid)) : null),
+    [firestore, user]
+  );
+  const { data: adminTambolaGames, isLoading: areAdminTambolaGamesLoading } = useCollection<TambolaGame & { orderId?: string; paymentId?: string; isConfigured?: boolean; prizes?: any; scheduledDate?: string; scheduledTime?: string }>(adminTambolaGamesQuery);
+
+  // Combine tambola games (remove duplicates)
+  const allTambolaGames = [
+    ...(playerTambolaGames || []),
+    ...(adminTambolaGames || [])
+  ];
+  const uniqueTambolaGames = Array.from(
+    new Map(allTambolaGames.map(game => [game.id, game])).values()
+  );
 
   // Filter kitty groups that are not fully started (can add more criteria)
-  const upcomingKittyGroups = allKittyGroups?.filter(group => 
+  const upcomingKittyGroups = userKittyGroups?.filter(group => 
     group.orderId && 
     (!group.nextTurn || group.nextTurn === 'TBD' || group.memberIds.length < (group as any).members)
   ) || [];
 
   // Filter tambola games that are not started (status: 'idle')
-  const upcomingTambolaGames = allTambolaGames?.filter(game => 
+  const upcomingTambolaGames = uniqueTambolaGames.filter(game => 
     game.orderId && 
     (game.status === 'idle' || !game.status)
-  ) || [];
+  );
 
-  const isLoading = areKittyGroupsLoading || areTambolaGamesLoading;
+  const isLoading = areUserKittyGroupsLoading || arePlayerTambolaGamesLoading || areAdminTambolaGamesLoading;
 
   // Handle joining tambola game
   const handleJoinTambola = async (gameId: string) => {

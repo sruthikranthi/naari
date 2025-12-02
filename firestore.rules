@@ -1,39 +1,3 @@
-
-/**
- * This ruleset enforces a security model for the Naarimani application,
- * balancing user-owned data with collaborative, shared resources.
- *
- * Core Philosophy:
- * The security model is built on two primary patterns: strict user-ownership for
- * personal data and membership-based access for shared data. All operations
- * require a user to be authenticated, providing a baseline level of security.
- *
- * Data Structure:
- * - User-specific data, such as profiles (`UserProfile`), is stored under the
- *   `/users/{userId}` path. This structure naturally maps ownership.
- * - Publicly readable content like posts, marketplace listings, courses, and
- *   events are in top-level collections, allowing for public reads by authenticated
- *   users but restricting writes to the designated owner.
- * - Collaborative resources like chats and kitty groups are also in top-level
- *   collections. Authorization is managed by denormalizing member lists directly
- *   onto the documents.
- *
- * Key Security Decisions:
- * - User Enumeration is Disabled: Listing the top-level `/users` collection is
- *   explicitly forbidden to protect user privacy.
- * - Default to Signed-In Users: Public read access is generally granted only to
- *   authenticated users (`isSignedIn()`) rather than being fully open (`if true;`),
- *   ensuring a logged-in context for all data interaction.
- * - Immutable Ownership: Critical relational IDs (e.g., `author.id`, `sellerId`)
- *   are enforced as immutable upon document creation to maintain data integrity.
- *
- * Denormalization for Authorization:
- * This ruleset relies heavily on denormalization to ensure fast and secure
- * authorization checks without costly `get()` calls. For example, a `/chats/{chatId}`
- * document contains a `participants` array, so a rule can instantly check if a user
- * is a member without reading another document. This is crucial for securing list
- * operations on subcollections like `/messages`.
- */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -42,112 +6,65 @@ service cloud.firestore {
     // Helper Functions
     // -------------------------------------------------------------------------
 
-    /**
-     * Verifies that a user is authenticated.
-     */
     function isSignedIn() {
       return request.auth != null;
     }
 
-    /**
-     * Checks if the currently authenticated user is the owner of a document
-     * identified by the provided userId.
-     */
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
-    
-    /**
-     * A stricter ownership check for updates and deletes that also ensures the
-     * document being modified actually exists.
-     */
+
     function isExistingOwner(userId) {
       return isOwner(userId) && resource != null;
     }
 
-    /**
-     * Verifies if the authenticated user's UID is present in a specified
-     * array field (e.g., 'participants', 'memberIds') on a document.
-     */
     function isMember(docData, key) {
-      // Check if the key exists and is a list before checking for membership
       return isSignedIn() && key in docData && request.auth.uid in docData[key];
     }
-    
-    /**
-     * Enforces immutability on a critical relational ID field during an update.
-     * Prevents re-assigning ownership of a document.
-     */
+
     function isRelationalIdImmutable(path) {
       return request.resource.data[path] == resource.data[path];
     }
-    
-    /**
-      * Checks if the user is a super admin.
-      */
+
     function isSuperAdmin() {
       return request.auth.uid == 'ebixEzJ8UuYjIYTXrkOObW1obSw1';
     }
 
-
     // -------------------------------------------------------------------------
-    // User Data (/users)
+    // USER PROFILES
     // -------------------------------------------------------------------------
-
-    /**
-     * @description A user can create, update, and delete their own profile. Other authenticated users can read profiles. Listing all users is disabled.
-     * @path /users/{userId}
-     * @allow (get) An authenticated user `user_abc` reading the profile of `user_xyz`.
-     * @allow (create) A new user `user_abc` creating their own profile at `/users/user_abc`.
-     * @deny (list) Any user attempting to list all documents in the `/users` collection.
-     * @deny (update) User `user_abc` trying to modify the profile of `user_xyz`.
-     * @principle Restricts access to a user's own data tree and prevents user enumeration.
-     */
     match /users/{userId} {
       allow get: if isSignedIn();
-      allow list: if isSignedIn(); // Allow listing for chat participant resolution and admin panel
+      allow list: if isSignedIn();
       allow create: if isOwner(userId) && request.resource.data.id == userId;
-      // Allow a user to update their own profile, including their followingIds.
-      // Allow other users to add/remove themselves from this user's followerIds (for follow/unfollow functionality).
+
       allow update: if isRelationalIdImmutable('id')
                     && (
-                      // User updating their own profile (can update followingIds, but not followerIds directly)
-                      (isExistingOwner(userId) && (!('followerIds' in request.resource.data) || request.resource.data.followerIds == resource.data.followerIds))
+                      (isExistingOwner(userId) &&
+                       (!('followerIds' in request.resource.data) ||
+                        request.resource.data.followerIds == resource.data.followerIds))
                       ||
-                      // Another user modifying followerIds (follow/unfollow functionality)
-                      // Allow if: user is signed in and followerIds is being updated
-                      // For follow (arrayUnion): user can add themselves if they weren't already in the array
-                      // For unfollow (arrayRemove): user can remove themselves if they were in the array
-                      (isSignedIn() 
+                      (isSignedIn()
                        && 'followerIds' in request.resource.data
                        && (
-                         // Follow: User wasn't in old array (or array didn't exist) - they can add themselves
-                         (!('followerIds' in resource.data) || !(request.auth.uid in resource.data.followerIds))
+                         (!('followerIds' in resource.data) ||
+                          !(request.auth.uid in resource.data.followerIds))
                          ||
-                         // Unfollow: User was in old array - they can remove themselves
-                         ('followerIds' in resource.data && request.auth.uid in resource.data.followerIds)
+                         ('followerIds' in resource.data &&
+                          request.auth.uid in resource.data.followerIds)
                        ))
                     );
+
       allow delete: if isExistingOwner(userId);
     }
-    
-    // -------------------------------------------------------------------------
-    // Posts (/posts)
-    // -------------------------------------------------------------------------
 
-    /**
-     * @description All authenticated users can read posts. Users can only create posts as themselves. Only the author can update or delete their own post.
-     * @path /posts/{postId}
-     * @allow (list) Any authenticated user listing all posts for the main feed.
-     * @allow (create) User `user_abc` creating a post where `author.id` is `user_abc`.
-     * @deny (update) User `user_xyz` trying to edit a post authored by `user_abc`.
-     * @principle Allows public discovery for authenticated users while enforcing ownership for writes.
-     */
+    // -------------------------------------------------------------------------
+    // POSTS
+    // -------------------------------------------------------------------------
     match /posts/{postId} {
       allow get, list: if isSignedIn();
       allow create: if isSignedIn() && request.resource.data.author.id == request.auth.uid;
-      // Allow author to update/delete, OR allow any authenticated user to update only the comment count
-      // Check that author and content haven't changed (ensuring only comments is being updated)
+
       allow update: if isSignedIn() && (
         resource.data.author.id == request.auth.uid ||
         (request.resource.data.author.id == resource.data.author.id &&
@@ -155,424 +72,296 @@ service cloud.firestore {
          request.resource.data.comments is int &&
          request.resource.data.comments >= 0)
       );
+
       allow delete: if isSignedIn() && resource.data.author.id == request.auth.uid;
-      
-      // Comments subcollection
+
       match /comments/{commentId} {
-      allow get, list: if isSignedIn();
-      allow create: if isSignedIn() && request.resource.data.author.id == request.auth.uid;
-      allow update, delete: if isSignedIn() && resource.data.author.id == request.auth.uid;
+        allow get, list: if isSignedIn();
+        allow create: if isSignedIn() && request.resource.data.author.id == request.auth.uid;
+        allow update, delete: if isSignedIn() && resource.data.author.id == request.auth.uid;
       }
     }
 
     // -------------------------------------------------------------------------
-    // Chats & Messages (/chats)
+    // CHATS
     // -------------------------------------------------------------------------
-
-    /**
-     * @description Chat documents are only accessible to their participants. Managing the participant list is disabled for clients.
-     * @path /chats/{chatId}
-     * @allow (get) User `user_abc` reading a chat document where `user_abc` is in the `participants` array.
-     * @allow (create) User `user_abc` creating a new chat document where they include themself in the `participants` array.
-     * @deny (list) Any user attempting to list all chats. This query must be performed by the client.
-     * @deny (update) Any user trying to add or remove members from the `participants` array.
-     * @principle Enforces access control based on a denormalized list of members (Closed Collaborators pattern).
-     */
     match /chats/{chatId} {
       allow get: if isMember(resource.data, 'participants');
-      // Allow list queries where the user is a participant. This is key for fetching the user's chat list.
       allow list: if isSignedIn() && request.auth.uid in resource.data.participants;
       allow create: if isMember(request.resource.data, 'participants');
-      allow update: if false; // Membership changes should be handled by a backend function for security.
+      allow update: if false;
       allow delete: if false;
-      
-      /**
-       * @description Messages can be read by chat participants and created/deleted by the sender.
-       * @path /chats/{chatId}/messages/{messageId}
-       * @allow (create) User `user_abc`, a participant in `chat_123`, sending a message where `senderId` is `user_abc`.
-       * @allow (list) User `user_xyz`, a participant in `chat_123`, listing all messages in that chat.
-       * @deny (get) User `user_pending` who is not in the parent chat's participant list trying to read a message.
-       * @deny (delete) User `user_abc` trying to delete a message sent by `user_xyz`.
-       * @principle Inherits authorization from the parent document and validates sender identity for writes.
-       */
+
       match /messages/{messageId} {
         allow get, list: if isMember(get(/databases/$(database)/documents/chats/$(chatId)).data, 'participants');
-        allow create: if isMember(get(/databases/$(database)/documents/chats/$(chatId)).data, 'participants') && request.resource.data.senderId == request.auth.uid && request.resource.data.chatId == chatId;
-        allow update: if isExistingOwner(resource.data.senderId) && isRelationalIdImmutable('senderId') && isRelationalIdImmutable('chatId');
+        allow create: if isMember(get(/databases/$(database)/documents/chats/$(chatId)).data, 'participants')
+                      && request.resource.data.senderId == request.auth.uid
+                      && request.resource.data.chatId == chatId;
+        allow update: if isExistingOwner(resource.data.senderId)
+                      && isRelationalIdImmutable('senderId')
+                      && isRelationalIdImmutable('chatId');
         allow delete: if isExistingOwner(resource.data.senderId);
       }
     }
 
     // -------------------------------------------------------------------------
-    // Communities (/communities)
+    // COMMUNITIES
     // -------------------------------------------------------------------------
-
-    /**
-     * @description Communities are publicly discoverable. Anyone can create one, making themself the leader. Only the leader can manage it.
-     * @path /communities/{communityId}
-     * @allow (list) Any authenticated user listing all available communities.
-     * @allow (create) User `user_abc` creating a new community and setting `leaderId` to `user_abc`.
-     * @deny (update) A regular member `user_xyz` trying to change the community description. Only the leader can.
-     * @principle Allows public discovery while centralizing write control to a single owner/leader.
-     */
     match /communities/{communityId} {
       allow get, list: if isSignedIn();
       allow create: if isSignedIn() && request.resource.data.leaderId == request.auth.uid;
-      allow update: if isOwner(resource.data.leaderId) && resource != null;
-      allow delete: if isOwner(resource.data.leaderId) && resource != null;
+      allow update: if isOwner(resource.data.leaderId);
+      allow delete: if isOwner(resource.data.leaderId);
     }
 
     // -------------------------------------------------------------------------
-    // Kitty Groups (/kitty_groups)
+    // KITTY GROUPS
     // -------------------------------------------------------------------------
-
-    /**
-     * @description Kitty Groups are private and only accessible to their members. Listing all groups is disabled for privacy.
-     * @path /kitty_groups/{kittyGroupId}
-     * @allow (get) User `user_abc` reading a group document where they are in the `memberIds` array.
-     * @allow (create) User `user_abc` creating a new group where they are included in the initial `memberIds`.
-     * @deny (list) Any user attempting to discover all kitty groups (except super admin).
-     * @deny (update) Any member trying to modify the group. This must be handled by a backend function.
-     * @principle Enforces strict membership-based access for highly sensitive collaborative data.
-     */
     match /kitty_groups/{kittyGroupId} {
-      allow get: if isMember(resource.data, 'memberIds') || isSuperAdmin() || (isSignedIn() && 'orderId' in resource.data && resource.data.orderId != null && resource.data.orderId != '');
-      // Allow list queries where user is a member OR group has orderId OR user is super admin
-      // Firestore evaluates this per document, so users only see groups they have access to
-      // Check field existence before accessing to avoid errors
+      allow get: if isMember(resource.data, 'memberIds')
+                 || isSuperAdmin()
+                 || (isSignedIn() && 'orderId' in resource.data && resource.data.orderId != null && resource.data.orderId != '');
+
       allow list: if isSignedIn() && (
-        ('memberIds' in resource.data && request.auth.uid in resource.data.memberIds) || 
+        ('memberIds' in resource.data && request.auth.uid in resource.data.memberIds) ||
         ('orderId' in resource.data && resource.data.orderId != null && resource.data.orderId != '') ||
         isSuperAdmin()
       );
+
       allow create: if isSignedIn() && isMember(request.resource.data, 'memberIds');
-      // Allow group creator (first member in memberIds) to update memberIds to add new members
-      // Allow users to add themselves via join link (using arrayUnion)
-      // Allow super admin to update groups
-      allow update: if isSuperAdmin() || 
-        (isSignedIn() && 
-         ((resource.data.memberIds.size() > 0 && 
-           resource.data.memberIds[0] == request.auth.uid &&
-           // Only allow updating memberIds array (adding members)
-           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberIds'])) ||
-          // Allow any authenticated user to add themselves via join link
-          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberIds']) &&
-           request.resource.data.memberIds.hasAll(resource.data.memberIds) &&
-           request.resource.data.memberIds.size() == resource.data.memberIds.size() + 1 &&
-           request.auth.uid in request.resource.data.memberIds &&
-           !(request.auth.uid in resource.data.memberIds))));
-      allow delete: if isSuperAdmin(); // Allow super admin to delete groups.
+
+      allow update: if isSuperAdmin()
+        || (isSignedIn() &&
+           ((resource.data.memberIds.size() > 0 &&
+             resource.data.memberIds[0] == request.auth.uid &&
+             request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberIds']))
+            ||
+            (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberIds']) &&
+             request.resource.data.memberIds.hasAll(resource.data.memberIds) &&
+             request.resource.data.memberIds.size() == resource.data.memberIds.size() + 1 &&
+             request.auth.uid in request.resource.data.memberIds &&
+             !(request.auth.uid in resource.data.memberIds))));
+
+      allow delete: if isSuperAdmin();
     }
 
     // -------------------------------------------------------------------------
-    // Tambola Games (/tambola_games)
+    // 🔥 TAMBOLA GAMES (FIXED LIST RULE)
     // -------------------------------------------------------------------------
-    
-    /**
-     * @description Tambola games are created by admins who pay for them. Only the admin can add players and control the game.
-     * @path /tambola_games/{gameId}
-     * @allow (get) Players can read games they are part of, or admins can read their own games.
-     * @allow (create) Authenticated users can create games (after payment).
-     * @allow (update) Game admin can update playerIds and game state.
-     */
     match /tambola_games/{gameId} {
+
+      // --- GET ---
       allow get: if isSignedIn() && (
-        ('playerIds' in resource.data && request.auth.uid in resource.data.playerIds) || 
+        ('playerIds' in resource.data && request.auth.uid in resource.data.playerIds) ||
         ('adminId' in resource.data && resource.data.adminId == request.auth.uid) ||
         ('orderId' in resource.data && resource.data.orderId != null && resource.data.orderId != '') ||
         isSuperAdmin()
       );
-      // Allow list queries where user is a player/admin OR game has orderId OR user is super admin
-      // Firestore evaluates this per document, so users only see games they have access to
-      // Check field existence before accessing to avoid errors
+
+      // --- FIXED LIST RULE ---
       allow list: if isSignedIn() && (
-        ('playerIds' in resource.data && request.auth.uid in resource.data.playerIds) || 
-        ('adminId' in resource.data && resource.data.adminId == request.auth.uid) ||
-        ('orderId' in resource.data && resource.data.orderId != null && resource.data.orderId != '') ||
+        // Player listing their games
+        (
+          request.query.where.size() > 0 &&
+          request.query.where[0].field == 'playerIds' &&
+          request.query.where[0].op == 'array-contains' &&
+          request.query.where[0].value == request.auth.uid
+        )
+        ||
+        // Admin listing their games
+        (
+          request.query.where.size() > 0 &&
+          request.query.where[0].field == 'adminId' &&
+          request.query.where[0].op == '==' &&
+          request.query.where[0].value == request.auth.uid
+        )
+        ||
+        // Super Admin sees all
         isSuperAdmin()
       );
+
+      // --- CREATE ---
       allow create: if isSignedIn() && request.resource.data.adminId == request.auth.uid;
-      // Allow admin to update playerIds (add players) and game state
-      // Allow users to add themselves via join link (using arrayUnion)
+
+      // --- UPDATE ---
       allow update: if isSignedIn() && (
         isSuperAdmin() ||
-        (resource.data.adminId == request.auth.uid &&
-         // Only allow updating playerIds, calledNumbers, currentNumber, and status
-         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['playerIds', 'calledNumbers', 'currentNumber', 'status'])) ||
-        // Allow any authenticated user to add themselves via join link
-        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['playerIds']) &&
-         request.resource.data.playerIds.hasAll(resource.data.playerIds) &&
-         request.resource.data.playerIds.size() == resource.data.playerIds.size() + 1 &&
-         request.auth.uid in request.resource.data.playerIds &&
-         !(request.auth.uid in resource.data.playerIds))
+        (
+          resource.data.adminId == request.auth.uid &&
+          request.resource.data.diff(resource.data)
+            .affectedKeys()
+            .hasOnly(['playerIds', 'calledNumbers', 'currentNumber', 'status'])
+        )
+        ||
+        (
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['playerIds']) &&
+          request.resource.data.playerIds.hasAll(resource.data.playerIds) &&
+          request.resource.data.playerIds.size() == resource.data.playerIds.size() + 1 &&
+          request.auth.uid in request.resource.data.playerIds &&
+          !(request.auth.uid in resource.data.playerIds)
+        )
       );
-      allow delete: if isSuperAdmin() || (isSignedIn() && resource.data.adminId == request.auth.uid);
+
+      // --- DELETE ---
+      allow delete: if isSuperAdmin() ||
+                    (isSignedIn() && resource.data.adminId == request.auth.uid);
     }
 
     // -------------------------------------------------------------------------
-    // Marketplace (/marketplace_listings)
+    // MARKETPLACE
     // -------------------------------------------------------------------------
-    
-    /**
-     * @description Marketplace listings are publicly readable by any authenticated user. Only the seller can create, update, or delete their own listings.
-     * @path /marketplace_listings/{listingId}
-     * @allow (list) Any authenticated user browsing all marketplace listings.
-     * @allow (create) User `user_seller` creating a new listing with `sellerId` set to `user_seller`.
-     * @deny (update) User `user_buyer` attempting to change the price on a listing owned by `user_seller`.
-     * @principle Implements a "Public Read with Owner-Only Writes" pattern, ideal for public catalogs.
-     */
     match /marketplace_listings/{listingId} {
       allow get, list: if isSignedIn();
       allow create: if isSignedIn() && request.resource.data.sellerId == request.auth.uid;
       allow update: if isExistingOwner(resource.data.sellerId) && isRelationalIdImmutable('sellerId');
       allow delete: if isExistingOwner(resource.data.sellerId);
     }
-    
-    // -------------------------------------------------------------------------
-    // Support Directory (/directory)
-    // -------------------------------------------------------------------------
 
-    /**
-     * @description The support directory is publicly readable by any authenticated user. Creating new entries is restricted to admins.
-     * @path /directory/{professionalId}
-     * @allow (list) Any authenticated user browsing all professionals.
-     * @principle Allows public discovery of support professionals while centralizing write access.
-     */
+    // -------------------------------------------------------------------------
+    // DIRECTORY
+    // -------------------------------------------------------------------------
     match /directory/{professionalId} {
       allow get, list: if isSignedIn();
       allow create, update, delete: if isSuperAdmin();
     }
 
     // -------------------------------------------------------------------------
-    // Courses (/courses)
+    // COURSES
     // -------------------------------------------------------------------------
-
-    /**
-     * @description Courses are publicly discoverable. Anyone can create one, making themself the instructor. Only the instructor can modify or delete it.
-     * @path /courses/{courseId}
-     * @allow (get) Any authenticated user viewing the details of a course.
-     * @allow (create) User `user_teacher` creating a new course with `instructorId` set to `user_teacher`.
-     * @deny (delete) An enrolled student `user_student` trying to delete the course.
-     * @principle Allows public discovery while centralizing write control to a single owner (the instructor).
-     */
     match /courses/{courseId} {
       allow get, list: if isSignedIn();
       allow create: if isSignedIn() && request.resource.data.instructorId == request.auth.uid;
-      allow update: if isOwner(resource.data.instructorId) && resource != null;
-      allow delete: if isOwner(resource.data.instructorId) && resource != null;
+      allow update: if isOwner(resource.data.instructorId);
+      allow delete: if isOwner(resource.data.instructorId);
     }
-    
-    // -------------------------------------------------------------------------
-    // Contests (/contests)
-    // -------------------------------------------------------------------------
 
-    /**
-     * @description Contests are publicly discoverable. Any authenticated user can read them and propose a new one.
-     * @path /contests/{contestId}
-     * @allow (list) Any authenticated user browsing all contests.
-     * @allow (create) Any signed-in user can propose a new contest.
-     * @principle Allows public discovery and community-driven content proposals. Updates/deletes managed by admin.
-     */
+    // -------------------------------------------------------------------------
+    // CONTESTS
+    // -------------------------------------------------------------------------
     match /contests/{contestId} {
-        allow get, list: if isSignedIn();
-        allow create: if isSignedIn();
-        allow update, delete: if isSuperAdmin();
-        
-        // Votes subcollection for tracking user votes
-        match /votes/{voteId} {
-          allow get, list: if isSignedIn();
-          allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-          allow update, delete: if false; // Votes are immutable once created
-        }
-    }
-
-    // -------------------------------------------------------------------------
-    // Nominations (/nominations)
-    // -------------------------------------------------------------------------
-
-    /**
-     * @description Users can create nominations for contests. Users can read their own nominations. Admins can read/list all nominations and update their status.
-     * @path /nominations/{nominationId}
-     * @allow (create) User creating a nomination for themselves (userId matches auth.uid).
-     * @allow (get, list) User reading their own nominations OR super admin reading any nomination.
-     * @allow (update) Super admin updating nomination status (approve/reject).
-     * @deny (read) Regular user trying to read another user's nomination.
-     * @principle Enforces ownership on creation and admin-only access for review and status updates.
-     */
-    match /nominations/{nominationId} {
-      // Users can read their own nominations, admins can read all
-      allow get: if isSignedIn() && (
-        resource.data.userId == request.auth.uid || 
-        isSuperAdmin()
-      );
-      // Users can list their own nominations, admins can list all
-      allow list: if isSignedIn() && (
-        resource.data.userId == request.auth.uid || 
-        isSuperAdmin()
-      );
-      // Users can create nominations for themselves
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      // Only super admin can update nominations (for approval/rejection)
-      allow update: if isSuperAdmin();
-      // Only super admin can delete nominations
-      allow delete: if isSuperAdmin();
-    }
-
-    // -------------------------------------------------------------------------
-    // Nominee Comments (/nominee_comments)
-    // -------------------------------------------------------------------------
-
-    /**
-     * @description Users can read and create comments on nominees. Only super admins can update/delete.
-     * @path /nominee_comments/{commentId}
-     */
-    match /nominee_comments/{commentId} {
-      // Anyone signed in can read comments
       allow get, list: if isSignedIn();
-      // Users can create comments
-      allow create: if isSignedIn() && request.resource.data.author.id == request.auth.uid;
-      // Only super admin can update/delete comments
+      allow create: if isSignedIn();
+      allow update, delete: if isSuperAdmin();
+
+      match /votes/{voteId} {
+        allow get, list: if isSignedIn();
+        allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+        allow update, delete: if false;
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // NOMINATIONS
+    // -------------------------------------------------------------------------
+    match /nominations/{nominationId} {
+      allow get: if isSignedIn() &&
+        (resource.data.userId == request.auth.uid || isSuperAdmin());
+
+      allow list: if isSignedIn() &&
+        (resource.data.userId == request.auth.uid || isSuperAdmin());
+
+      allow create: if isSignedIn() &&
+        request.resource.data.userId == request.auth.uid;
+
       allow update, delete: if isSuperAdmin();
     }
 
     // -------------------------------------------------------------------------
-    // Events (/events)
+    // NOMINEE COMMENTS
     // -------------------------------------------------------------------------
+    match /nominee_comments/{commentId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn() &&
+                    request.resource.data.author.id == request.auth.uid;
+      allow update, delete: if isSuperAdmin();
+    }
 
-    /**
-     * @description Events are publicly discoverable. Anyone can create one, making themself the organizer. Only the organizer can modify or delete it.
-     * @path /events/{eventId}
-     * @allow (list) Any authenticated user browsing all upcoming events.
-     * @allow (create) User `user_host` creating a new event with `organizerId` set to `user_host`.
-     * @deny (update) An attendee `user_guest` trying to change the event's location.
-     * @principle Allows public discovery while centralizing write control to a single owner (the organizer).
-     */
+    // -------------------------------------------------------------------------
+    // EVENTS
+    // -------------------------------------------------------------------------
     match /events/{eventId} {
       allow get, list: if isSignedIn();
-      allow create: if isSignedIn() && request.resource.data.organizerId == request.auth.uid;
-      allow update: if isOwner(resource.data.organizerId) && resource != null;
-      allow delete: if isOwner(resource.data.organizerId) && resource != null;
+      allow create: if isSignedIn() &&
+                    request.resource.data.organizerId == request.auth.uid;
+      allow update: if isOwner(resource.data.organizerId);
+      allow delete: if isOwner(resource.data.organizerId);
     }
-    
+
     // -------------------------------------------------------------------------
-    // Professional Applications (/professional_applications)
+    // PROFESSIONAL APPLICATIONS
     // -------------------------------------------------------------------------
-    
-    /**
-     * @description Users can create their own application. Admins can read all applications and update their status.
-     * @path /professional_applications/{applicationId}
-     * @allow (create) User `user_abc` creating an application for themself.
-     * @allow (list) An admin listing all applications.
-     * @deny (read) A regular user reading another user's application.
-     * @principle Enforces ownership on creation and admin-only access for review.
-     */
     match /professional_applications/{applicationId} {
       allow get, list, update, delete: if isSuperAdmin();
       allow create: if isOwner(request.resource.data.userId);
     }
 
     // -------------------------------------------------------------------------
-    // Notifications (/notifications)
+    // NOTIFICATIONS
     // -------------------------------------------------------------------------
-
-    /**
-     * @description Users can read their own notifications. System can create notifications for users.
-     * @path /notifications/{notificationId}
-     * @allow (get, list) User `user_abc` reading notifications where `userId` is `user_abc`.
-     * @allow (create) System creating a notification for user `user_abc`.
-     * @deny (read) User `user_xyz` trying to read notifications for user `user_abc`.
-     * @principle Users can only access their own notifications for privacy.
-     */
     match /notifications/{notificationId} {
-      // For get operations, check if the notification belongs to the user
-      allow get: if isSignedIn() && (resource == null || resource.data.userId == request.auth.uid);
-      // For list queries, check each document - only return notifications belonging to the user
-      // The where clause in the query works together with this rule to ensure security
+      allow get: if isSignedIn() &&
+                  (resource == null || resource.data.userId == request.auth.uid);
+
       allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
-      // Allow creating notifications for the authenticated user
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      // Allow updating/deleting own notifications
-      allow update: if isSignedIn() && resource != null && resource.data.userId == request.auth.uid;
-      allow delete: if isSignedIn() && resource != null && resource.data.userId == request.auth.uid;
+
+      allow create: if isSignedIn() &&
+                    request.resource.data.userId == request.auth.uid;
+
+      allow update: if isSignedIn() &&
+                    resource.data.userId == request.auth.uid;
+
+      allow delete: if isSignedIn() &&
+                    resource.data.userId == request.auth.uid;
     }
 
     // -------------------------------------------------------------------------
-    // Notification Preferences (/notification_preferences)
+    // NOTIFICATION PREFERENCES
     // -------------------------------------------------------------------------
-
-    /**
-     * @description Users can read and update their own notification preferences.
-     * @path /notification_preferences/{preferenceId}
-     */
     match /notification_preferences/{preferenceId} {
-      allow get, list, create, update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow get, list, create, update, delete:
+        if isSignedIn() && resource.data.userId == request.auth.uid;
     }
 
     // -------------------------------------------------------------------------
-    // Payments (/payments)
+    // PAYMENTS
     // -------------------------------------------------------------------------
-
-    /**
-     * @description Users can read their own payments. System can create/update payments via API.
-     * @path /payments/{paymentId}
-     * @allow (get, list) User reading their own payments where `userId` matches.
-     * @allow (create, update) System creating/updating payments via API routes.
-     * @deny (read) User trying to read payments for other users.
-     */
     match /payments/{paymentId} {
-      // Users can read their own payments
-      allow get: if isSignedIn() && (resource == null || resource.data.userId == request.auth.uid);
-      // Users can list their own payments (query with where clause)
+      allow get: if isSignedIn() &&
+                 (resource == null || resource.data.userId == request.auth.uid);
+
       allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
-      // Allow creating payments - user must be authenticated and creating for themselves
-      allow create: if isSignedIn() 
+
+      allow create: if isSignedIn()
         && request.resource.data.userId == request.auth.uid
         && request.resource.data.userId is string
         && request.resource.data.amount is number
         && request.resource.data.currency is string
         && request.resource.data.status == 'pending';
-      // Allow updating payments (only status and metadata updates via API)
-      allow update: if isSignedIn() 
-        && resource != null 
-        && resource.data.userId == request.auth.uid
-        && (!('userId' in request.resource.data) || request.resource.data.userId == resource.data.userId);
-      // Users cannot delete payments (only system can via API if needed)
+
+      allow update: if isSignedIn() &&
+                    resource.data.userId == request.auth.uid &&
+                    (!('userId' in request.resource.data)
+                      || request.resource.data.userId == resource.data.userId);
+
       allow delete: if false;
     }
 
     // -------------------------------------------------------------------------
-    // Refunds (/refunds)
+    // REFUNDS
     // -------------------------------------------------------------------------
-
-    /**
-     * @description Users can read refunds for their payments. System can create/update refunds.
-     * @path /refunds/{refundId}
-     */
     match /refunds/{refundId} {
-      // Users can read refunds (will need to query by paymentId which belongs to user)
       allow get, list: if isSignedIn();
-      // Allow creating refunds (API will handle validation)
       allow create: if isSignedIn();
-      // Allow updating refund status (via API)
       allow update: if isSignedIn();
-      // Users cannot delete refunds
       allow delete: if false;
     }
 
     // -------------------------------------------------------------------------
-    // Payment Webhooks (/payment_webhooks)
+    // PAYMENT WEBHOOKS
     // -------------------------------------------------------------------------
-
-    /**
-     * @description System-only collection for logging payment webhooks.
-     * @path /payment_webhooks/{webhookId}
-     */
     match /payment_webhooks/{webhookId} {
-      // Only allow creation via API (webhook handler)
       allow create: if isSignedIn();
-      // Users cannot read webhook logs
       allow read: if false;
-      // No updates or deletes
       allow update, delete: if false;
     }
   }

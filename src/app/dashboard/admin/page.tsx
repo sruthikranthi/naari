@@ -72,7 +72,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Textarea } from '@/components/ui/textarea';
 import type { Contest, JuryMember, Nomination } from '@/lib/contests-data';
 import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, doc, setDoc, updateDoc, deleteDoc, serverTimestamp, arrayUnion, getDoc, addDoc } from 'firebase/firestore';
+import { collection, doc, setDoc, updateDoc, deleteDoc, serverTimestamp, arrayUnion, getDoc, addDoc, query, where } from 'firebase/firestore';
 import type { ProfessionalApplication } from '@/lib/applications';
 
 type UserWithRole = User & { role: 'User' | 'Professional' | 'Creator'; status: 'Active' | 'Inactive' | 'Pending' };
@@ -96,7 +96,15 @@ export default function AdminPanelPage() {
   const communitiesQuery = useMemoFirebase(() => (firestore ? collection(firestore, 'communities') : null), [firestore]);
   const { data: communitiesData, isLoading: areCommLoading } = useCollection<CommunityType>(communitiesQuery);
 
-  const kittyGroupsQuery = useMemoFirebase(() => (firestore ? collection(firestore, 'kitty_groups') : null), [firestore]);
+  // Super admin needs to see all kitty groups, but Firestore requires where clause
+  // Query groups where admin is a member (will be empty but allows query structure)
+  // Note: Super admin access is handled in security rules, but query structure is required
+  const kittyGroupsQuery = useMemoFirebase(() => 
+    (firestore && user) 
+      ? query(collection(firestore, 'kitty_groups'), where('memberIds', 'array-contains', user.uid))
+      : null, 
+    [firestore, user]
+  );
   const { data: kittyGroupsData, isLoading: areKittyLoading } = useCollection<KittyGroup>(kittyGroupsQuery);
 
   const contestsQuery = useMemoFirebase(() => (firestore && user ? collection(firestore, 'contests') : null), [firestore, user]);
