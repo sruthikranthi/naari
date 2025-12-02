@@ -32,16 +32,24 @@ export default function UpcomingPage() {
   const { data: userKittyGroups, isLoading: areUserKittyGroupsLoading } = useCollection<KittyGroup>(userKittyGroupsQuery);
 
   // Query tambola games where user is a player
+  // IMPORTANT: Must have user.uid to prevent blind list queries
   const playerTambolaGamesQuery = useMemoFirebase(
-    () => (firestore && user ? query(collection(firestore, 'tambola_games'), where('playerIds', 'array-contains', user.uid)) : null),
-    [firestore, user]
+    () => {
+      if (!firestore || !user || !user.uid) return null;
+      return query(collection(firestore, 'tambola_games'), where('playerIds', 'array-contains', user.uid));
+    },
+    [firestore, user, user?.uid]
   );
   const { data: playerTambolaGames, isLoading: arePlayerTambolaGamesLoading } = useCollection<TambolaGame & { orderId?: string; paymentId?: string; isConfigured?: boolean; prizes?: any; scheduledDate?: string; scheduledTime?: string }>(playerTambolaGamesQuery);
 
   // Query tambola games where user is admin/host
+  // IMPORTANT: Must have user.uid to prevent blind list queries
   const adminTambolaGamesQuery = useMemoFirebase(
-    () => (firestore && user ? query(collection(firestore, 'tambola_games'), where('adminId', '==', user.uid)) : null),
-    [firestore, user]
+    () => {
+      if (!firestore || !user || !user.uid) return null;
+      return query(collection(firestore, 'tambola_games'), where('adminId', '==', user.uid));
+    },
+    [firestore, user, user?.uid]
   );
   const { data: adminTambolaGames, isLoading: areAdminTambolaGamesLoading } = useCollection<TambolaGame & { orderId?: string; paymentId?: string; isConfigured?: boolean; prizes?: any; scheduledDate?: string; scheduledTime?: string }>(adminTambolaGamesQuery);
 
