@@ -24,6 +24,9 @@ import {
   SidebarMenuButton,
   useSidebar,
 } from '@/components/ui/sidebar';
+import { useUser } from '@/firebase';
+
+const SUPER_ADMIN_ID = process.env.NEXT_PUBLIC_SUPER_ADMIN_ID || 'ebixEzJ8UuYjIYTXrkOObW1obSw1';
 
 const navItems = [
   { href: '/dashboard', icon: Home, label: 'Dashboard' },
@@ -49,10 +52,11 @@ const navItems = [
     icon: Briefcase,
     label: 'Professional Hub',
   },
-   {
+  {
     href: '/dashboard/admin',
     icon: Shield,
     label: 'Admin Panel',
+    adminOnly: true, // Only show to super admin
   },
   {
     href: '/dashboard/subscriptions',
@@ -68,9 +72,20 @@ const navItems = [
 
 export function MainNav() {
   const { isMobile } = useSidebar();
+  const { user } = useUser();
+  const isSuperAdmin = user?.uid === SUPER_ADMIN_ID;
+
+  // Filter nav items based on admin status
+  const visibleNavItems = navItems.filter(item => {
+    if (item.adminOnly && !isSuperAdmin) {
+      return false;
+    }
+    return true;
+  });
+
   return (
     <SidebarMenu>
-      {navItems.map((item) => (
+      {visibleNavItems.map((item) => (
         <SidebarMenuItem key={item.label}>
           <Link 
             href={item.href} 
