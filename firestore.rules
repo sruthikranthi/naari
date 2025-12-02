@@ -182,8 +182,14 @@ service cloud.firestore {
           ('adminId' in resource.data && resource.data.adminId == request.auth.uid)
         )
         ||
-        // Games with orderId (discoverable) - evaluated per document
-        ('orderId' in resource.data && resource.data.orderId != null && resource.data.orderId != '')
+        // Query by orderId - check query structure OR document has orderId
+        (
+          (request.query.where.size() > 0 &&
+           request.query.where[0].field == 'orderId' &&
+           request.query.where[0].op == '==')
+          ||
+          ('orderId' in resource.data && resource.data.orderId != null && resource.data.orderId != '')
+        )
         ||
         // Super Admin sees all
         isSuperAdmin()
