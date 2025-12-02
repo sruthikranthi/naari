@@ -3,8 +3,13 @@
 import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { getFirestore, setLogLevel } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
+
+// Enable Firestore debug logging to find blind list queries
+if (typeof window !== 'undefined') {
+  setLogLevel('debug');
+}
 
 export function initializeFirebase() {
   // Check if Firebase is already initialized

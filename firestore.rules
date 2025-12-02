@@ -164,8 +164,10 @@ service cloud.firestore {
       // Must have where filters. Prevent blind list.
       allow list: if isSignedIn() && (
         request.query.where.size() > 0 ||
+        ('orderId' in resource.data && resource.data.orderId != null && resource.data.orderId != '') ||
         isSuperAdmin()
-      );
+      )
+      || (false && debug(request));  // TEMP: Debug query structure
 
       // ---------------------------
       // CREATE GAME (Only hosts)
