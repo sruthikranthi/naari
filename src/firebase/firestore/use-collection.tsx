@@ -73,6 +73,20 @@ export function useCollection<T = any>(
       return;
     }
 
+    // Prevent blind list queries for tambola_games and kitty_groups
+    // These collections require where clauses for security
+    if (memoizedTargetRefOrQuery.type === 'collection') {
+      const collectionRef = memoizedTargetRefOrQuery as CollectionReference;
+      const path = collectionRef.path;
+      if (path === 'tambola_games' || path === 'kitty_groups') {
+        console.error(`SECURITY: Blind list query detected for ${path}. This collection requires a where clause.`);
+        setError(new Error(`Security: ${path} requires a where clause in the query`));
+        setData(null);
+        setIsLoading(false);
+        return;
+      }
+    }
+
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Need to set loading state when starting new subscription
     setIsLoading(true);
     // eslint-disable-next-line react-hooks/set-state-in-effect
