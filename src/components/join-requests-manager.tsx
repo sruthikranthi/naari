@@ -187,11 +187,19 @@ export function JoinRequestsManager({ type, gameOrGroupId, adminId }: JoinReques
         ) : (
           <div className="space-y-3">
             {pendingRequests.map((request) => {
-              const createdAt = request.createdAt
-                ? typeof request.createdAt === 'object' && 'toDate' in request.createdAt
-                  ? request.createdAt.toDate()
-                  : new Date(request.createdAt)
-                : new Date();
+              let createdAt: Date;
+              if (!request.createdAt) {
+                createdAt = new Date();
+              } else if (typeof request.createdAt === 'object' && 'toDate' in request.createdAt) {
+                // Firestore Timestamp
+                createdAt = request.createdAt.toDate();
+              } else if (typeof request.createdAt === 'string' || typeof request.createdAt === 'number') {
+                // String or number timestamp
+                createdAt = new Date(request.createdAt);
+              } else {
+                // FieldValue or other - use current date as fallback
+                createdAt = new Date();
+              }
 
               return (
                 <div
