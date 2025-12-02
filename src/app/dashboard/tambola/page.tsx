@@ -32,6 +32,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Loader2, Search, UserPlus } from 'lucide-react';
 import { TambolaSetupDialog } from '@/components/tambola-setup-dialog';
+import { JoinRequestsManager } from '@/components/join-requests-manager';
 
 // A more robust function to generate a valid Tambola ticket
 const generateTicket = (): (number | null)[][] => {
@@ -855,6 +856,14 @@ export default function TambolaPage() {
               <Button variant="destructive" onClick={resetGame} disabled={gameStatus === 'idle'}>End Game</Button>
             </CardContent>
           </Card>
+
+          {isGameAdmin && currentGameId && (
+            <JoinRequestsManager
+              type="tambola"
+              gameOrGroupId={currentGameId}
+              adminId={currentGame?.adminId || user?.uid || ''}
+            />
+          )}
           
           <Card>
             <CardHeader>

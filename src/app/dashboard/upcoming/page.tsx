@@ -1,26 +1,29 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { PageHeader } from '@/components/page-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
-import { collection, doc, updateDoc, arrayUnion, query, where } from 'firebase/firestore';
+import { collection, doc, updateDoc, arrayUnion, query, where, addDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Users, Calendar, IndianRupee, Trophy, Clock, ArrowRight, UserPlus, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import type { KittyGroup, TambolaGame } from '@/lib/mock-data';
 import { formatDistanceToNow } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
+import type { TambolaGameJoinRequest, KittyGroupJoinRequest } from '@/lib/join-requests';
+import { useCollection, useMemoFirebase } from '@/firebase';
 
 export default function UpcomingPage() {
   const firestore = useFirestore();
   const { user } = useUser();
   const { toast } = useToast();
-  const [joiningGameId, setJoiningGameId] = useState<string | null>(null);
-  const [joiningGroupId, setJoiningGroupId] = useState<string | null>(null);
+  const [requestingGameId, setRequestingGameId] = useState<string | null>(null);
+  const [requestingGroupId, setRequestingGroupId] = useState<string | null>(null);
+  const [pendingRequests, setPendingRequests] = useState<Set<string>>(new Set());
 
   // Query kitty groups where user is a member
   const userKittyGroupsQuery = useMemoFirebase(
@@ -66,74 +69,93 @@ export default function UpcomingPage() {
 
   const isLoading = areUserKittyGroupsLoading || arePlayerTambolaGamesLoading || areAdminTambolaGamesLoading;
 
-  // Handle joining tambola game
-  const handleJoinTambola = async (gameId: string) => {
+  // Fetch pending join requests for current user
+  const userTambolaRequestsQuery = useMemoFirebase(
+    () => (firestore && user ? query(collection(firestore, 'tambola_game_join_requests'), where('userId', '==', user.uid), where('status', '==', 'pending')) : null),
+    [firestore, user]
+  );
+  const { data: userTambolaRequests } = useCollection<TambolaGameJoinRequest>(userTambolaRequestsQuery);
+
+  const userKittyRequestsQuery = useMemoFirebase(
+    () => (firestore && user ? query(collection(firestore, 'kitty_group_join_requests'), where('userId', '==', user.uid), where('status', '==', 'pending')) : null),
+    [firestore, user]
+  );
+  const { data: userKittyRequests } = useCollection<KittyGroupJoinRequest>(userKittyRequestsQuery);
+
+  // Build set of pending request IDs
+  useEffect(() => {
+    const tambolaRequestIds = new Set(userTambolaRequests?.map(req => req.tambolaGameId) || []);
+    const kittyRequestIds = new Set(userKittyRequests?.map(req => req.kittyGroupId) || []);
+    setPendingRequests(new Set([...tambolaRequestIds, ...kittyRequestIds]));
+  }, [userTambolaRequests, userKittyRequests]);
+
+  // Handle requesting to join tambola game
+  const handleRequestJoinTambola = async (gameId: string) => {
     if (!user || !firestore) {
       toast({
         variant: 'destructive',
         title: 'Not Logged In',
-        description: 'Please log in to join the game.',
+        description: 'Please log in to request joining the game.',
       });
       return;
     }
 
-    setJoiningGameId(gameId);
+    // Check if request already exists
+    if (pendingRequests.has(gameId)) {
+      toast({
+        title: 'Request Already Sent',
+        description: 'You have already sent a join request for this game. Please wait for admin approval.',
+      });
+      return;
+    }
+
+    setRequestingGameId(gameId);
     try {
+      // Check if user is already a player
       const gameRef = doc(firestore, 'tambola_games', gameId);
-      await updateDoc(gameRef, {
-        playerIds: arrayUnion(user.uid),
+      const gameSnap = await getDocs(query(collection(firestore, 'tambola_games'), where('__name__', '==', gameId)));
+      if (!gameSnap.empty) {
+        const gameData = gameSnap.docs[0].data();
+        if (gameData.playerIds?.includes(user.uid)) {
+          toast({
+            title: 'Already a Player',
+            description: 'You are already a player in this game.',
+          });
+          setRequestingGameId(null);
+          return;
+        }
+      }
+
+      // Create join request
+      await addDoc(collection(firestore, 'tambola_game_join_requests'), {
+        tambolaGameId: gameId,
+        userId: user.uid,
+        userName: user.displayName || 'Anonymous User',
+        userAvatar: user.photoURL || `https://picsum.photos/seed/${user.uid}/100/100`,
+        status: 'pending',
+        createdAt: serverTimestamp(),
       });
       
       toast({
-        title: 'Successfully Joined!',
-        description: 'You have joined the Tambola game.',
+        title: 'Join Request Sent!',
+        description: 'Your request has been sent to the game admin. You will be notified when it is approved.',
       });
+      
+      // Update pending requests
+      setPendingRequests(prev => new Set([...prev, gameId]));
     } catch (error: any) {
-      console.error('Error joining game:', error);
+      console.error('Error sending join request:', error);
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: error.message || 'Failed to join the game. Please try again.',
+        description: error.message || 'Failed to send join request. Please try again.',
       });
     } finally {
-      setJoiningGameId(null);
+      setRequestingGameId(null);
     }
   };
 
   // Handle joining kitty group
-  const handleJoinKittyGroup = async (groupId: string) => {
-    if (!user || !firestore) {
-      toast({
-        variant: 'destructive',
-        title: 'Not Logged In',
-        description: 'Please log in to join the group.',
-      });
-      return;
-    }
-
-    setJoiningGroupId(groupId);
-    try {
-      const groupRef = doc(firestore, 'kitty_groups', groupId);
-      await updateDoc(groupRef, {
-        memberIds: arrayUnion(user.uid),
-      });
-      
-      toast({
-        title: 'Successfully Joined!',
-        description: 'You have joined the kitty group.',
-      });
-    } catch (error: any) {
-      console.error('Error joining group:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: error.message || 'Failed to join the group. Please try again.',
-      });
-    } finally {
-      setJoiningGroupId(null);
-    }
-  };
-
   return (
     <div className="space-y-6">
       <PageHeader
@@ -204,11 +226,11 @@ export default function UpcomingPage() {
                             variant="default" 
                             className="w-full" 
                             size="sm"
-                            onClick={() => handleJoinKittyGroup(group.id)}
-                            disabled={joiningGroupId === group.id}
+                            onClick={() => handleRequestJoinKittyGroup(group.id)}
+                            disabled={requestingGroupId === group.id || pendingRequests.has(group.id)}
                           >
                             <UserPlus className="mr-2 h-4 w-4" />
-                            {joiningGroupId === group.id ? 'Joining...' : 'Join Group'}
+                            {requestingGroupId === group.id ? 'Sending Request...' : pendingRequests.has(group.id) ? 'Request Pending' : 'Request to Join'}
                           </Button>
                         )}
                         <Link href={`/dashboard/kitty-groups/${group.id}`}>
@@ -282,11 +304,11 @@ export default function UpcomingPage() {
                             variant="default" 
                             className="w-full" 
                             size="sm"
-                            onClick={() => game.id && handleJoinTambola(game.id)}
-                            disabled={!game.id || joiningGameId === game.id}
+                            onClick={() => game.id && handleRequestJoinTambola(game.id)}
+                            disabled={!game.id || requestingGameId === game.id || pendingRequests.has(game.id)}
                           >
                             <UserPlus className="mr-2 h-4 w-4" />
-                            {joiningGameId === game.id ? 'Joining...' : 'Join Game'}
+                            {requestingGameId === game.id ? 'Sending Request...' : pendingRequests.has(game.id) ? 'Request Pending' : 'Request to Join'}
                           </Button>
                         )}
                         <Link href={`/dashboard/tambola${game.id ? `?gameId=${game.id}` : ''}`}>
@@ -369,8 +391,8 @@ export default function UpcomingPage() {
                           variant="default" 
                           className="w-full" 
                           size="sm"
-                          onClick={() => handleJoinKittyGroup(group.id)}
-                          disabled={joiningGroupId === group.id}
+                          onClick={() => handleRequestJoinKittyGroup(group.id)}
+                          disabled={requestingGroupId === group.id || pendingRequests.has(group.id)}
                         >
                           <UserPlus className="mr-2 h-4 w-4" />
                           {joiningGroupId === group.id ? 'Joining...' : 'Join Group'}

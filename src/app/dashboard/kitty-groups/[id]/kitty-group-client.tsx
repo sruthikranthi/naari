@@ -49,6 +49,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { JoinRequestsManager } from '@/components/join-requests-manager';
 import { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { CameraCapture } from '@/components/camera-capture';

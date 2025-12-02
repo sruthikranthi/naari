@@ -364,6 +364,74 @@ service cloud.firestore {
     }
 
     // -------------------------------------------------------------------------
+    // JOIN REQUESTS
+    // -------------------------------------------------------------------------
+    
+    // Tambola Game Join Requests
+    match /tambola_game_join_requests/{requestId} {
+      // Users can create their own join requests
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      
+      // Users can read their own requests, admins can read requests for their games
+      allow get: if isSignedIn() && (
+        resource.data.userId == request.auth.uid ||
+        (resource.data.tambolaGameId != null && 
+         get(/databases/$(database)/documents/tambola_games/$(resource.data.tambolaGameId)).data.adminId == request.auth.uid) ||
+        isSuperAdmin()
+      );
+      
+      // Users can list their own requests, admins can list requests for their games
+      allow list: if isSignedIn() && (
+        resource.data.userId == request.auth.uid ||
+        (resource.data.tambolaGameId != null && 
+         get(/databases/$(database)/documents/tambola_games/$(resource.data.tambolaGameId)).data.adminId == request.auth.uid) ||
+        isSuperAdmin()
+      );
+      
+      // Only admins can update (approve/reject) requests for their games
+      allow update: if isSignedIn() && (
+        (resource.data.tambolaGameId != null && 
+         get(/databases/$(database)/documents/tambola_games/$(resource.data.tambolaGameId)).data.adminId == request.auth.uid) ||
+        isSuperAdmin()
+      );
+      
+      allow delete: if isSuperAdmin();
+    }
+    
+    // Kitty Group Join Requests
+    match /kitty_group_join_requests/{requestId} {
+      // Users can create their own join requests
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      
+      // Users can read their own requests, admins can read requests for their groups
+      allow get: if isSignedIn() && (
+        resource.data.userId == request.auth.uid ||
+        (resource.data.kittyGroupId != null && 
+         resource.data.kittyGroupId in get(/databases/$(database)/documents/kitty_groups/$(resource.data.kittyGroupId)).data.memberIds &&
+         get(/databases/$(database)/documents/kitty_groups/$(resource.data.kittyGroupId)).data.memberIds[0] == request.auth.uid) ||
+        isSuperAdmin()
+      );
+      
+      // Users can list their own requests, admins can list requests for their groups
+      allow list: if isSignedIn() && (
+        resource.data.userId == request.auth.uid ||
+        (resource.data.kittyGroupId != null && 
+         resource.data.kittyGroupId in get(/databases/$(database)/documents/kitty_groups/$(resource.data.kittyGroupId)).data.memberIds &&
+         get(/databases/$(database)/documents/kitty_groups/$(resource.data.kittyGroupId)).data.memberIds[0] == request.auth.uid) ||
+        isSuperAdmin()
+      );
+      
+      // Only group creator (first member) can update (approve/reject) requests
+      allow update: if isSignedIn() && (
+        (resource.data.kittyGroupId != null && 
+         get(/databases/$(database)/documents/kitty_groups/$(resource.data.kittyGroupId)).data.memberIds[0] == request.auth.uid) ||
+        isSuperAdmin()
+      );
+      
+      allow delete: if isSuperAdmin();
+    }
+
+    // -------------------------------------------------------------------------
     // PAYMENT WEBHOOKS
     // -------------------------------------------------------------------------
     match /payment_webhooks/{webhookId} {
