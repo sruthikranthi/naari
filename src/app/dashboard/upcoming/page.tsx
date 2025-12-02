@@ -154,7 +154,72 @@ export default function UpcomingPage() {
     }
   };
 
-  // Handle joining kitty group
+  // Handle requesting to join kitty group
+  const handleRequestJoinKittyGroup = async (groupId: string) => {
+    if (!user || !firestore) {
+      toast({
+        variant: 'destructive',
+        title: 'Not Logged In',
+        description: 'Please log in to request joining the group.',
+      });
+      return;
+    }
+
+    // Check if request already exists
+    if (pendingRequests.has(groupId)) {
+      toast({
+        title: 'Request Already Sent',
+        description: 'You have already sent a join request for this group. Please wait for admin approval.',
+      });
+      return;
+    }
+
+    setRequestingGroupId(groupId);
+    try {
+      // Check if user is already a member
+      const groupRef = doc(firestore, 'kitty_groups', groupId);
+      const groupSnap = await getDoc(groupRef);
+      if (groupSnap.exists()) {
+        const groupData = groupSnap.data();
+        if (groupData.memberIds?.includes(user.uid)) {
+          toast({
+            title: 'Already a Member',
+            description: 'You are already a member of this group.',
+          });
+          setRequestingGroupId(null);
+          return;
+        }
+      }
+
+      // Create join request
+      await addDoc(collection(firestore, 'kitty_group_join_requests'), {
+        kittyGroupId: groupId,
+        userId: user.uid,
+        userName: user.displayName || 'Anonymous User',
+        userAvatar: user.photoURL || `https://picsum.photos/seed/${user.uid}/100/100`,
+        status: 'pending',
+        createdAt: serverTimestamp(),
+      });
+      
+      toast({
+        title: 'Join Request Sent!',
+        description: 'Your request has been sent to the group admin. You will be notified when it is approved.',
+      });
+      
+      // Update pending requests
+      setPendingRequests(prev => new Set([...prev, groupId]));
+    } catch (error: any) {
+      console.error('Error sending join request:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error.message || 'Failed to send join request. Please try again.',
+      });
+    } finally {
+      setRequestingGroupId(null);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader
