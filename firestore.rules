@@ -127,9 +127,6 @@ service cloud.firestore {
         // If query has where clause, allow it - Firestore will filter results
         request.query.where.size() > 0
         ||
-        // Document has orderId (discoverable) - allows listing groups with orderId
-        ('orderId' in resource.data && resource.data.orderId != null && resource.data.orderId != '')
-        ||
         // Super Admin sees all
         isSuperAdmin()
       );
@@ -162,12 +159,11 @@ service cloud.firestore {
       // LIST FIX — VERY IMPORTANT
       // ---------------------------
       // Must have where filters. Prevent blind list.
+      // NOTE: resource.data is NOT available in list queries, only in get/update/delete
       allow list: if isSignedIn() && (
         request.query.where.size() > 0 ||
-        ('orderId' in resource.data && resource.data.orderId != null && resource.data.orderId != '') ||
         isSuperAdmin()
-      )
-      || (false && debug(request));  // TEMP: Debug query structure
+      );
 
       // ---------------------------
       // CREATE GAME (Only hosts)

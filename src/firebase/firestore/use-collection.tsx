@@ -75,13 +75,15 @@ export function useCollection<T = any>(
 
     // Prevent blind list queries for tambola_games and kitty_groups
     // These collections require where clauses for security
+    let guardCollectionName: string | null = null;
+    
     if (memoizedTargetRefOrQuery.type === 'collection') {
       const collectionRef = memoizedTargetRefOrQuery as CollectionReference;
-      const path = collectionRef.path;
-      if (path === 'tambola_games' || path === 'kitty_groups') {
-        console.error(`🚨 SECURITY ERROR: Blind list query detected for ${path}. This collection requires a where clause.`);
+      guardCollectionName = collectionRef.path;
+      if (guardCollectionName === 'tambola_games' || guardCollectionName === 'kitty_groups') {
+        console.error(`🚨 SECURITY ERROR: Blind list query detected for ${guardCollectionName}. This collection requires a where clause.`);
         console.error('Stack trace:', new Error().stack);
-        setError(new Error(`Security: ${path} requires a where clause in the query`));
+        setError(new Error(`Security: ${guardCollectionName} requires a where clause in the query`));
         setData(null);
         setIsLoading(false);
         return;
@@ -91,8 +93,12 @@ export function useCollection<T = any>(
     // Also check if query has where clauses for tambola_games and kitty_groups
     if (memoizedTargetRefOrQuery.type === 'query') {
       const queryRef = memoizedTargetRefOrQuery as unknown as InternalQuery;
-      const path = queryRef._query.path.canonicalString();
-      if (path === 'tambola_games' || path === 'kitty_groups') {
+      const guardFullPath = queryRef._query.path.canonicalString();
+      // Extract collection name from full path
+      const guardPathSegments = guardFullPath.split('/');
+      guardCollectionName = guardPathSegments[guardPathSegments.length - 1];
+      
+      if (guardCollectionName === 'tambola_games' || guardCollectionName === 'kitty_groups') {
         // Check if query has where clauses by inspecting the query structure
         // Firestore queries store filters in _query.filters array (not structuredQuery.where)
         const queryObj = queryRef._query as any;
@@ -106,17 +112,18 @@ export function useCollection<T = any>(
           (structuredQuery.where.fieldFilter || structuredQuery.where.compositeFilter);
         
         if (!hasFilters && !hasStructuredWhere) {
-          console.error(`🚨 SECURITY ERROR: Query for ${path} has no where clauses. This collection requires a where clause.`);
+          console.error(`🚨 SECURITY ERROR: Query for ${guardCollectionName} has no where clauses. This collection requires a where clause.`);
           console.error('Query object structure:', {
             hasFilters: hasFilters,
             filtersLength: queryObj.filters ? queryObj.filters.length : 0,
             hasStructuredQuery: !!structuredQuery,
             hasStructuredWhere: hasStructuredWhere,
-            path: path
+            collectionName: guardCollectionName,
+            fullPath: guardFullPath
           });
           console.error('Full query object:', JSON.stringify(queryObj, null, 2));
           console.error('Stack trace:', new Error().stack);
-          setError(new Error(`Security: ${path} requires a where clause in the query`));
+          setError(new Error(`Security: ${guardCollectionName} requires a where clause in the query`));
           setData(null);
           setIsLoading(false);
           return;
@@ -128,6 +135,41 @@ export function useCollection<T = any>(
     setIsLoading(true);
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setError(null);
+
+    // Extract path and query details for logging
+    const fullPath: string =
+      memoizedTargetRefOrQuery.type === 'collection'
+        ? (memoizedTargetRefOrQuery as CollectionReference).path
+        : (memoizedTargetRefOrQuery as unknown as InternalQuery)._query.path.canonicalString();
+    
+    // Extract just the collection name from the path
+    // canonicalString() returns: "databases/(default)/documents/tambola_games"
+    // CollectionReference.path returns: "tambola_games"
+    const pathSegments = fullPath.split('/');
+    const collectionName = pathSegments[pathSegments.length - 1];
+
+    // Log query details for tambola_games and kitty_groups
+    if (collectionName === 'tambola_games' || collectionName === 'kitty_groups') {
+      const stackTrace = new Error().stack;
+      const queryDetails: any = {
+        collectionName,
+        fullPath,
+        type: memoizedTargetRefOrQuery.type,
+      };
+      
+      if (memoizedTargetRefOrQuery.type === 'query') {
+        const queryRef = memoizedTargetRefOrQuery as unknown as InternalQuery;
+        const queryObj = queryRef._query as any;
+        queryDetails.filters = queryObj.filters || [];
+        queryDetails.hasFilters = queryObj.filters && queryObj.filters.length > 0;
+        queryDetails.structuredQuery = queryObj.structuredQuery ? {
+          hasWhere: !!queryObj.structuredQuery.where,
+        } : null;
+      }
+      
+      console.log(`🔍 [useCollection] Creating listener for ${collectionName}:`, queryDetails);
+      console.log(`📍 Stack trace:`, stackTrace);
+    }
 
     // Directly use memoizedTargetRefOrQuery as it's assumed to be the final query
     const unsubscribe = onSnapshot(
@@ -143,14 +185,30 @@ export function useCollection<T = any>(
       },
       (error: FirestoreError) => {
         // This logic extracts the path from either a ref or a query
-        const path: string =
+        const errorFullPath: string =
           memoizedTargetRefOrQuery.type === 'collection'
             ? (memoizedTargetRefOrQuery as CollectionReference).path
-            : (memoizedTargetRefOrQuery as unknown as InternalQuery)._query.path.canonicalString()
+            : (memoizedTargetRefOrQuery as unknown as InternalQuery)._query.path.canonicalString();
+        
+        // Extract just the collection name
+        const errorPathSegments = errorFullPath.split('/');
+        const errorCollectionName = errorPathSegments[errorPathSegments.length - 1];
+
+        // Enhanced error logging for tambola_games and kitty_groups
+        if (errorCollectionName === 'tambola_games' || errorCollectionName === 'kitty_groups') {
+          console.error(`❌ [useCollection] Permission error for ${errorCollectionName}:`, {
+            code: error.code,
+            message: error.message,
+            collectionName: errorCollectionName,
+            fullPath: errorFullPath,
+            queryType: memoizedTargetRefOrQuery.type,
+            stack: new Error().stack,
+          });
+        }
 
         const contextualError = new FirestorePermissionError({
           operation: 'list',
-          path,
+          path: errorCollectionName,
         })
 
         setError(contextualError)
