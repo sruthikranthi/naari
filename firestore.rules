@@ -185,25 +185,22 @@ service cloud.firestore {
         // Require query to have a where clause (prevents blind lists)
         request.query.where.size() > 0 &&
         (
-          // Player query - check query structure AND document data
+          // Player query - check query structure (Firestore will filter results)
           (request.query.where[0].field == 'playerIds' &&
            request.query.where[0].op == 'array-contains' &&
-           request.query.where[0].value == request.auth.uid &&
-           ('playerIds' in resource.data && request.auth.uid in resource.data.playerIds))
+           request.query.where[0].value == request.auth.uid)
           ||
-          // Admin query - check query structure AND document data
+          // Admin query - check query structure (Firestore will filter results)
           (request.query.where[0].field == 'adminId' &&
            request.query.where[0].op == '==' &&
-           request.query.where[0].value == request.auth.uid &&
-           ('adminId' in resource.data && resource.data.adminId == request.auth.uid))
+           request.query.where[0].value == request.auth.uid)
           ||
-          // OrderId query - check query structure AND document has orderId
+          // OrderId query - check query structure
           (request.query.where[0].field == 'orderId' &&
-           request.query.where[0].op == '==' &&
-           ('orderId' in resource.data && resource.data.orderId != null && resource.data.orderId != ''))
+           request.query.where[0].op == '==')
         )
         ||
-        // Document has orderId (discoverable) - allows listing games with orderId even without orderId query
+        // Document has orderId (discoverable) - allows listing games with orderId
         ('orderId' in resource.data && resource.data.orderId != null && resource.data.orderId != '')
         ||
         // Super Admin sees all (even without where clause)
