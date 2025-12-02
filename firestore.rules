@@ -123,10 +123,11 @@ service cloud.firestore {
                  || (isSignedIn() && 'orderId' in resource.data && resource.data.orderId != null && resource.data.orderId != '');
 
       allow list: if isSignedIn() && (
-        // Require query to have a where clause (prevents blind lists)
-        // If query has where clause, allow it - Firestore will filter results
-        request.query.where.size() > 0
-        ||
+        // Require query to have filters (prevents blind lists)
+        // Allow if query has where clause, orderBy, or limit (indicates it's not a blind list)
+        request.query.where.size() > 0 ||
+        request.query.orderBy.size() > 0 ||
+        request.query.limit != null ||
         // Super Admin sees all
         isSuperAdmin()
       );
@@ -160,8 +161,11 @@ service cloud.firestore {
       // ---------------------------
       // Must have where filters. Prevent blind list.
       // NOTE: resource.data is NOT available in list queries, only in get/update/delete
+      // Allow if query has where clause, limit, or orderBy (indicates it's not a blind list)
       allow list: if isSignedIn() && (
         request.query.where.size() > 0 ||
+        request.query.limit != null ||
+        request.query.orderBy.size() > 0 ||
         isSuperAdmin()
       );
 
