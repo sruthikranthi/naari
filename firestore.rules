@@ -162,21 +162,23 @@ service cloud.firestore {
       // Allow list queries with where clauses OR documents with orderId
       // Firestore evaluates this per document during list operations
       allow list: if isSignedIn() && (
-        // Player listing their games (query structure check)
+        // Player listing their games - check query structure OR document data
         (
-          request.query.where.size() > 0 &&
-          request.query.where[0].field == 'playerIds' &&
-          request.query.where[0].op == 'array-contains' &&
-          request.query.where[0].value == request.auth.uid &&
+          (request.query.where.size() > 0 &&
+           request.query.where[0].field == 'playerIds' &&
+           request.query.where[0].op == 'array-contains' &&
+           request.query.where[0].value == request.auth.uid)
+          ||
           ('playerIds' in resource.data && request.auth.uid in resource.data.playerIds)
         )
         ||
-        // Admin listing their games (query structure check)
+        // Admin listing their games - check query structure OR document data
         (
-          request.query.where.size() > 0 &&
-          request.query.where[0].field == 'adminId' &&
-          request.query.where[0].op == '==' &&
-          request.query.where[0].value == request.auth.uid &&
+          (request.query.where.size() > 0 &&
+           request.query.where[0].field == 'adminId' &&
+           request.query.where[0].op == '==' &&
+           request.query.where[0].value == request.auth.uid)
+          ||
           ('adminId' in resource.data && resource.data.adminId == request.auth.uid)
         )
         ||
