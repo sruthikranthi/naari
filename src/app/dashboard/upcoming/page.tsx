@@ -459,7 +459,7 @@ export default function UpcomingPage() {
                           disabled={requestingGroupId === group.id || pendingRequests.has(group.id)}
                         >
                           <UserPlus className="mr-2 h-4 w-4" />
-                          {joiningGroupId === group.id ? 'Joining...' : 'Join Group'}
+                          {requestingGroupId === group.id ? 'Sending Request...' : pendingRequests.has(group.id) ? 'Request Pending' : 'Request to Join'}
                         </Button>
                       )}
                       <Link href={`/dashboard/kitty-groups/${group.id}`}>
@@ -537,11 +537,11 @@ export default function UpcomingPage() {
                           variant="default" 
                           className="w-full" 
                           size="sm"
-                          onClick={() => game.id && handleJoinTambola(game.id)}
-                          disabled={!game.id || joiningGameId === game.id}
+                          onClick={() => game.id && handleRequestJoinTambola(game.id)}
+                          disabled={!game.id || requestingGameId === game.id || pendingRequests.has(game.id)}
                         >
                           <UserPlus className="mr-2 h-4 w-4" />
-                          {joiningGameId === game.id ? 'Joining...' : 'Join Game'}
+                          {requestingGameId === game.id ? 'Sending Request...' : pendingRequests.has(game.id) ? 'Request Pending' : 'Request to Join'}
                         </Button>
                       )}
                       <Link href={`/dashboard/tambola${game.id ? `?gameId=${game.id}` : ''}`}>
