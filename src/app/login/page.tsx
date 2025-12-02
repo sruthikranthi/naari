@@ -40,7 +40,7 @@ export default function LoginPage() {
   const { toast } = useToast();
 
   // ---------- State & refs (DECLARED BEFORE hooks that use them) ----------
-  const [email, setEmail] = useState('admin@sakhi.com');
+  const [email, setEmail] = useState('admin@naari.com');
   const [password, setPassword] = useState('password');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
