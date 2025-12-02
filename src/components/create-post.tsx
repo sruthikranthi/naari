@@ -4,7 +4,7 @@ import { useState, useRef } from 'react';
 import Image from 'next/image';
 import { useAuth, useFirestore, useStorage } from '@/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytes, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -85,8 +85,51 @@ export function CreatePost() {
           const fileName = `${user.uid}/${timestamp}.${fileExtension}`;
           const storageRef = ref(storage, `posts/${fileName}`);
           
-          await uploadBytes(storageRef, mediaFile);
-          mediaUrl = await getDownloadURL(storageRef);
+          // Use resumable upload for large videos (>100MB) for better reliability
+          const useResumable = mediaType === 'video' && mediaFile.size > 100 * 1024 * 1024;
+          
+          if (useResumable) {
+            // Resumable upload for large videos (30-60 min videos)
+            const uploadTask = uploadBytesResumable(storageRef, mediaFile);
+            
+            // Monitor upload progress
+            uploadTask.on('state_changed',
+              (snapshot) => {
+                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                console.log(`Upload progress: ${progress.toFixed(2)}%`);
+                // You could show progress in UI here if needed
+              },
+              (error) => {
+                console.error('Error uploading media:', error);
+                toast({
+                  variant: 'destructive',
+                  title: 'Upload Failed',
+                  description: 'Could not upload video. Please check your connection and try again.',
+                });
+                setIsUploading(false);
+                throw error;
+              },
+              async () => {
+                // Upload completed successfully
+                mediaUrl = await getDownloadURL(uploadTask.snapshot.ref);
+              }
+            );
+            
+            // Wait for upload to complete
+            await new Promise<void>((resolve, reject) => {
+              uploadTask.on('state_changed',
+                null,
+                (error) => reject(error),
+                () => resolve()
+              );
+            });
+            
+            mediaUrl = await getDownloadURL(uploadTask.snapshot.ref);
+          } else {
+            // Regular upload for smaller files
+            await uploadBytes(storageRef, mediaFile);
+            mediaUrl = await getDownloadURL(storageRef);
+          }
         } catch (uploadError) {
           console.error('Error uploading media:', uploadError);
           toast({
@@ -239,14 +282,15 @@ export function CreatePost() {
         return;
       }
 
-      // Validate file size (max 50MB for videos, 10MB for images)
-      const maxSize = isVideo ? 50 * 1024 * 1024 : 10 * 1024 * 1024;
+      // Validate file size (max 5GB for videos, 10MB for images)
+      // Firebase Storage supports up to 5TB, but we set a reasonable limit for videos
+      const maxSize = isVideo ? 5 * 1024 * 1024 * 1024 : 10 * 1024 * 1024; // 5GB for videos, 10MB for images
       if (file.size > maxSize) {
         toast({
           variant: 'destructive',
           title: 'File Too Large',
           description: isVideo 
-            ? 'Video file must be less than 50MB.' 
+            ? 'Video file must be less than 5GB. For very large videos, consider compressing them first.' 
             : 'Image file must be less than 10MB.',
         });
         return;
