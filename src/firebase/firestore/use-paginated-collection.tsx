@@ -66,6 +66,15 @@ export function usePaginatedCollection<T = any>(
       // Build query with pagination
       let firestoreQuery: Query<DocumentData>;
       
+      // Prevent blind list queries for tambola_games and kitty_groups
+      if (memoizedQuery.type === 'collection') {
+        const collectionRef = memoizedQuery as CollectionReference<DocumentData>;
+        const path = collectionRef.path;
+        if (path === 'tambola_games' || path === 'kitty_groups') {
+          throw new Error(`SECURITY: Cannot use paginated collection for ${path} without a where clause. Use useCollection with a query instead.`);
+        }
+      }
+
       if (isRefresh || !lastDoc) {
         // First page or refresh
         if (memoizedQuery.type === 'collection') {
