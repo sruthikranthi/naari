@@ -817,6 +817,14 @@ export function KittyGroupClient({ group, groupMembers, upcomingEvent, currentUs
           <p>Past and upcoming events will be shown here.</p>
         </TabsContent>
       </Tabs>
+
+      {isGroupAdmin && (
+        <JoinRequestsManager
+          type="kitty"
+          gameOrGroupId={groupId}
+          adminId={group.memberIds && group.memberIds.length > 0 ? group.memberIds[0] : ''}
+        />
+      )}
     </div>
   );
 }
