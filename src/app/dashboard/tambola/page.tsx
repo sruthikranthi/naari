@@ -847,9 +847,9 @@ export default function TambolaPage() {
             <CardContent className="grid grid-cols-2 gap-4">
               <Button 
                 onClick={handleStartGame} 
-                disabled={gameStatus === 'running' || !!currentGame || isSetupDialogOpen || !!pendingGameData}
+                disabled={gameStatus === 'running' || isSetupDialogOpen || !!pendingGameData}
               >
-                Pay ₹1 & Start Game
+                Pay ₹1 & Start New Game
               </Button>
               <Button onClick={handleNextNumber} disabled={gameStatus !== 'running' || !isGameAdmin}>Next Number</Button>
               <Button variant="outline" disabled={gameStatus !== 'running'}>Pause Game</Button>
