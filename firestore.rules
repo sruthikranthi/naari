@@ -159,6 +159,11 @@ service cloud.firestore {
       );
 
       // --- FIXED LIST RULE ---
+      // Allow list queries with where clauses:
+      // 1. Player listing their games (playerIds array-contains)
+      // 2. Admin listing their games (adminId ==)
+      // 3. Games with orderId (discoverable paid games) - check per document
+      // 4. Super Admin sees all
       allow list: if isSignedIn() && (
         // Player listing their games
         (
@@ -175,6 +180,9 @@ service cloud.firestore {
           request.query.where[0].op == '==' &&
           request.query.where[0].value == request.auth.uid
         )
+        ||
+        // Games with orderId (discoverable) - evaluated per document
+        ('orderId' in resource.data && resource.data.orderId != null && resource.data.orderId != '')
         ||
         // Super Admin sees all
         isSuperAdmin()
