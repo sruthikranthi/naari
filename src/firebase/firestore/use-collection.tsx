@@ -79,11 +79,30 @@ export function useCollection<T = any>(
       const collectionRef = memoizedTargetRefOrQuery as CollectionReference;
       const path = collectionRef.path;
       if (path === 'tambola_games' || path === 'kitty_groups') {
-        console.error(`SECURITY: Blind list query detected for ${path}. This collection requires a where clause.`);
+        console.error(`🚨 SECURITY ERROR: Blind list query detected for ${path}. This collection requires a where clause.`);
+        console.error('Stack trace:', new Error().stack);
         setError(new Error(`Security: ${path} requires a where clause in the query`));
         setData(null);
         setIsLoading(false);
         return;
+      }
+    }
+    
+    // Also check if query has where clauses for tambola_games and kitty_groups
+    if (memoizedTargetRefOrQuery.type === 'query') {
+      const queryRef = memoizedTargetRefOrQuery as unknown as InternalQuery;
+      const path = queryRef._query.path.canonicalString();
+      if (path === 'tambola_games' || path === 'kitty_groups') {
+        // Check if query has where clauses
+        const whereClauses = (queryRef._query as any).explicitOrderBy || (queryRef._query as any).filters || [];
+        if (!whereClauses || whereClauses.length === 0) {
+          console.error(`🚨 SECURITY ERROR: Query for ${path} has no where clauses. This collection requires a where clause.`);
+          console.error('Stack trace:', new Error().stack);
+          setError(new Error(`Security: ${path} requires a where clause in the query`));
+          setData(null);
+          setIsLoading(false);
+          return;
+        }
       }
     }
 
