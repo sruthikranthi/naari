@@ -154,6 +154,9 @@ service cloud.firestore {
     // -------------------------------------------------------------------------
     // 🔥 TAMBOLA GAMES (FIXED LIST RULE)
     // -------------------------------------------------------------------------
+    // ----------------------------------------------------
+    // TAMBOLA GAMES
+    // ----------------------------------------------------
     match /tambola_games/{gameId} {
       // ---------------------------
       // LIST FIX — VERY IMPORTANT
@@ -173,7 +176,7 @@ service cloud.firestore {
       // READ GAME
       // ---------------------------
       allow get: if isSignedIn() && (
-        // host/admin
+        // host/admin (using adminId to match our codebase)
         request.auth.uid == resource.data.adminId ||
         // player
         (resource.data.playerIds != null &&
