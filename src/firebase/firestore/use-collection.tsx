@@ -97,12 +97,28 @@ export function useCollection<T = any>(
         // Firestore queries store filters in _query.structuredQuery.where
         const queryObj = queryRef._query as any;
         const structuredQuery = queryObj.structuredQuery;
-        const hasWhereClause = structuredQuery && structuredQuery.where && 
-          (structuredQuery.where.fieldFilter || structuredQuery.where.compositeFilter);
         
-        if (!hasWhereClause) {
+        // Check for where clauses in various possible locations
+        const hasWhereClause = structuredQuery && structuredQuery.where && 
+          (structuredQuery.where.fieldFilter || 
+           structuredQuery.where.compositeFilter ||
+           (structuredQuery.where.fields && structuredQuery.where.fields.length > 0));
+        
+        // Also check if there are any filters in the query
+        const hasFilters = queryObj._filters && queryObj._filters.length > 0;
+        
+        if (!hasWhereClause && !hasFilters) {
           console.error(`🚨 SECURITY ERROR: Query for ${path} has no where clauses. This collection requires a where clause.`);
-          console.error('Query object:', queryObj);
+          console.error('Query object structure:', {
+            hasStructuredQuery: !!structuredQuery,
+            hasWhere: !!(structuredQuery && structuredQuery.where),
+            hasFieldFilter: !!(structuredQuery && structuredQuery.where && structuredQuery.where.fieldFilter),
+            hasCompositeFilter: !!(structuredQuery && structuredQuery.where && structuredQuery.where.compositeFilter),
+            hasFilters: hasFilters,
+            queryType: queryObj.type,
+            path: path
+          });
+          console.error('Full query object:', JSON.stringify(queryObj, null, 2));
           console.error('Stack trace:', new Error().stack);
           setError(new Error(`Security: ${path} requires a where clause in the query`));
           setData(null);
