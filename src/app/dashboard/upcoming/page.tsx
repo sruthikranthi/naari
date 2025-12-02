@@ -112,9 +112,9 @@ export default function UpcomingPage() {
     try {
       // Check if user is already a player
       const gameRef = doc(firestore, 'tambola_games', gameId);
-      const gameSnap = await getDocs(query(collection(firestore, 'tambola_games'), where('__name__', '==', gameId)));
-      if (!gameSnap.empty) {
-        const gameData = gameSnap.docs[0].data();
+      const gameSnap = await getDoc(gameRef);
+      if (gameSnap.exists()) {
+        const gameData = gameSnap.data();
         if (gameData.playerIds?.includes(user.uid)) {
           toast({
             title: 'Already a Player',
