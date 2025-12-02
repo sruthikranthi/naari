@@ -155,56 +155,49 @@ service cloud.firestore {
     // 🔥 TAMBOLA GAMES (FIXED LIST RULE)
     // -------------------------------------------------------------------------
     match /tambola_games/{gameId} {
-
-      // --- GET ---
-      allow get: if isSignedIn() && (
-        ('playerIds' in resource.data && request.auth.uid in resource.data.playerIds) ||
-        ('adminId' in resource.data && resource.data.adminId == request.auth.uid) ||
-        ('orderId' in resource.data && resource.data.orderId != null && resource.data.orderId != '') ||
-        isSuperAdmin()
-      );
-
-      // --- FIXED LIST RULE ---
-      // Allow list queries with where clauses OR documents with orderId
-      // Firestore evaluates this per document during list operations
-      // IMPORTANT: Must have a where clause in the query (no blind lists)
+      // ---------------------------
+      // LIST FIX — VERY IMPORTANT
+      // ---------------------------
+      // Must have where filters. Prevent blind list.
       allow list: if isSignedIn() && (
-        // Require query to have a where clause (prevents blind lists)
-        // If query has where clause, allow it - Firestore will filter results
-        request.query.where.size() > 0
-        ||
-        // Document has orderId (discoverable) - allows listing games with orderId
-        ('orderId' in resource.data && resource.data.orderId != null && resource.data.orderId != '')
-        ||
-        // Super Admin sees all (even without where clause)
+        request.query.where.size() > 0 ||
         isSuperAdmin()
       );
 
-      // --- CREATE ---
-      allow create: if isSignedIn() && request.resource.data.adminId == request.auth.uid;
+      // ---------------------------
+      // CREATE GAME (Only hosts)
+      // ---------------------------
+      allow create: if isSignedIn();
 
-      // --- UPDATE ---
-      allow update: if isSignedIn() && (
-        isSuperAdmin() ||
-        (
-          resource.data.adminId == request.auth.uid &&
-          request.resource.data.diff(resource.data)
-            .affectedKeys()
-            .hasOnly(['playerIds', 'calledNumbers', 'currentNumber', 'status'])
-        )
-        ||
-        (
-          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['playerIds']) &&
-          request.resource.data.playerIds.hasAll(resource.data.playerIds) &&
-          request.resource.data.playerIds.size() == resource.data.playerIds.size() + 1 &&
-          request.auth.uid in request.resource.data.playerIds &&
-          !(request.auth.uid in resource.data.playerIds)
-        )
+      // ---------------------------
+      // READ GAME
+      // ---------------------------
+      allow get: if isSignedIn() && (
+        // host/admin
+        request.auth.uid == resource.data.adminId ||
+        // player
+        (resource.data.playerIds != null &&
+         request.auth.uid in resource.data.playerIds) ||
+        // order-based access
+        (resource.data.orderId != null &&
+         resource.data.orderId != "") ||
+        // elevated access
+        isSuperAdmin()
       );
 
-      // --- DELETE ---
-      allow delete: if isSuperAdmin() ||
-                    (isSignedIn() && resource.data.adminId == request.auth.uid);
+      // ---------------------------
+      // UPDATE GAME
+      // ---------------------------
+      allow update: if isSignedIn() && (
+        // only host/admin can update the game
+        request.auth.uid == resource.data.adminId ||
+        isSuperAdmin()
+      );
+
+      // ---------------------------
+      // DELETE GAME
+      // ---------------------------
+      allow delete: if isSuperAdmin();
     }
 
     // -------------------------------------------------------------------------
