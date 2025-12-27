@@ -76,6 +76,7 @@ import { collection, doc, setDoc, updateDoc, deleteDoc, serverTimestamp, arrayUn
 import type { ProfessionalApplication } from '@/lib/applications';
 import { FantasyAdminTab } from './fantasy-admin-tab';
 import { AdsAdminTab } from './ads-admin-tab';
+import { RewardsAdminTab } from './rewards-admin-tab';
 
 type UserWithRole = User & { role: 'User' | 'Professional' | 'Creator'; status: 'Active' | 'Inactive' | 'Pending' };
 
@@ -518,7 +519,7 @@ export default function AdminPanelPage() {
       />
 
       <Tabs defaultValue="dashboard">
-        <TabsList className="grid w-full grid-cols-8">
+        <TabsList className="grid w-full grid-cols-9">
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
           <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="applications">Applications</TabsTrigger>
@@ -527,6 +528,7 @@ export default function AdminPanelPage() {
           <TabsTrigger value="contests">Contests</TabsTrigger>
           <TabsTrigger value="fantasy">Fantasy Zone</TabsTrigger>
           <TabsTrigger value="ads">Ads & Sponsors</TabsTrigger>
+          <TabsTrigger value="rewards">Rewards & Coins</TabsTrigger>
         </TabsList>
         
         <TabsContent value="dashboard" className="mt-6">
@@ -883,6 +885,9 @@ export default function AdminPanelPage() {
         </TabsContent>
         <TabsContent value="ads" className="mt-6">
           <AdsAdminTab firestore={firestore} user={user} toast={toast} />
+        </TabsContent>
+        <TabsContent value="rewards" className="mt-6">
+          <RewardsAdminTab firestore={firestore} user={user} toast={toast} />
         </TabsContent>
       </Tabs>
       

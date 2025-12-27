@@ -12,6 +12,7 @@ import {
   getDocs,
   addDoc,
   updateDoc,
+  deleteDoc,
   query,
   where,
   orderBy,
@@ -70,6 +71,39 @@ export async function getActiveCampaigns(
       
       return now >= startDate && now <= endDate;
     });
+}
+
+export async function getAllCampaigns(
+  firestore: Firestore
+): Promise<AdCampaign[]> {
+  const snapshot = await getDocs(
+    query(
+      collection(firestore, 'ad_campaigns'),
+      orderBy('createdAt', 'desc')
+    )
+  );
+  return snapshot.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data(),
+  })) as AdCampaign[];
+}
+
+export async function updateAdCampaign(
+  firestore: Firestore,
+  campaignId: string,
+  updates: Partial<AdCampaign>
+): Promise<void> {
+  await updateDoc(doc(firestore, 'ad_campaigns', campaignId), {
+    ...updates,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function deleteAdCampaign(
+  firestore: Firestore,
+  campaignId: string
+): Promise<void> {
+  await deleteDoc(doc(firestore, 'ad_campaigns', campaignId));
 }
 
 export async function getAdCreatives(
@@ -161,6 +195,55 @@ export async function getActiveSponsors(
     });
   
   return sponsors;
+}
+
+export async function updateSponsor(
+  firestore: Firestore,
+  sponsorId: string,
+  updates: Partial<Sponsor>
+): Promise<void> {
+  await updateDoc(doc(firestore, 'sponsors', sponsorId), {
+    ...updates,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function deleteSponsor(
+  firestore: Firestore,
+  sponsorId: string
+): Promise<void> {
+  await deleteDoc(doc(firestore, 'sponsors', sponsorId));
+}
+
+export async function createAdCreative(
+  firestore: Firestore,
+  creative: Omit<AdCreative, 'id' | 'createdAt' | 'updatedAt'>
+): Promise<string> {
+  const creativeData = {
+    ...creative,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  };
+  const docRef = await addDoc(collection(firestore, 'ad_creatives'), creativeData);
+  return docRef.id;
+}
+
+export async function updateAdCreative(
+  firestore: Firestore,
+  creativeId: string,
+  updates: Partial<AdCreative>
+): Promise<void> {
+  await updateDoc(doc(firestore, 'ad_creatives', creativeId), {
+    ...updates,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function deleteAdCreative(
+  firestore: Firestore,
+  creativeId: string
+): Promise<void> {
+  await deleteDoc(doc(firestore, 'ad_creatives', creativeId));
 }
 
 // ============================================================================

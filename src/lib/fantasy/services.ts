@@ -93,6 +93,28 @@ export async function updateFantasyGame(
   });
 }
 
+export async function deleteFantasyGame(
+  firestore: Firestore,
+  gameId: string
+): Promise<void> {
+  await deleteDoc(doc(firestore, 'fantasy_games', gameId));
+}
+
+export async function getAllFantasyGames(
+  firestore: Firestore
+): Promise<FantasyGame[]> {
+  const snapshot = await getDocs(
+    query(
+      collection(firestore, 'fantasy_games'),
+      orderBy('createdAt', 'desc')
+    )
+  );
+  return snapshot.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data(),
+  })) as FantasyGame[];
+}
+
 // ============================================================================
 // FANTASY QUESTIONS
 // ============================================================================
@@ -319,6 +341,42 @@ export async function createUserBadge(
   };
   const docRef = await addDoc(collection(firestore, 'user_badges'), badgeData);
   return docRef.id;
+}
+
+export async function awardBadge(
+  firestore: Firestore,
+  userId: string,
+  badgeType: string
+): Promise<string> {
+  const { BADGE_DEFINITIONS } = await import('./constants');
+  const badgeDef = BADGE_DEFINITIONS[badgeType as keyof typeof BADGE_DEFINITIONS];
+  
+  if (!badgeDef) {
+    throw new Error(`Badge type ${badgeType} not found`);
+  }
+
+  return await createUserBadge(firestore, {
+    userId,
+    badgeType: badgeType as any,
+    badgeName: badgeDef.name,
+    badgeDescription: badgeDef.description,
+    badgeIcon: badgeDef.icon,
+  });
+}
+
+export async function updateUserWalletBalance(
+  firestore: Firestore,
+  userId: string,
+  amount: number,
+  type: CoinTransaction['type'],
+  description: string
+): Promise<void> {
+  await addCoinTransaction(firestore, {
+    userId,
+    type,
+    amount,
+    description,
+  });
 }
 
 // ============================================================================

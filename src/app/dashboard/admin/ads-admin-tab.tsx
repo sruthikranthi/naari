@@ -23,8 +23,17 @@ import {
 } from 'lucide-react';
 import {
   getActiveCampaigns,
+  getAllCampaigns,
   getActiveSponsors,
+  getAllSponsors,
   getAdStats,
+  updateAdCampaign,
+  deleteAdCampaign,
+  updateSponsor,
+  deleteSponsor,
+  createAdCreative,
+  updateAdCreative,
+  deleteAdCreative,
 } from '@/lib/ads/services';
 import {
   getRevenueSummary,
@@ -54,8 +63,15 @@ import type {
   Sponsor,
   AdCreative,
 } from '@/lib/ads/types';
-import { collection, query, where, getDocs, addDoc, updateDoc, doc, Timestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, Timestamp } from 'firebase/firestore';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -69,10 +85,18 @@ interface AdsAdminTabProps {
 export function AdsAdminTab({ firestore, user, toast }: AdsAdminTabProps) {
   const [activeTab, setActiveTab] = useState<'campaigns' | 'sponsors' | 'analytics'>('campaigns');
   const [campaigns, setCampaigns] = useState<AdCampaign[]>([]);
+  const [allCampaigns, setAllCampaigns] = useState<AdCampaign[]>([]);
   const [sponsors, setSponsors] = useState<Sponsor[]>([]);
+  const [allSponsors, setAllSponsors] = useState<Sponsor[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateCampaign, setShowCreateCampaign] = useState(false);
   const [showCreateSponsor, setShowCreateSponsor] = useState(false);
+  const [showAllCampaigns, setShowAllCampaigns] = useState(false);
+  const [showAllSponsors, setShowAllSponsors] = useState(false);
+  const [editingCampaign, setEditingCampaign] = useState<AdCampaign | null>(null);
+  const [editingSponsor, setEditingSponsor] = useState<Sponsor | null>(null);
+  const [selectedCampaignForCreative, setSelectedCampaignForCreative] = useState<string | null>(null);
+  const [showCreateCreative, setShowCreateCreative] = useState(false);
 
   useEffect(() => {
     if (firestore) {
@@ -85,12 +109,16 @@ export function AdsAdminTab({ firestore, user, toast }: AdsAdminTabProps) {
     
     setLoading(true);
     try {
-      const [campaignsData, sponsorsData] = await Promise.all([
+      const [activeCampaigns, allCampaignsData, activeSponsors, allSponsorsData] = await Promise.all([
         getActiveCampaigns(firestore),
+        getAllCampaigns(firestore),
         getActiveSponsors(firestore),
+        getAllSponsors(firestore),
       ]);
-      setCampaigns(campaignsData);
-      setSponsors(sponsorsData);
+      setCampaigns(activeCampaigns);
+      setAllCampaigns(allCampaignsData);
+      setSponsors(activeSponsors);
+      setAllSponsors(allSponsorsData);
     } catch (error) {
       console.error('Error loading ads data:', error);
       toast({
@@ -127,9 +155,10 @@ export function AdsAdminTab({ firestore, user, toast }: AdsAdminTabProps) {
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
-          <TabsList className="grid w-full grid-cols-8">
+          <TabsList className="grid w-full grid-cols-9">
             <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
             <TabsTrigger value="sponsors">Sponsors</TabsTrigger>
+            <TabsTrigger value="creatives">Creatives</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
             <TabsTrigger value="revenue">Revenue</TabsTrigger>
             <TabsTrigger value="ab-testing">A/B Testing</TabsTrigger>
@@ -141,7 +170,16 @@ export function AdsAdminTab({ firestore, user, toast }: AdsAdminTabProps) {
             {/* Campaigns Tab */}
             <TabsContent value="campaigns" className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold">Ad Campaigns</h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-semibold">Ad Campaigns</h3>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowAllCampaigns(!showAllCampaigns)}
+                  >
+                    {showAllCampaigns ? 'Show Active Only' : 'Show All'}
+                  </Button>
+                </div>
                 <Dialog open={showCreateCampaign} onOpenChange={setShowCreateCampaign}>
                   <DialogTrigger asChild>
                     <Button>
@@ -180,22 +218,61 @@ export function AdsAdminTab({ firestore, user, toast }: AdsAdminTabProps) {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {campaigns.map((campaign) => (
+                  {(showAllCampaigns ? allCampaigns : campaigns).map((campaign) => (
                     <CampaignCard
                       key={campaign.id}
                       campaign={campaign}
                       firestore={firestore}
+                      onEdit={() => setEditingCampaign(campaign)}
+                      onDelete={async () => {
+                        if (confirm('Are you sure you want to delete this campaign?')) {
+                          try {
+                            await deleteAdCampaign(firestore!, campaign.id);
+                            toast({ title: 'Success', description: 'Campaign deleted.' });
+                            loadData();
+                          } catch (error: any) {
+                            toast({
+                              variant: 'destructive',
+                              title: 'Error',
+                              description: error.message || 'Failed to delete campaign.',
+                            });
+                          }
+                        }
+                      }}
                       onUpdate={loadData}
                     />
                   ))}
                 </div>
+              )}
+
+              {/* Edit Campaign Dialog */}
+              {editingCampaign && (
+                <EditCampaignDialog
+                  campaign={editingCampaign}
+                  firestore={firestore}
+                  onClose={() => setEditingCampaign(null)}
+                  onSuccess={() => {
+                    setEditingCampaign(null);
+                    loadData();
+                  }}
+                  toast={toast}
+                />
               )}
             </TabsContent>
 
             {/* Sponsors Tab */}
             <TabsContent value="sponsors" className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold">Sponsors</h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-semibold">Sponsors</h3>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowAllSponsors(!showAllSponsors)}
+                  >
+                    {showAllSponsors ? 'Show Active Only' : 'Show All'}
+                  </Button>
+                </div>
                 <Dialog open={showCreateSponsor} onOpenChange={setShowCreateSponsor}>
                   <DialogTrigger asChild>
                     <Button>
@@ -234,15 +311,45 @@ export function AdsAdminTab({ firestore, user, toast }: AdsAdminTabProps) {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {sponsors.map((sponsor) => (
+                  {(showAllSponsors ? allSponsors : sponsors).map((sponsor) => (
                     <SponsorCard
                       key={sponsor.id}
                       sponsor={sponsor}
                       firestore={firestore}
+                      onEdit={() => setEditingSponsor(sponsor)}
+                      onDelete={async () => {
+                        if (confirm('Are you sure you want to delete this sponsor?')) {
+                          try {
+                            await deleteSponsor(firestore!, sponsor.id);
+                            toast({ title: 'Success', description: 'Sponsor deleted.' });
+                            loadData();
+                          } catch (error: any) {
+                            toast({
+                              variant: 'destructive',
+                              title: 'Error',
+                              description: error.message || 'Failed to delete sponsor.',
+                            });
+                          }
+                        }
+                      }}
                       onUpdate={loadData}
                     />
                   ))}
                 </div>
+              )}
+
+              {/* Edit Sponsor Dialog */}
+              {editingSponsor && (
+                <EditSponsorDialog
+                  sponsor={editingSponsor}
+                  firestore={firestore}
+                  onClose={() => setEditingSponsor(null)}
+                  onSuccess={() => {
+                    setEditingSponsor(null);
+                    loadData();
+                  }}
+                  toast={toast}
+                />
               )}
             </TabsContent>
 
@@ -276,10 +383,14 @@ export function AdsAdminTab({ firestore, user, toast }: AdsAdminTabProps) {
 function CampaignCard({
   campaign,
   firestore,
+  onEdit,
+  onDelete,
   onUpdate,
 }: {
   campaign: AdCampaign;
   firestore: Firestore;
+  onEdit: () => void;
+  onDelete: () => void;
   onUpdate: () => void;
 }) {
   const [creatives, setCreatives] = useState<AdCreative[]>([]);
@@ -340,6 +451,38 @@ function CampaignCard({
             <Button variant="outline" size="sm" onClick={toggleActive}>
               {campaign.active ? 'Deactivate' : 'Activate'}
             </Button>
+            <Button variant="outline" size="sm" onClick={onEdit}>
+              <Edit className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" size="sm" onClick={onDelete}>
+              <Trash2 className="h-4 w-4" />
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={onEdit}>
+                  <Edit className="mr-2 h-4 w-4" />
+                  Edit
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setSelectedCampaignForCreative(campaign.id);
+                    setShowCreateCreative(true);
+                  }}
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Creative
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={onDelete} className="text-destructive">
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </CardContent>
@@ -351,10 +494,14 @@ function CampaignCard({
 function SponsorCard({
   sponsor,
   firestore,
+  onEdit,
+  onDelete,
   onUpdate,
 }: {
   sponsor: Sponsor;
   firestore: Firestore;
+  onEdit: () => void;
+  onDelete: () => void;
   onUpdate: () => void;
 }) {
   const toggleActive = async () => {
@@ -391,6 +538,12 @@ function SponsorCard({
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={toggleActive}>
               {sponsor.active ? 'Deactivate' : 'Activate'}
+            </Button>
+            <Button variant="outline" size="sm" onClick={onEdit}>
+              <Edit className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" size="sm" onClick={onDelete}>
+              <Trash2 className="h-4 w-4" />
             </Button>
           </div>
         </div>
