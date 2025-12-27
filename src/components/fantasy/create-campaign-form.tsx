@@ -157,6 +157,17 @@ export function CreateCampaignForm({ firestore, userId, onSuccess, onCancel, toa
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Check if user is super admin
+    const SUPER_ADMIN_ID = 'ebixEzJ8UuYjIYTXrkOObW1obSw1';
+    if (userId !== SUPER_ADMIN_ID) {
+      toast({
+        variant: 'destructive',
+        title: 'Permission Denied',
+        description: 'Only super admins can create campaigns. Please log in as admin@naari.com',
+      });
+      return;
+    }
+    
     if (campaignForm.campaignType === 'single-game' && campaignForm.gameIds.length === 0) {
       toast({
         variant: 'destructive',
@@ -217,10 +228,19 @@ export function CreateCampaignForm({ firestore, userId, onSuccess, onCancel, toa
       onSuccess();
     } catch (error: any) {
       console.error('Error creating campaign:', error);
+      
+      // Provide more helpful error messages
+      let errorMessage = 'Failed to create campaign.';
+      if (error.code === 'permission-denied' || error.message?.includes('permission')) {
+        errorMessage = 'Permission denied. Please ensure you are logged in as the super admin (admin@naari.com) and that Firestore rules are deployed.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: error.message || 'Failed to create campaign.',
+        description: errorMessage,
       });
     } finally {
       setLoading(false);
