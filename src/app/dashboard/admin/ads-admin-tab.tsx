@@ -116,7 +116,7 @@ export function AdsAdminTab({ firestore, user, toast }: AdsAdminTabProps) {
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
             <TabsTrigger value="sponsors">Sponsors</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
