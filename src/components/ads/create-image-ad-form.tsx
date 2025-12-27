@@ -43,7 +43,7 @@ export function CreateImageAdForm({ firestore, userId, onSuccess, onCancel, toas
 
   // Form state
   const [formData, setFormData] = useState({
-    sponsorId: '',
+    sponsorId: undefined as string | undefined,
     title: '',
     description: '',
     imageUrl: '',

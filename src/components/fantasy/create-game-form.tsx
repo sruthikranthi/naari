@@ -59,7 +59,7 @@ export function CreateGameForm({ firestore, userId, onSuccess, onCancel, toast }
     startTime: '',
     endTime: '',
     resultRevealTime: '',
-    mainSponsorId: '',
+    mainSponsorId: undefined as string | undefined,
     imageUrl: '',
   });
 
