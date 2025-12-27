@@ -526,6 +526,7 @@ export default function AdminPanelPage() {
           <TabsTrigger value="content">Content</TabsTrigger>
           <TabsTrigger value="contests">Contests</TabsTrigger>
           <TabsTrigger value="fantasy">Fantasy Zone</TabsTrigger>
+          <TabsTrigger value="ads">Ads & Sponsors</TabsTrigger>
         </TabsList>
         
         <TabsContent value="dashboard" className="mt-6">
