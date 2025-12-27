@@ -17,6 +17,7 @@ import type {
   FantasyQuestion,
   FantasyGameType,
   PredictionType,
+  FantasyCategory,
 } from './types';
 import { GAME_CONFIGURATIONS } from './engine';
 

@@ -12,6 +12,15 @@ import {
   createSampleGoldPriceGame,
   createSampleSareePriceGame,
   createSampleMakeupPriceGame,
+  createSampleKitchenBudgetGame,
+  createSampleWeddingBudgetGame,
+  createSampleFestivalExpenseGame,
+  createSampleHomeExpenseGame,
+  createSampleSareeColorTrendGame,
+  createSampleJewelryTrendGame,
+  createSampleBridalMakeupTrendGame,
+  createSampleCelebritySareeGame,
+  createSampleActressFashionGame,
 } from '@/lib/fantasy/admin-utils';
 import { getActiveFantasyGames } from '@/lib/fantasy/services';
 import type { FantasyGame } from '@/lib/fantasy/types';
@@ -196,6 +205,285 @@ export function FantasyAdminTab({ firestore, user, toast }: FantasyAdminTabProps
                       size="sm"
                     >
                       {isCreating === 'makeup' ? (
+                        <>
+                          <Loader className="mr-2 h-4 w-4 animate-spin" />
+                          Creating...
+                        </>
+                      ) : (
+                        'Create Game'
+                      )}
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+
+            {/* Lifestyle & Budget Games */}
+            <div>
+              <h3 className="text-sm font-semibold mb-3">Lifestyle & Budget Games</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <Card className="border-2 border-dashed">
+                  <CardHeader>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4" />
+                      Kitchen Budget
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      Monthly kitchen expense prediction
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Button
+                      onClick={() => handleCreateGame('kitchen')}
+                      disabled={isCreating === 'kitchen'}
+                      className="w-full"
+                      size="sm"
+                    >
+                      {isCreating === 'kitchen' ? (
+                        <>
+                          <Loader className="mr-2 h-4 w-4 animate-spin" />
+                          Creating...
+                        </>
+                      ) : (
+                        'Create Game'
+                      )}
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-2 border-dashed">
+                  <CardHeader>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Sparkles className="h-4 w-4" />
+                      Wedding Budget
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      Wedding expense prediction
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Button
+                      onClick={() => handleCreateGame('wedding')}
+                      disabled={isCreating === 'wedding'}
+                      className="w-full"
+                      size="sm"
+                    >
+                      {isCreating === 'wedding' ? (
+                        <>
+                          <Loader className="mr-2 h-4 w-4 animate-spin" />
+                          Creating...
+                        </>
+                      ) : (
+                        'Create Game'
+                      )}
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-2 border-dashed">
+                  <CardHeader>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Coins className="h-4 w-4" />
+                      Festival Expense
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      Festival expense prediction
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Button
+                      onClick={() => handleCreateGame('festival')}
+                      disabled={isCreating === 'festival'}
+                      className="w-full"
+                      size="sm"
+                    >
+                      {isCreating === 'festival' ? (
+                        <>
+                          <Loader className="mr-2 h-4 w-4 animate-spin" />
+                          Creating...
+                        </>
+                      ) : (
+                        'Create Game'
+                      )}
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-2 border-dashed">
+                  <CardHeader>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4" />
+                      Home Expense
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      Monthly home expense prediction
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Button
+                      onClick={() => handleCreateGame('home')}
+                      disabled={isCreating === 'home'}
+                      className="w-full"
+                      size="sm"
+                    >
+                      {isCreating === 'home' ? (
+                        <>
+                          <Loader className="mr-2 h-4 w-4 animate-spin" />
+                          Creating...
+                        </>
+                      ) : (
+                        'Create Game'
+                      )}
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+
+            {/* Fashion & Trend Games */}
+            <div>
+              <h3 className="text-sm font-semibold mb-3">Fashion & Trend Games</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Card className="border-2 border-dashed">
+                  <CardHeader>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Sparkles className="h-4 w-4" />
+                      Saree Color Trend
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      Predict trending saree colors
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Button
+                      onClick={() => handleCreateGame('saree-color')}
+                      disabled={isCreating === 'saree-color'}
+                      className="w-full"
+                      size="sm"
+                    >
+                      {isCreating === 'saree-color' ? (
+                        <>
+                          <Loader className="mr-2 h-4 w-4 animate-spin" />
+                          Creating...
+                        </>
+                      ) : (
+                        'Create Game'
+                      )}
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-2 border-dashed">
+                  <CardHeader>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Coins className="h-4 w-4" />
+                      Jewelry Design Trend
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      Predict trending jewelry designs
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Button
+                      onClick={() => handleCreateGame('jewelry')}
+                      disabled={isCreating === 'jewelry'}
+                      className="w-full"
+                      size="sm"
+                    >
+                      {isCreating === 'jewelry' ? (
+                        <>
+                          <Loader className="mr-2 h-4 w-4 animate-spin" />
+                          Creating...
+                        </>
+                      ) : (
+                        'Create Game'
+                      )}
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-2 border-dashed">
+                  <CardHeader>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4" />
+                      Bridal Makeup Trend
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      Predict trending bridal makeup
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Button
+                      onClick={() => handleCreateGame('bridal-makeup')}
+                      disabled={isCreating === 'bridal-makeup'}
+                      className="w-full"
+                      size="sm"
+                    >
+                      {isCreating === 'bridal-makeup' ? (
+                        <>
+                          <Loader className="mr-2 h-4 w-4 animate-spin" />
+                          Creating...
+                        </>
+                      ) : (
+                        'Create Game'
+                      )}
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+
+            {/* Celebrity & Style Games */}
+            <div>
+              <h3 className="text-sm font-semibold mb-3">Celebrity & Style Games</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card className="border-2 border-dashed">
+                  <CardHeader>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Sparkles className="h-4 w-4" />
+                      Celebrity Saree Look
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      Predict viral celebrity saree looks
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Button
+                      onClick={() => handleCreateGame('celebrity-saree')}
+                      disabled={isCreating === 'celebrity-saree'}
+                      className="w-full"
+                      size="sm"
+                    >
+                      {isCreating === 'celebrity-saree' ? (
+                        <>
+                          <Loader className="mr-2 h-4 w-4 animate-spin" />
+                          Creating...
+                        </>
+                      ) : (
+                        'Create Game'
+                      )}
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-2 border-dashed">
+                  <CardHeader>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Coins className="h-4 w-4" />
+                      Actress Fashion Trend
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      Predict trending actress fashion
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Button
+                      onClick={() => handleCreateGame('actress-fashion')}
+                      disabled={isCreating === 'actress-fashion'}
+                      className="w-full"
+                      size="sm"
+                    >
+                      {isCreating === 'actress-fashion' ? (
                         <>
                           <Loader className="mr-2 h-4 w-4 animate-spin" />
                           Creating...
