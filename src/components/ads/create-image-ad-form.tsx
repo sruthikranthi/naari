@@ -232,14 +232,14 @@ export function CreateImageAdForm({ firestore, userId, onSuccess, onCancel, toas
           <div className="space-y-2">
             <Label htmlFor="sponsorId">Sponsor *</Label>
             <Select
-              value={formData.sponsorId}
-              onValueChange={(value) => setFormData({ ...formData, sponsorId: value })}
+              value={formData.sponsorId || 'none'}
+              onValueChange={(value) => setFormData({ ...formData, sponsorId: value === 'none' ? undefined : value })}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select sponsor" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">None</SelectItem>
+                <SelectItem value="none">None</SelectItem>
                 {sponsors.map((sponsor) => (
                   <SelectItem key={sponsor.id} value={sponsor.id}>
                     {sponsor.name}

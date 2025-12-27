@@ -204,14 +204,14 @@ export function CreateCampaignForm({ firestore, userId, onSuccess, onCancel, toa
             <div className="space-y-2">
               <Label htmlFor="language">Language</Label>
               <Select
-                value={campaignForm.language}
-                onValueChange={(value) => setCampaignForm({ ...campaignForm, language: value })}
+                value={campaignForm.language || 'all'}
+                onValueChange={(value) => setCampaignForm({ ...campaignForm, language: value === 'all' ? undefined : value })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select language" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Languages</SelectItem>
+                  <SelectItem value="all">All Languages</SelectItem>
                   <SelectItem value="Hindi">Hindi</SelectItem>
                   <SelectItem value="Telugu">Telugu</SelectItem>
                   <SelectItem value="Tamil">Tamil</SelectItem>
@@ -373,14 +373,14 @@ export function CreateCampaignForm({ firestore, userId, onSuccess, onCancel, toa
               <div className="space-y-2">
                 <Label htmlFor="sponsorId">Select Sponsor (Optional)</Label>
                 <Select
-                  value={campaignForm.sponsorId}
-                  onValueChange={(value) => setCampaignForm({ ...campaignForm, sponsorId: value })}
+                  value={campaignForm.sponsorId || 'none'}
+                  onValueChange={(value) => setCampaignForm({ ...campaignForm, sponsorId: value === 'none' ? undefined : value })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select from existing sponsors" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">No Sponsor</SelectItem>
+                    <SelectItem value="none">No Sponsor</SelectItem>
                     {sponsors.map((sponsor) => (
                       <SelectItem key={sponsor.id} value={sponsor.id}>
                         {sponsor.name}

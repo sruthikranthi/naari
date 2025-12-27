@@ -354,14 +354,14 @@ export function CreateGameForm({ firestore, userId, onSuccess, onCancel, toast }
           <div className="space-y-2">
             <Label htmlFor="mainSponsor">Main Sponsor (Overall Game Sponsor)</Label>
             <Select
-              value={gameForm.mainSponsorId}
-              onValueChange={(value) => setGameForm({ ...gameForm, mainSponsorId: value })}
+              value={gameForm.mainSponsorId || 'none'}
+              onValueChange={(value) => setGameForm({ ...gameForm, mainSponsorId: value === 'none' ? undefined : value })}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select main sponsor (optional)" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">No Sponsor</SelectItem>
+                <SelectItem value="none">No Sponsor</SelectItem>
                 {sponsors.map((sponsor) => (
                   <SelectItem key={sponsor.id} value={sponsor.id}>
                     {sponsor.name}
@@ -449,14 +449,14 @@ export function CreateGameForm({ firestore, userId, onSuccess, onCancel, toast }
                   <div className="space-y-2">
                     <Label>Event Sponsor (Optional)</Label>
                     <Select
-                      value={question.eventSponsorId || ''}
-                      onValueChange={(value) => handleUpdateQuestion(index, { eventSponsorId: value || undefined })}
+                      value={question.eventSponsorId || 'none'}
+                      onValueChange={(value) => handleUpdateQuestion(index, { eventSponsorId: value === 'none' ? undefined : value })}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select event sponsor" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">No Sponsor</SelectItem>
+                        <SelectItem value="none">No Sponsor</SelectItem>
                         {sponsors.map((sponsor) => (
                           <SelectItem key={sponsor.id} value={sponsor.id}>
                             {sponsor.name}
