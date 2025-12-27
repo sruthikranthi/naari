@@ -881,13 +881,37 @@ export default function AdminPanelPage() {
         </TabsContent>
 
         <TabsContent value="fantasy" className="mt-6">
-          <FantasyAdminTab firestore={firestore} user={user} toast={toast} />
+          {firestore && user ? (
+            <FantasyAdminTab firestore={firestore} user={user} toast={toast} />
+          ) : (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <p className="text-muted-foreground">Loading...</p>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
         <TabsContent value="ads" className="mt-6">
-          <AdsAdminTab firestore={firestore} user={user} toast={toast} />
+          {firestore && user ? (
+            <AdsAdminTab firestore={firestore} user={user} toast={toast} />
+          ) : (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <p className="text-muted-foreground">Loading...</p>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
         <TabsContent value="rewards" className="mt-6">
-          <RewardsAdminTab firestore={firestore} user={user} toast={toast} />
+          {firestore && user ? (
+            <RewardsAdminTab firestore={firestore} user={user} toast={toast} />
+          ) : (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <p className="text-muted-foreground">Loading...</p>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
       </Tabs>
       

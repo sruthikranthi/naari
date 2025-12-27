@@ -77,13 +77,16 @@ export function CreateGameForm({ firestore, userId, onSuccess, onCancel, toast }
   useEffect(() => {
     const loadSponsors = async () => {
       try {
-        const allSponsors = await getAllSponsors(firestore);
+        const allSponsors = await getAllSponsors(firestore).catch(() => []);
         setSponsors(allSponsors);
       } catch (error) {
         console.error('Error loading sponsors:', error);
+        setSponsors([]);
       }
     };
-    loadSponsors();
+    if (firestore) {
+      loadSponsors();
+    }
   }, [firestore]);
 
   const handleAddQuestion = () => {
