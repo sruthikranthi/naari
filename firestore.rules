@@ -430,12 +430,13 @@ service cloud.firestore {
     match /fantasy_games/{gameId} {
       allow get: if isSignedIn();
       
-      // Require query to have filters (prevents blind lists)
+      // Super admins can list all games
+      // Regular users need filtered queries (where/orderBy/limit)
       allow list: if isSignedIn() && (
-        request.query.where.size() > 0 ||
-        request.query.orderBy.size() > 0 ||
-        request.query.limit != null ||
-        isSuperAdmin()
+        isSuperAdmin() ||
+        (request.query.where.size() > 0) ||
+        (request.query.orderBy.size() > 0) ||
+        (request.query.limit != null)
       );
       
       allow create, update, delete: if isSuperAdmin();
