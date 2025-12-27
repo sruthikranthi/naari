@@ -881,6 +881,9 @@ export default function AdminPanelPage() {
         <TabsContent value="fantasy" className="mt-6">
           <FantasyAdminTab firestore={firestore} user={user} toast={toast} />
         </TabsContent>
+        <TabsContent value="ads" className="mt-6">
+          <AdsAdminTab firestore={firestore} user={user} toast={toast} />
+        </TabsContent>
       </Tabs>
       
       {/* Contest Management Dialog */}
