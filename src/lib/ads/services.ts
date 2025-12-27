@@ -30,6 +30,9 @@ import type {
   AdDecision,
   AdPosition,
   AdCampaignType,
+  TargetingRule,
+  RotationStrategy,
+  ABTestVariant,
 } from './types';
 
 // ============================================================================
@@ -219,15 +222,26 @@ export class AdDecisionEngine {
         
         // Check frequency rules
         if (await this.checkFrequencyRule(rule, userId, userStats)) {
-          const creatives = await getAdCreatives(firestore, campaign.id);
-          if (creatives.length > 0) {
-            // Rotate: pick first for now (can enhance with rotation)
-            return {
-              show: true,
-              ad: creatives[0],
-              type: 'IMAGE',
-              placement: position,
-            };
+          // Check targeting rules
+          if (this.checkTargetingRule(rule.targeting || campaign.targeting, userProfile)) {
+            const creatives = await getAdCreatives(firestore, campaign.id);
+            if (creatives.length > 0) {
+              // Use rotation strategy
+              const selectedCreative = this.selectCreative(
+                creatives,
+                campaign.rotationStrategy || 'ROUND_ROBIN',
+                campaign.abTestEnabled || false
+              );
+              
+              if (selectedCreative) {
+                return {
+                  show: true,
+                  ad: selectedCreative,
+                  type: 'IMAGE',
+                  placement: position,
+                };
+              }
+            }
           }
         }
       }
@@ -287,6 +301,106 @@ export class AdDecisionEngine {
         
       default:
         return true;
+    }
+  }
+  
+  /**
+   * Check if targeting rules match user profile
+   */
+  private static checkTargetingRule(
+    targeting?: TargetingRule,
+    userProfile?: {
+      location?: string;
+      language?: string;
+      interests?: string[];
+      coinBalance?: number;
+      userSegment?: string;
+    }
+  ): boolean {
+    if (!targeting || !userProfile) return true; // No targeting = show to all
+    
+    // Location targeting
+    if (targeting.locations && targeting.locations.length > 0) {
+      if (!userProfile.location || !targeting.locations.includes(userProfile.location)) {
+        return false;
+      }
+    }
+    
+    // Language targeting
+    if (targeting.languages && targeting.languages.length > 0) {
+      if (!userProfile.language || !targeting.languages.includes(userProfile.language)) {
+        return false;
+      }
+    }
+    
+    // Interest targeting
+    if (targeting.interests && targeting.interests.length > 0) {
+      if (!userProfile.interests || !userProfile.interests.some(i => targeting.interests!.includes(i))) {
+        return false;
+      }
+    }
+    
+    // Coin balance targeting
+    if (targeting.minCoins !== undefined) {
+      if (!userProfile.coinBalance || userProfile.coinBalance < targeting.minCoins) {
+        return false;
+      }
+    }
+    
+    // User segment targeting
+    if (targeting.userSegments && targeting.userSegments.length > 0) {
+      if (!userProfile.userSegment || !targeting.userSegments.includes(userProfile.userSegment)) {
+        return false;
+      }
+    }
+    
+    return true;
+  }
+  
+  /**
+   * Select creative based on rotation strategy
+   */
+  private static selectCreative(
+    creatives: AdCreative[],
+    strategy: RotationStrategy,
+    abTestEnabled: boolean
+  ): AdCreative | null {
+    if (creatives.length === 0) return null;
+    if (creatives.length === 1) return creatives[0];
+    
+    // Filter active creatives
+    const activeCreatives = creatives.filter(c => c.active);
+    if (activeCreatives.length === 0) return null;
+    if (activeCreatives.length === 1) return activeCreatives[0];
+    
+    switch (strategy) {
+      case 'ROUND_ROBIN':
+        // Simple round-robin: pick based on order
+        const sorted = activeCreatives.sort((a, b) => a.order - b.order);
+        const index = Math.floor(Date.now() / 1000) % sorted.length;
+        return sorted[index];
+        
+      case 'WEIGHTED':
+        // Weighted random selection
+        const totalWeight = activeCreatives.reduce((sum, c) => sum + (c.weight || 1), 0);
+        let random = Math.random() * totalWeight;
+        for (const creative of activeCreatives) {
+          random -= (creative.weight || 1);
+          if (random <= 0) return creative;
+        }
+        return activeCreatives[0];
+        
+      case 'PERFORMANCE_BASED':
+        // Select based on CTR performance (higher CTR = more likely)
+        // For now, fallback to weighted
+        return this.selectCreative(activeCreatives, 'WEIGHTED', false);
+        
+      case 'RANDOM':
+        // Pure random selection
+        return activeCreatives[Math.floor(Math.random() * activeCreatives.length)];
+        
+      default:
+        return activeCreatives[0];
     }
   }
 }

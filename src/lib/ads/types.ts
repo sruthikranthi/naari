@@ -24,6 +24,28 @@ export type FrequencyType =
 
 export type SponsorshipType = 'OVERALL' | 'EVENT';
 
+export type TargetingRule = {
+  locations?: string[]; // e.g., ['IN', 'US', 'UK']
+  languages?: string[]; // e.g., ['en', 'hi', 'te']
+  interests?: string[]; // e.g., ['fashion', 'beauty', 'jewelry']
+  gameCategories?: string[]; // e.g., ['price-prediction', 'fashion-trend']
+  minCoins?: number; // Target users with minimum coin balance
+  userSegments?: string[]; // e.g., ['active', 'new', 'premium']
+};
+
+export type ABTestVariant = {
+  id: string;
+  creativeId: string;
+  weight: number; // 0-100, percentage of traffic
+  performance?: {
+    impressions: number;
+    clicks: number;
+    ctr: number;
+  };
+};
+
+export type RotationStrategy = 'ROUND_ROBIN' | 'WEIGHTED' | 'PERFORMANCE_BASED' | 'RANDOM';
+
 // ============================================================================
 // AD CAMPAIGN SCHEMA
 // ============================================================================
@@ -45,6 +67,13 @@ export type AdCampaign = {
   description?: string;
   targetAudience?: string;
   budget?: number; // Optional: for tracking
+  
+  // Advanced Features
+  targeting?: TargetingRule;
+  rotationStrategy?: RotationStrategy;
+  abTestEnabled?: boolean;
+  revenuePerClick?: number; // Revenue in INR per click
+  revenuePerImpression?: number; // Revenue in INR per impression
 };
 
 // ============================================================================
@@ -64,6 +93,10 @@ export type AdCreative = {
   active: boolean;
   createdAt: Timestamp | FieldValue;
   updatedAt: Timestamp | FieldValue;
+  
+  // A/B Testing
+  abTestVariant?: string; // Variant ID for A/B testing
+  weight?: number; // Weight for rotation (0-100)
 };
 
 // ============================================================================
@@ -81,6 +114,9 @@ export type AdPlacementRule = {
   active: boolean;
   createdAt: Timestamp | FieldValue;
   updatedAt: Timestamp | FieldValue;
+  
+  // Advanced Targeting
+  targeting?: TargetingRule;
 };
 
 // ============================================================================

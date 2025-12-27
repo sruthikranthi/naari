@@ -19,12 +19,25 @@ import {
   Trash2,
   Eye,
   MousePointerClick,
+  IndianRupee,
 } from 'lucide-react';
 import {
   getActiveCampaigns,
   getActiveSponsors,
   getAdStats,
 } from '@/lib/ads/services';
+import {
+  getRevenueSummary,
+  calculateCampaignRevenue,
+} from '@/lib/ads/revenue';
+import {
+  getABTestResults,
+  markWinningVariant,
+} from '@/lib/ads/ab-testing';
+import {
+  checkCampaignPerformance,
+  sendPerformanceReport,
+} from '@/lib/ads/notifications';
 import type {
   AdCampaign,
   Sponsor,
@@ -103,11 +116,14 @@ export function AdsAdminTab({ firestore, user, toast }: AdsAdminTabProps) {
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
-              <TabsTrigger value="sponsors">Sponsors</TabsTrigger>
-              <TabsTrigger value="analytics">Analytics</TabsTrigger>
-            </TabsList>
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
+            <TabsTrigger value="sponsors">Sponsors</TabsTrigger>
+            <TabsTrigger value="analytics">Analytics</TabsTrigger>
+            <TabsTrigger value="revenue">Revenue</TabsTrigger>
+            <TabsTrigger value="ab-testing">A/B Testing</TabsTrigger>
+            <TabsTrigger value="notifications">Notifications</TabsTrigger>
+          </TabsList>
 
             {/* Campaigns Tab */}
             <TabsContent value="campaigns" className="space-y-4">
@@ -220,6 +236,21 @@ export function AdsAdminTab({ firestore, user, toast }: AdsAdminTabProps) {
             {/* Analytics Tab */}
             <TabsContent value="analytics" className="space-y-4">
               <AnalyticsDashboard firestore={firestore} />
+            </TabsContent>
+            
+            {/* Revenue Tab */}
+            <TabsContent value="revenue" className="space-y-4">
+              <RevenueDashboard firestore={firestore} />
+            </TabsContent>
+            
+            {/* A/B Testing Tab */}
+            <TabsContent value="ab-testing" className="space-y-4">
+              <ABTestingDashboard firestore={firestore} toast={toast} />
+            </TabsContent>
+            
+            {/* Notifications Tab */}
+            <TabsContent value="notifications" className="space-y-4">
+              <NotificationsDashboard firestore={firestore} user={user} toast={toast} />
             </TabsContent>
           </Tabs>
         </CardContent>
