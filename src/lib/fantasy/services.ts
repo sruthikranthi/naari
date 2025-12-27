@@ -148,8 +148,36 @@ export async function createFantasyQuestion(
   firestore: Firestore,
   question: Omit<FantasyQuestion, 'id' | 'createdAt' | 'updatedAt'>
 ): Promise<string> {
+  // Filter out undefined values (Firestore doesn't allow undefined)
+  // Clean arrays to remove undefined/null elements
+  const cleanedQuestion: any = {};
+  
+  for (const [key, value] of Object.entries(question)) {
+    if (value === undefined) {
+      // Skip undefined values entirely
+      continue;
+    }
+    
+    if (Array.isArray(value)) {
+      // Filter out undefined/null/empty string elements from arrays
+      const cleanedArray = value.filter(item => item !== undefined && item !== null && item !== '');
+      // Include array if it has elements (empty arrays are valid in Firestore, but we skip for options)
+      if (key === 'options') {
+        // For options, only include if it has valid elements
+        if (cleanedArray.length > 0) {
+          cleanedQuestion[key] = cleanedArray;
+        }
+      } else {
+        // For other arrays, include even if empty
+        cleanedQuestion[key] = cleanedArray;
+      }
+    } else {
+      cleanedQuestion[key] = value;
+    }
+  }
+  
   const questionData = {
-    ...question,
+    ...cleanedQuestion,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   };

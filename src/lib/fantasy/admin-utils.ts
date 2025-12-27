@@ -98,18 +98,25 @@ export async function createGameQuestion(
 ): Promise<string> {
   const gameConfig = await getGameConfigForQuestion(firestore, gameId);
   
+  // Build question data, only including defined fields
+  // For options, ensure it's a valid array (filter out undefined elements)
+  const options = question.options 
+    ? question.options.filter(opt => opt !== undefined && opt !== null && opt !== '')
+    : undefined;
+  
   const questionData: Omit<FantasyQuestion, 'id' | 'createdAt' | 'updatedAt'> = {
     gameId,
     question: question.question,
     predictionType: question.predictionType,
-    options: question.options,
-    minValue: question.minValue,
-    maxValue: question.maxValue,
-    unit: question.unit,
     exactMatchPoints: question.exactMatchPoints || gameConfig.defaultExactMatchPoints,
     nearRangePoints: question.nearRangePoints ?? gameConfig.defaultNearRangePoints,
     nearRangeTolerance: question.nearRangeTolerance ?? gameConfig.defaultNearRangeTolerance,
     order: question.order,
+    // Only include optional fields if they're defined
+    ...(options !== undefined && options.length > 0 && { options }),
+    ...(question.minValue !== undefined && { minValue: question.minValue }),
+    ...(question.maxValue !== undefined && { maxValue: question.maxValue }),
+    ...(question.unit !== undefined && question.unit !== '' && { unit: question.unit }),
   };
 
   return await createFantasyQuestion(firestore, questionData);
