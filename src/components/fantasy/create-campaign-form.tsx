@@ -63,16 +63,21 @@ export function CreateCampaignForm({ firestore, userId, onSuccess, onCancel, toa
     const loadData = async () => {
       try {
         const [allGames, allSponsors] = await Promise.all([
-          getAllFantasyGames(firestore),
-          getAllSponsors(firestore),
+          getAllFantasyGames(firestore).catch(() => []),
+          getAllSponsors(firestore).catch(() => []),
         ]);
         setGames(allGames);
         setSponsors(allSponsors);
       } catch (error) {
         console.error('Error loading data:', error);
+        // Set empty arrays on error to prevent crashes
+        setGames([]);
+        setSponsors([]);
       }
     };
-    loadData();
+    if (firestore) {
+      loadData();
+    }
   }, [firestore]);
 
   const handleAddPrizeTier = () => {

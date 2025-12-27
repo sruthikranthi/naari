@@ -59,32 +59,52 @@ export async function getFantasyCampaign(
 export async function getAllFantasyCampaigns(
   firestore: Firestore
 ): Promise<FantasyCampaign[]> {
-  const snapshot = await getDocs(
-    query(
-      collection(firestore, 'fantasy_campaigns'),
-      orderBy('createdAt', 'desc')
-    )
-  );
-  return snapshot.docs.map((doc) => ({
-    id: doc.id,
-    ...doc.data(),
-  })) as FantasyCampaign[];
+  try {
+    const snapshot = await getDocs(
+      query(
+        collection(firestore, 'fantasy_campaigns'),
+        orderBy('createdAt', 'desc')
+      )
+    );
+    return snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    })) as FantasyCampaign[];
+  } catch (error: any) {
+    // If collection doesn't exist or query fails, return empty array
+    console.error('Error loading fantasy campaigns:', error);
+    // Check if it's a missing index error
+    if (error?.code === 'failed-precondition') {
+      console.warn('Firestore index may be missing for fantasy_campaigns. Please create the index.');
+    }
+    return [];
+  }
 }
 
 export async function getActiveFantasyCampaigns(
   firestore: Firestore
 ): Promise<FantasyCampaign[]> {
-  const snapshot = await getDocs(
-    query(
-      collection(firestore, 'fantasy_campaigns'),
-      where('status', 'in', ['upcoming', 'active']),
-      orderBy('startDate', 'desc')
-    )
-  );
-  return snapshot.docs.map((doc) => ({
-    id: doc.id,
-    ...doc.data(),
-  })) as FantasyCampaign[];
+  try {
+    const snapshot = await getDocs(
+      query(
+        collection(firestore, 'fantasy_campaigns'),
+        where('status', 'in', ['upcoming', 'active']),
+        orderBy('startDate', 'desc')
+      )
+    );
+    return snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    })) as FantasyCampaign[];
+  } catch (error: any) {
+    // If collection doesn't exist or query fails, return empty array
+    console.error('Error loading active fantasy campaigns:', error);
+    // Check if it's a missing index error
+    if (error?.code === 'failed-precondition') {
+      console.warn('Firestore index may be missing for fantasy_campaigns. Please create the index.');
+    }
+    return [];
+  }
 }
 
 export async function updateFantasyCampaign(

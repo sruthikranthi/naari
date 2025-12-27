@@ -67,18 +67,24 @@ export function CreateImageAdForm({ firestore, userId, onSuccess, onCancel, toas
     const loadData = async () => {
       try {
         const [allSponsors, allGames, allCampaigns] = await Promise.all([
-          getAllSponsors(firestore),
-          getAllFantasyGames(firestore),
-          getAllFantasyCampaigns(firestore),
+          getAllSponsors(firestore).catch(() => []),
+          getAllFantasyGames(firestore).catch(() => []),
+          getAllFantasyCampaigns(firestore).catch(() => []),
         ]);
         setSponsors(allSponsors);
         setGames(allGames);
         setCampaigns(allCampaigns);
       } catch (error) {
         console.error('Error loading data:', error);
+        // Set empty arrays on error to prevent crashes
+        setSponsors([]);
+        setGames([]);
+        setCampaigns([]);
       }
     };
-    loadData();
+    if (firestore) {
+      loadData();
+    }
   }, [firestore]);
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
