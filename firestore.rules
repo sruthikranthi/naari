@@ -542,6 +542,12 @@ service cloud.firestore {
       allow get, list: if isSignedIn();
       allow create, update, delete: if isSuperAdmin();
     }
+    
+    // Fantasy Campaigns
+    match /fantasy_campaigns/{campaignId} {
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isSuperAdmin();
+    }
 
     // -------------------------------------------------------------------------
     // AD & SPONSORSHIP SYSTEM

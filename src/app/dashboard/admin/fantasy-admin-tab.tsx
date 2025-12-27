@@ -45,6 +45,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Timestamp } from 'firebase/firestore';
 import { CreateGameForm } from '@/components/fantasy/create-game-form';
+import { CreateCampaignForm } from '@/components/fantasy/create-campaign-form';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface FantasyAdminTabProps {
@@ -62,6 +63,7 @@ export function FantasyAdminTab({ firestore, user, toast }: FantasyAdminTabProps
   const [editingGame, setEditingGame] = useState<FantasyGame | null>(null);
   const [deletingGame, setDeletingGame] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showCreateCampaign, setShowCreateCampaign] = useState(false);
 
   const loadGames = async () => {
     if (!firestore) return;
@@ -207,15 +209,21 @@ export function FantasyAdminTab({ firestore, user, toast }: FantasyAdminTabProps
           <div className="space-y-4">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="text-lg font-semibold">Create New Game</h3>
+                <h3 className="text-lg font-semibold">Create New Game or Campaign</h3>
                 <p className="text-sm text-muted-foreground">
                   Create comprehensive games with 10-18 events, sponsors, and image-based questions
                 </p>
               </div>
-              <Button onClick={() => setShowCreateForm(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                Create Custom Game
-              </Button>
+              <div className="flex gap-2">
+                <Button onClick={() => setShowCreateCampaign(true)} variant="outline">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create Campaign
+                </Button>
+                <Button onClick={() => setShowCreateForm(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create Custom Game
+                </Button>
+              </div>
             </div>
 
             <div>
@@ -644,6 +652,32 @@ export function FantasyAdminTab({ firestore, user, toast }: FantasyAdminTabProps
           )}
         </CardContent>
       </Card>
+
+      {/* Create Campaign Dialog */}
+      <Dialog open={showCreateCampaign} onOpenChange={setShowCreateCampaign}>
+        <DialogContent className="max-w-5xl max-h-[95vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>Create Fantasy Campaign</DialogTitle>
+            <DialogDescription>
+              Create a campaign with prizes, sponsors, and entry fees (similar to movie fantasy campaigns)
+            </DialogDescription>
+          </DialogHeader>
+          <div className="overflow-y-auto max-h-[calc(95vh-120px)]">
+            {firestore && user && (
+              <CreateCampaignForm
+                firestore={firestore}
+                userId={user.uid}
+                onSuccess={async () => {
+                  setShowCreateCampaign(false);
+                  await loadGames();
+                }}
+                onCancel={() => setShowCreateCampaign(false)}
+                toast={toast}
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Create Game Dialog */}
       <Dialog open={showCreateForm} onOpenChange={setShowCreateForm}>
