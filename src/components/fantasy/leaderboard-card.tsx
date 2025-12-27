@@ -46,6 +46,7 @@ export function LeaderboardCard({ entries, period, title }: LeaderboardCardProps
                   <div className="flex items-center gap-2 flex-1 min-w-0">
                     <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold overflow-hidden">
                       {entry.userAvatar ? (
+                        // eslint-disable-next-line @next/next/no-img-element
                         <img src={entry.userAvatar} alt={entry.userName} className="h-full w-full object-cover" />
                       ) : (
                         entry.userName.charAt(0).toUpperCase()

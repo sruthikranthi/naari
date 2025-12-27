@@ -121,7 +121,7 @@ export function FantasyAdminTab({ firestore, user, toast }: FantasyAdminTabProps
     );
   }
 
-  const handleCreateGame = async (gameType: 'gold' | 'saree' | 'makeup') => {
+  const handleCreateGame = async (gameType: string) => {
     if (!firestore || !user) return;
 
     setIsCreating(gameType);
@@ -138,11 +138,40 @@ export function FantasyAdminTab({ firestore, user, toast }: FantasyAdminTabProps
         case 'makeup':
           gameId = await createSampleMakeupPriceGame(firestore, user.uid);
           break;
+        case 'kitchen':
+          gameId = await createSampleKitchenBudgetGame(firestore, user.uid);
+          break;
+        case 'wedding':
+          gameId = await createSampleWeddingBudgetGame(firestore, user.uid);
+          break;
+        case 'festival':
+          gameId = await createSampleFestivalExpenseGame(firestore, user.uid);
+          break;
+        case 'home':
+          gameId = await createSampleHomeExpenseGame(firestore, user.uid);
+          break;
+        case 'saree-color':
+          gameId = await createSampleSareeColorTrendGame(firestore, user.uid);
+          break;
+        case 'jewelry':
+          gameId = await createSampleJewelryTrendGame(firestore, user.uid);
+          break;
+        case 'bridal-makeup':
+          gameId = await createSampleBridalMakeupTrendGame(firestore, user.uid);
+          break;
+        case 'celebrity-saree':
+          gameId = await createSampleCelebritySareeGame(firestore, user.uid);
+          break;
+        case 'actress-fashion':
+          gameId = await createSampleActressFashionGame(firestore, user.uid);
+          break;
+        default:
+          throw new Error(`Unknown game type: ${gameType}`);
       }
 
       toast({
         title: 'Game Created!',
-        description: `Successfully created ${gameType} price prediction game.`,
+        description: `Successfully created ${gameType} game.`,
       });
 
       // Reload games
@@ -661,7 +690,7 @@ function GameCard({
     
     try {
       await updateFantasyGame(firestore, game.id, {
-        status: game.status === 'active' ? 'completed' : 'active',
+        status: (game.status === 'active' ? 'completed' : 'active') as any,
       });
       onUpdate();
     } catch (error) {

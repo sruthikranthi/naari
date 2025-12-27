@@ -41,7 +41,7 @@ export async function awardDailyLoginCoins(
       type: 'daily-login',
       amount: COIN_REWARDS.DAILY_LOGIN,
       description: `Daily login bonus - ${today}`,
-      metadata: { date: today },
+      metadata: {},
     });
 
     return {
@@ -146,7 +146,7 @@ export async function awardQuizCompleteCoins(
       type: 'quiz-complete',
       amount: COIN_REWARDS.QUIZ_COMPLETE,
       description: `Completed quiz: ${quizTitle || quizId}${score ? ` (Score: ${score}%)` : ''}`,
-      metadata: { quizId, score },
+      metadata: { quizId },
     });
 
     return {
@@ -178,7 +178,7 @@ export async function awardReferralCoins(
       type: 'referral',
       amount: COIN_REWARDS.REFERRAL,
       description: `Referral bonus - New user joined`,
-      metadata: { referredUserId },
+      metadata: { referralUserId: referredUserId },
     });
 
     // Optionally, award welcome coins to the new user
@@ -187,7 +187,7 @@ export async function awardReferralCoins(
       type: 'referral',
       amount: COIN_REWARDS.DAILY_LOGIN, // Welcome bonus same as daily login
       description: `Welcome bonus - Referred by friend`,
-      metadata: { referrerUserId },
+      metadata: { referralUserId: referrerUserId },
     });
 
     return {

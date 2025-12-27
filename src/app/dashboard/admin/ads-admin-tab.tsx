@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { Firestore } from 'firebase/firestore';
 import type { User as FirebaseUser } from 'firebase/auth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -99,13 +99,7 @@ export function AdsAdminTab({ firestore, user, toast }: AdsAdminTabProps) {
   const [selectedCampaignForCreative, setSelectedCampaignForCreative] = useState<string | null>(null);
   const [showCreateCreative, setShowCreateCreative] = useState(false);
 
-  useEffect(() => {
-    if (firestore) {
-      loadData();
-    }
-  }, [firestore]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!firestore) return;
     
     setLoading(true);
@@ -130,7 +124,13 @@ export function AdsAdminTab({ firestore, user, toast }: AdsAdminTabProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [firestore, toast]);
+
+  useEffect(() => {
+    if (firestore) {
+      loadData();
+    }
+  }, [firestore, loadData]);
 
   if (!firestore || !user) {
     return (
@@ -421,13 +421,7 @@ function CampaignCard({
   const [creatives, setCreatives] = useState<AdCreative[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (firestore) {
-      loadCreatives();
-    }
-  }, [firestore, campaign.id]);
-
-  const loadCreatives = async () => {
+  const loadCreatives = useCallback(async () => {
     try {
       const q = query(
         collection(firestore, 'ad_creatives'),
@@ -440,7 +434,13 @@ function CampaignCard({
     } finally {
       setLoading(false);
     }
-  };
+  }, [firestore, campaign.id]);
+
+  useEffect(() => {
+    if (firestore) {
+      loadCreatives();
+    }
+  }, [firestore, campaign.id, loadCreatives]);
 
   const toggleActive = async () => {
     try {
@@ -495,12 +495,12 @@ function CampaignCard({
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => {
-                    setSelectedCampaignForCreative(campaign.id);
-                    setShowCreateCreative(true);
+                    // Navigate to creatives tab - handled by parent
+                    window.location.hash = 'creatives';
                   }}
                 >
                   <Plus className="mr-2 h-4 w-4" />
-                  Add Creative
+                  Manage Creatives
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={onDelete} className="text-destructive">
                   <Trash2 className="mr-2 h-4 w-4" />
@@ -880,13 +880,7 @@ function AnalyticsDashboard({ firestore }: { firestore: Firestore | null }) {
   });
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (firestore) {
-      loadStats();
-    }
-  }, [firestore]);
-
-  const loadStats = async () => {
+  const loadStats = useCallback(async () => {
     if (!firestore) return;
     
     setLoading(true);
@@ -910,7 +904,13 @@ function AnalyticsDashboard({ firestore }: { firestore: Firestore | null }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [firestore]);
+
+  useEffect(() => {
+    if (firestore) {
+      loadStats();
+    }
+  }, [firestore, loadStats]);
 
   if (loading) {
     return (

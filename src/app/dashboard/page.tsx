@@ -9,6 +9,8 @@ import { PostCard } from '@/components/post-card';
 import { Stories } from '@/components/stories';
 import { Suggestions } from '@/components/suggestions';
 import { TrendingHashtags } from '@/components/trending-hashtags';
+import { WalletCard } from '@/components/fantasy/wallet-card';
+import { ReferralCard } from '@/components/fantasy/referral-card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AdCard, type Ad } from '@/components/ad-card';

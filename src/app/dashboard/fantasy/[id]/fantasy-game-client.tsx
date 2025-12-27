@@ -42,10 +42,15 @@ export default function FantasyGameClient({ gameId }: FantasyGameClientProps) {
   const [questions, setQuestions] = useState<FantasyQuestion[]>([]);
   const [userCoins, setUserCoins] = useState<number>(0);
   const [userPredictions, setUserPredictions] = useState<Map<string, UserPrediction>>(new Map());
+  const [results, setResults] = useState<any[]>([]);
   const [loadingQuestions, setLoadingQuestions] = useState(true);
   const [loadingWallet, setLoadingWallet] = useState(true);
   const [loadingPredictions, setLoadingPredictions] = useState(true);
+  const [loadingResults, setLoadingResults] = useState(false);
   const [submittingPrediction, setSubmittingPrediction] = useState<string | null>(null);
+  const [showPreGameAd, setShowPreGameAd] = useState(false);
+  const [showPostGameAd, setShowPostGameAd] = useState(false);
+  const [userStats, setUserStats] = useState({ predictionsCount: 0, gamesPlayed: 0 });
 
   const gameQuery = useMemoFirebase(
     () => firestore ? doc(firestore, 'fantasy_games', gameId) : null,
@@ -119,6 +124,25 @@ export default function FantasyGameClient({ gameId }: FantasyGameClientProps) {
 
     loadPredictions();
   }, [firestore, user?.uid, gameId]);
+
+  // Load results when game status is results-declared
+  useEffect(() => {
+    if (!firestore || !gameId || !game || game.status !== 'results-declared') return;
+    
+    const loadResults = async () => {
+      try {
+        setLoadingResults(true);
+        const fetchedResults = await getFantasyResults(firestore, gameId);
+        setResults(fetchedResults);
+      } catch (error) {
+        console.error('Error loading results:', error);
+      } finally {
+        setLoadingResults(false);
+      }
+    };
+
+    loadResults();
+  }, [firestore, gameId, game?.status]);
 
   // Handle prediction submission
   const handlePredictionSubmit = async (
@@ -260,13 +284,13 @@ export default function FantasyGameClient({ gameId }: FantasyGameClientProps) {
   if (!game) {
     return (
       <div className="space-y-6">
-        <PageHeader title="Game Not Found" />
+        <PageHeader title="Game Not Found" description="The fantasy game you&apos;re looking for doesn&apos;t exist or has been removed." />
         <Card>
           <CardContent className="py-12 text-center">
             <AlertCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">Game Not Found</h3>
             <p className="text-muted-foreground mb-4">
-              The fantasy game you're looking for doesn't exist or has been removed.
+              The fantasy game you&apos;re looking for doesn&apos;t exist or has been removed.
             </p>
             <Link href="/dashboard/fantasy">
               <Button variant="outline">
@@ -479,19 +503,25 @@ export default function FantasyGameClient({ gameId }: FantasyGameClientProps) {
           <CardContent>
             <div className="space-y-4">
               {/* User Score Summary */}
-              {user && (
-                <div className="p-4 bg-background rounded-lg border">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium">Your Total Points</span>
-                    <span className="text-2xl font-bold text-primary">{userTotalPoints}</span>
-                  </div>
-                  {userRank && (
-                    <div className="text-xs text-muted-foreground">
-                      Rank: #{userRank} out of {game.totalParticipants} participants
+              {user && (() => {
+                const userTotalPoints = Array.from(userPredictions.values()).reduce(
+                  (sum, pred) => sum + (pred.pointsEarned || 0),
+                  0
+                );
+                return (
+                  <div className="p-4 bg-background rounded-lg border">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium">Your Total Points</span>
+                      <span className="text-2xl font-bold text-primary">{userTotalPoints}</span>
                     </div>
-                  )}
-                </div>
-              )}
+                    {game.totalParticipants > 0 && (
+                      <div className="text-xs text-muted-foreground">
+                        {game.totalParticipants} participants
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
 
               {/* Results for each question */}
               <div className="space-y-3">
@@ -545,7 +575,7 @@ export default function FantasyGameClient({ gameId }: FantasyGameClientProps) {
       )}
 
       {/* Admin: Result Declaration */}
-      {isAdmin && game.status === 'active' && FantasyGameUtils.canRevealResults(game) && (
+      {user && game.createdBy === user.uid && game.status === 'active' && FantasyGameUtils.canRevealResults(game) && (
         <ResultDeclaration
           firestore={firestore}
           game={game}

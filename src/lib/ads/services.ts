@@ -35,7 +35,6 @@ import type {
   RotationStrategy,
   ABTestVariant,
 } from './types';
-import type { Firestore } from 'firebase/firestore';
 
 // ============================================================================
 // AD CAMPAIGN SERVICES
@@ -321,6 +320,9 @@ export class AdDecisionEngine {
         
         // Check frequency rules
         if (await this.checkFrequencyRule(rule, userId, userStats)) {
+          // Get user profile for targeting (optional - can be enhanced later)
+          const userProfile = await this.getUserProfile(firestore, userId);
+          
           // Check targeting rules
           if (this.checkTargetingRule(rule.targeting || campaign.targeting, userProfile)) {
             const creatives = await getAdCreatives(firestore, campaign.id);
@@ -404,6 +406,24 @@ export class AdDecisionEngine {
     }
   }
   
+  /**
+   * Get user profile for targeting (placeholder - can be enhanced)
+   */
+  private static async getUserProfile(
+    firestore: Firestore,
+    userId: string
+  ): Promise<{
+    location?: string;
+    language?: string;
+    interests?: string[];
+    coinBalance?: number;
+    userSegment?: string;
+  } | undefined> {
+    // TODO: Implement user profile fetching from Firestore
+    // For now, return undefined (no targeting restrictions)
+    return undefined;
+  }
+
   /**
    * Check if targeting rules match user profile
    */

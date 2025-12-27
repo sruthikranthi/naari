@@ -5,6 +5,7 @@
  */
 
 import type { Firestore } from 'firebase/firestore';
+import { Timestamp } from 'firebase/firestore';
 import {
   getFantasyResults,
   getUserPredictions,
@@ -78,7 +79,7 @@ export async function calculateGameScores(
     await updateUserPrediction(firestore, prediction.id, {
       pointsEarned: points,
       isCorrect,
-      scoredAt: new Date(),
+      scoredAt: Timestamp.now(),
     });
 
     scoredCount++;
@@ -97,7 +98,7 @@ export async function calculateGameScores(
           type: 'fantasy-win',
           amount: bonusCoins,
           description: `Bonus coins for ${isCorrect ? 'exact' : 'close'} prediction in ${game.title}`,
-          metadata: { gameId, questionId: question.id },
+          metadata: { gameId },
         });
       }
     }

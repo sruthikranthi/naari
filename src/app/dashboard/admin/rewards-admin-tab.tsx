@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { Firestore } from 'firebase/firestore';
 import type { User as FirebaseUser } from 'firebase/auth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -55,13 +55,7 @@ export function RewardsAdminTab({ firestore, user, toast }: RewardsAdminTabProps
   const [showAwardCoins, setShowAwardCoins] = useState(false);
   const [showAwardBadge, setShowAwardBadge] = useState(false);
 
-  useEffect(() => {
-    if (firestore) {
-      loadData();
-    }
-  }, [firestore]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!firestore) return;
     
     setLoading(true);
@@ -115,7 +109,13 @@ export function RewardsAdminTab({ firestore, user, toast }: RewardsAdminTabProps
     } finally {
       setLoading(false);
     }
-  };
+  }, [firestore, toast]);
+
+  useEffect(() => {
+    if (firestore) {
+      loadData();
+    }
+  }, [firestore, loadData]);
 
   if (!firestore || !user) {
     return (
