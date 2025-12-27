@@ -36,6 +36,7 @@ import {
   updateAdCreative,
   deleteAdCreative,
 } from '@/lib/ads/services';
+import { CreateImageAdForm } from '@/components/ads/create-image-ad-form';
 import {
   getRevenueSummary,
   calculateCampaignRevenue,
