@@ -1,7 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { Firestore } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { useStorage } from '@/firebase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,7 +11,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Plus, X, Loader } from 'lucide-react';
+import { Plus, X, Loader, Upload, Image as ImageIcon } from 'lucide-react';
+import Image from 'next/image';
 import { createFantasyCampaign } from '@/lib/fantasy/campaign-services';
 import { getAllFantasyGames } from '@/lib/fantasy/services';
 import { getAllSponsors } from '@/lib/ads/services';
@@ -27,7 +30,12 @@ interface CreateCampaignFormProps {
 }
 
 export function CreateCampaignForm({ firestore, userId, onSuccess, onCancel, toast }: CreateCampaignFormProps) {
+  const storage = useStorage();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState<string | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [games, setGames] = useState<FantasyGame[]>([]);
   const [sponsors, setSponsors] = useState<Sponsor[]>([]);
 
@@ -54,9 +62,53 @@ export function CreateCampaignForm({ firestore, userId, onSuccess, onCancel, toa
     totalPrizeValue: '',
     currency: 'INR' as Currency,
     notes: '',
+    imageUrl: '',
   });
 
   const [prizeTiers, setPrizeTiers] = useState<PrizeTier[]>([]);
+
+  // Handle image upload
+  const handleImageUpload = async (file: File): Promise<string | undefined> => {
+    if (!storage) return undefined;
+
+    setUploadingImage('campaign');
+    try {
+      const storageRef = ref(storage, `fantasy_campaigns/${userId}/${Date.now()}_${file.name}`);
+      await uploadBytes(storageRef, file);
+      const downloadURL = await getDownloadURL(storageRef);
+      setUploadingImage(null);
+      return downloadURL;
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      setUploadingImage(null);
+      toast({
+        variant: 'destructive',
+        title: 'Upload Failed',
+        description: 'Failed to upload image. Please try again.',
+      });
+      return undefined;
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        toast({
+          variant: 'destructive',
+          title: 'File Too Large',
+          description: 'Image file must be less than 5MB.',
+        });
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+        setImageFile(file);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   // Load games and sponsors
   useEffect(() => {
@@ -116,6 +168,18 @@ export function CreateCampaignForm({ firestore, userId, onSuccess, onCancel, toa
 
     setLoading(true);
     try {
+      // Upload image if file is selected
+      let uploadedImageUrl = campaignForm.imageUrl;
+      if (imageFile) {
+        const url = await handleImageUpload(imageFile);
+        if (url) {
+          uploadedImageUrl = url;
+        } else {
+          setLoading(false);
+          return;
+        }
+      }
+
       const campaignData: Omit<FantasyCampaign, 'id' | 'createdAt' | 'updatedAt' | 'totalParticipants' | 'totalEntries'> = {
         title: campaignForm.title,
         campaignType: campaignForm.campaignType,
@@ -140,6 +204,7 @@ export function CreateCampaignForm({ firestore, userId, onSuccess, onCancel, toa
         ...(campaignForm.totalPrizeValue && { totalPrizeValue: parseFloat(campaignForm.totalPrizeValue) }),
         ...(prizeTiers.length > 0 && { prizeTiers }),
         ...(campaignForm.notes && { notes: campaignForm.notes }),
+        ...(uploadedImageUrl && { imageUrl: uploadedImageUrl }),
       };
 
       await createFantasyCampaign(firestore, campaignData);
@@ -281,6 +346,87 @@ export function CreateCampaignForm({ firestore, userId, onSuccess, onCancel, toa
               rows={3}
               placeholder="Campaign description"
             />
+          </div>
+
+          {/* Campaign Image */}
+          <div className="space-y-2">
+            <Label>Campaign Image/Banner (Optional)</Label>
+            <div className="space-y-2">
+              {imagePreview ? (
+                <div className="relative border-2 border-dashed rounded-lg p-4">
+                  <div className="relative w-full h-48">
+                    {/* Use regular img tag for data URLs, Image component for URLs */}
+                    {imagePreview.startsWith('data:') ? (
+                      <img
+                        src={imagePreview}
+                        alt="Campaign preview"
+                        className="w-full h-full object-contain rounded-lg"
+                      />
+                    ) : (
+                      <Image
+                        src={imagePreview}
+                        alt="Campaign preview"
+                        fill
+                        className="object-contain rounded-lg"
+                        unoptimized
+                      />
+                    )}
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      className="absolute top-2 right-2"
+                      onClick={() => {
+                        setImagePreview(null);
+                        setImageFile(null);
+                        setCampaignForm({ ...campaignForm, imageUrl: '' });
+                        if (fileInputRef.current) {
+                          fileInputRef.current.value = '';
+                        }
+                      }}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div
+                  className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed rounded-lg cursor-pointer bg-muted/20 hover:bg-muted/30"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Upload className="w-8 h-8 text-muted-foreground mb-2" />
+                  <p className="text-sm text-muted-foreground">Click to upload or drag and drop</p>
+                  <p className="text-xs text-muted-foreground">PNG, JPG, WebP up to 5MB</p>
+                </div>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                className="hidden"
+                accept="image/png, image/jpeg, image/webp"
+                onChange={handleFileChange}
+              />
+              {uploadingImage && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader className="h-4 w-4 animate-spin" />
+                  Uploading image...
+                </div>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="imageUrl">Or provide Image URL (Optional if file uploaded)</Label>
+              <Input
+                id="imageUrl"
+                type="url"
+                value={campaignForm.imageUrl}
+                onChange={(e) => setCampaignForm({ ...campaignForm, imageUrl: e.target.value })}
+                placeholder="https://example.com/campaign-banner.png"
+                disabled={!!imageFile}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Recommended: 1200×400px banner image for campaign display
+            </p>
           </div>
 
           <div className="grid grid-cols-3 gap-4">

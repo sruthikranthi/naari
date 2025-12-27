@@ -41,6 +41,9 @@ export type FantasyCampaign = {
   // Description
   description?: string;
   
+  // Campaign Image/Banner
+  imageUrl?: string;      // Campaign banner/hero image
+  
   // Timing
   startDate: Timestamp | FieldValue;
   endDate?: Timestamp | FieldValue;
