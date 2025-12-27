@@ -85,9 +85,9 @@ export function RewardsAdminTab({ firestore, user, toast }: RewardsAdminTabProps
       setBadges(Array.from(badgesByUser.entries()).map(([userId, badges]) => ({ userId, badges })));
 
       // Load recent transactions
+      // Super admin can list all, so no where clause needed (handled by security rules)
       const transactionsQuery = query(
-        collection(firestore, 'coin_transactions'),
-        where('createdAt', '!=', null)
+        collection(firestore, 'coin_transactions')
       );
       const transactionsSnapshot = await getDocs(transactionsQuery);
       const transactionsData = transactionsSnapshot.docs

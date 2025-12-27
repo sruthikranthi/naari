@@ -485,8 +485,11 @@ service cloud.firestore {
       // Users can read their own wallet
       allow get: if isSignedIn() && resource.data.userId == request.auth.uid;
       
-      // Users can list their own wallet only
-      allow list: if isSignedIn() && request.query.where.size() > 0;
+      // Super admins can list all wallets, regular users need filtered queries
+      allow list: if isSignedIn() && (
+        isSuperAdmin() ||
+        request.query.where.size() > 0
+      );
       
       // System can create/update wallets (via admin or server functions)
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
@@ -503,8 +506,11 @@ service cloud.firestore {
       // Users can read their own transactions
       allow get: if isSignedIn() && resource.data.userId == request.auth.uid;
       
-      // Users can list their own transactions only
-      allow list: if isSignedIn() && request.query.where.size() > 0;
+      // Super admins can list all transactions, regular users need filtered queries
+      allow list: if isSignedIn() && (
+        isSuperAdmin() ||
+        request.query.where.size() > 0
+      );
       
       // System can create transactions (via admin or server functions)
       allow create: if isSignedIn();
@@ -518,8 +524,11 @@ service cloud.firestore {
       // Users can read their own badges
       allow get: if isSignedIn() && resource.data.userId == request.auth.uid;
       
-      // Users can list their own badges only
-      allow list: if isSignedIn() && request.query.where.size() > 0;
+      // Super admins can list all badges, regular users need filtered queries
+      allow list: if isSignedIn() && (
+        isSuperAdmin() ||
+        request.query.where.size() > 0
+      );
       
       // System can create badges (via admin or server functions)
       allow create: if isSignedIn();
