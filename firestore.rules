@@ -423,6 +423,108 @@ service cloud.firestore {
     }
 
     // -------------------------------------------------------------------------
+    // NAARI FANTASY ZONE
+    // -------------------------------------------------------------------------
+    
+    // Fantasy Games
+    match /fantasy_games/{gameId} {
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isSuperAdmin();
+    }
+    
+    // Fantasy Questions
+    match /fantasy_questions/{questionId} {
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isSuperAdmin();
+    }
+    
+    // User Predictions
+    match /user_predictions/{predictionId} {
+      // Users can create their own predictions
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      
+      // Users can read their own predictions, admins can read all
+      allow get: if isSignedIn() && (
+        resource.data.userId == request.auth.uid ||
+        isSuperAdmin()
+      );
+      
+      // Users can list their own predictions, admins can list all
+      allow list: if isSignedIn() && (
+        request.query.where.size() > 0 || // Must have where clause
+        isSuperAdmin()
+      );
+      
+      // Users can update their own predictions (before deadline), admins can update all
+      allow update: if isSignedIn() && (
+        resource.data.userId == request.auth.uid ||
+        isSuperAdmin()
+      );
+      
+      allow delete: if isSuperAdmin();
+    }
+    
+    // Fantasy Results
+    match /fantasy_results/{resultId} {
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isSuperAdmin();
+    }
+    
+    // User Wallets (Coins)
+    match /user_wallets/{walletId} {
+      // Users can read their own wallet
+      allow get: if isSignedIn() && resource.data.userId == request.auth.uid;
+      
+      // Users can list their own wallet only
+      allow list: if isSignedIn() && request.query.where.size() > 0;
+      
+      // System can create/update wallets (via admin or server functions)
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if isSignedIn() && (
+        resource.data.userId == request.auth.uid ||
+        isSuperAdmin()
+      );
+      
+      allow delete: if false; // Wallets should never be deleted
+    }
+    
+    // Coin Transactions
+    match /coin_transactions/{transactionId} {
+      // Users can read their own transactions
+      allow get: if isSignedIn() && resource.data.userId == request.auth.uid;
+      
+      // Users can list their own transactions only
+      allow list: if isSignedIn() && request.query.where.size() > 0;
+      
+      // System can create transactions (via admin or server functions)
+      allow create: if isSignedIn();
+      
+      // No updates or deletes allowed
+      allow update, delete: if false;
+    }
+    
+    // User Badges
+    match /user_badges/{badgeId} {
+      // Users can read their own badges
+      allow get: if isSignedIn() && resource.data.userId == request.auth.uid;
+      
+      // Users can list their own badges only
+      allow list: if isSignedIn() && request.query.where.size() > 0;
+      
+      // System can create badges (via admin or server functions)
+      allow create: if isSignedIn();
+      
+      // No updates or deletes allowed
+      allow update, delete: if false;
+    }
+    
+    // Leaderboards
+    match /leaderboards/{leaderboardId} {
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isSuperAdmin();
+    }
+
+    // -------------------------------------------------------------------------
     // PAYMENT WEBHOOKS
     // -------------------------------------------------------------------------
     match /payment_webhooks/{webhookId} {

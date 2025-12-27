@@ -16,6 +16,7 @@ import {
   Award,
   Crown,
   Calendar,
+  Sparkles,
 } from 'lucide-react';
 
 import {
@@ -67,6 +68,11 @@ const navItems = [
     href: '/dashboard/upcoming',
     icon: Calendar,
     label: 'Upcoming',
+  },
+  {
+    href: '/dashboard/fantasy',
+    icon: Sparkles,
+    label: 'Fantasy Zone',
   },
 ];
 
