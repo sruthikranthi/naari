@@ -16,7 +16,7 @@ import Image from 'next/image';
 import type { FantasyCampaign } from '@/lib/fantasy/campaign-types';
 import type { FantasyGame } from '@/lib/fantasy/types';
 import { getFantasyCampaign } from '@/lib/fantasy/campaign-services';
-import { getFantasyGame, getAllFantasyGames } from '@/lib/fantasy/services';
+import { getAllFantasyGames } from '@/lib/fantasy/services';
 import { SponsorBanner } from '@/components/ads/sponsor-banner';
 
 interface CampaignDetailClientProps {
@@ -41,12 +41,12 @@ export default function CampaignDetailClient({ campaignId }: CampaignDetailClien
         setCampaign(campaignData);
 
         if (campaignData?.gameIds && campaignData.gameIds.length > 0) {
-          // Load all games in the campaign
-          const gamePromises = campaignData.gameIds.map(gameId => 
-            getFantasyGame(firestore, gameId).catch(() => null)
+          // Load all games - filter to only include games in this campaign
+          const allGames = await getAllFantasyGames(firestore);
+          const campaignGames = allGames.filter(game => 
+            campaignData.gameIds.includes(game.id)
           );
-          const gameResults = await Promise.all(gamePromises);
-          setGames(gameResults.filter((g): g is FantasyGame => g !== null));
+          setGames(campaignGames);
         }
       } catch (error) {
         console.error('Error loading campaign:', error);
