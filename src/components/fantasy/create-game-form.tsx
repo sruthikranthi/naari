@@ -89,7 +89,10 @@ export function CreateGameForm({ firestore, userId, onSuccess, onCancel, toast }
     }
   }, [firestore]);
 
-  const handleAddQuestion = () => {
+  const handleAddQuestion = (e?: React.MouseEvent) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+    
     if (questions.length >= 18) {
       toast({
         variant: 'destructive',
@@ -98,15 +101,15 @@ export function CreateGameForm({ firestore, userId, onSuccess, onCancel, toast }
       });
       return;
     }
-    setQuestions([
-      ...questions,
-      {
-        order: questions.length + 1,
-        question: '',
-        predictionType: 'up-down',
-        exactMatchPoints: 100,
-      },
-    ]);
+    
+    const newQuestion: QuestionForm = {
+      order: questions.length + 1,
+      question: '',
+      predictionType: 'up-down',
+      exactMatchPoints: 100,
+    };
+    
+    setQuestions([...questions, newQuestion]);
   };
 
   const handleRemoveQuestion = (index: number) => {
