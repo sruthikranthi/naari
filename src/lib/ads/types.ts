@@ -236,7 +236,7 @@ export type AdImpression = {
 export type AdClick = {
   id: string;
   adId: string; // AdCreative ID or Sponsor ID
-  campaignId: string;
+  campaignId?: string; // Optional for standalone image ads
   userId: string;
   timestamp: Timestamp | FieldValue;
   placement: AdPosition;

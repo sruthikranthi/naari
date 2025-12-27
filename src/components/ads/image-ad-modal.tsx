@@ -88,7 +88,7 @@ export function ImageAdModal({
     try {
       await recordClick(firestore, {
         adId: ad.id,
-        campaignId: ad.campaignId,
+        ...(ad.campaignId && { campaignId: ad.campaignId }),
         userId: user.uid,
         placement: position,
         gameId,
