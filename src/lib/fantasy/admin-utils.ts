@@ -70,7 +70,8 @@ export async function createPricePredictionGame(
     entryCoins: options.entryCoins || config.defaultEntryCoins,
     tags: options.tags || [gameType, category],
     createdBy: options.createdBy,
-    imageUrl: options.imageUrl,
+    // Only include imageUrl if it's defined (Firestore doesn't allow undefined)
+    ...(options.imageUrl !== undefined && { imageUrl: options.imageUrl }),
   };
 
   return await createFantasyGame(firestore, game);
