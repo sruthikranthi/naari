@@ -388,7 +388,11 @@ export function CreateGameForm({ firestore, userId, onSuccess, onCancel, toast }
             </div>
             <Button
               type="button"
-              onClick={handleAddQuestion}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleAddQuestion(e);
+              }}
               disabled={questions.length >= 18}
               size="sm"
             >
