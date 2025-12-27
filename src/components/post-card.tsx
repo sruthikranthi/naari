@@ -21,6 +21,9 @@ import { Timestamp } from 'firebase/firestore';
 import { formatDistanceToNow } from 'date-fns';
 import { motion } from 'framer-motion';
 import { CommentsDialog } from '@/components/comments-dialog';
+import { useFirestore, useUser } from '@/firebase';
+import { awardBlogReadCoins, awardReelWatchCoins } from '@/lib/fantasy/coin-rewards';
+import { useToast } from '@/hooks/use-toast';
 
 type PostFromFirestore = Omit<Post, 'timestamp'> & {
   timestamp: Timestamp | null;
@@ -36,10 +39,14 @@ const formatTimestamp = (timestamp: Timestamp | null): string => {
 
 export function PostCard({ post }: { post: PostFromFirestore }) {
   const { toast } = useToast();
+  const firestore = useFirestore();
+  const { user } = useUser();
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(post.likes);
   const [isCommentsOpen, setIsCommentsOpen] = useState(false);
   const [commentCount, setCommentCount] = useState(post.comments);
+  const [hasAwardedRead, setHasAwardedRead] = useState(false);
+  const [hasAwardedWatch, setHasAwardedWatch] = useState(false);
 
   const authorName = post.isAnonymous ? 'Anonymous Sakhi' : post.author.name;
   const authorAvatar = post.isAnonymous
@@ -108,7 +115,30 @@ export function PostCard({ post }: { post: PostFromFirestore }) {
         </div>
       </CardHeader>
       <CardContent className="space-y-4 px-4 pb-2">
-        <p className="whitespace-pre-wrap text-sm">{post.content}</p>
+        <p 
+          className="whitespace-pre-wrap text-sm"
+          onMouseEnter={async () => {
+            // Award coins when user reads post (on hover/engagement)
+            if (firestore && user && !hasAwardedRead && post.content.length > 100) {
+              // Only award if post has substantial content (like a blog)
+              setHasAwardedRead(true);
+              const result = await awardBlogReadCoins(
+                firestore,
+                user.uid,
+                post.id,
+                post.content.substring(0, 50)
+              );
+              if (result.awarded) {
+                toast({
+                  title: 'Coins Earned!',
+                  description: `You earned ${result.coins} coins for reading this post!`,
+                });
+              }
+            }
+          }}
+        >
+          {post.content}
+        </p>
         {post.image && (
           <div className="relative aspect-video overflow-hidden rounded-lg border">
             <Image
@@ -130,6 +160,24 @@ export function PostCard({ post }: { post: PostFromFirestore }) {
               className="w-full h-full object-contain"
               preload="metadata"
               playsInline
+              onPlay={async () => {
+                // Award coins when user starts watching video
+                if (firestore && user && !hasAwardedWatch) {
+                  setHasAwardedWatch(true);
+                  const result = await awardReelWatchCoins(
+                    firestore,
+                    user.uid,
+                    post.id,
+                    post.content.substring(0, 50)
+                  );
+                  if (result.awarded) {
+                    toast({
+                      title: 'Coins Earned!',
+                      description: `You earned ${result.coins} coins for watching this video!`,
+                    });
+                  }
+                }
+              }}
             >
               <source src={post.video} type="video/mp4" />
               <source src={post.video} type="video/webm" />

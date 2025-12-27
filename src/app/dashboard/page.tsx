@@ -97,6 +97,11 @@ function PageContent() {
           <Stories />
           <CreatePost />
           
+          {/* Wallet Card - Show on mobile first, then sidebar on desktop */}
+          <div className="lg:hidden">
+            <WalletCard />
+          </div>
+          
           <Tabs defaultValue="all-posts">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="all-posts">All Posts</TabsTrigger>
@@ -148,6 +153,8 @@ function PageContent() {
 
         {/* Sidebar */}
         <div className="sticky top-20 hidden space-y-6 lg:block">
+          <WalletCard />
+          <ReferralCard />
           <Suggestions />
           <TrendingHashtags />
         </div>
