@@ -28,7 +28,7 @@ export type FantasyGameType =
   | 'celebrity-saree-look'
   | 'actress-fashion-trend';
 
-export type PredictionType = 'up-down' | 'range' | 'multiple-choice';
+export type PredictionType = 'up-down' | 'range' | 'multiple-choice' | 'image-weight' | 'image-wastage' | 'image-making-charges' | 'image-price';
 
 export type GameStatus = 'draft' | 'active' | 'closed' | 'results-declared';
 
@@ -60,6 +60,9 @@ export type FantasyGame = {
   createdAt: Timestamp | FieldValue;
   updatedAt: Timestamp | FieldValue;
   
+  // Sponsorship
+  mainSponsorId?: string; // Overall game sponsor (from sponsors collection)
+  
   // Stats
   totalParticipants: number;
   totalPredictions: number;
@@ -75,13 +78,17 @@ export type FantasyQuestion = {
   question: string;
   predictionType: PredictionType;
   
+  // Image-based questions
+  imageUrl?: string; // Image for image-based prediction questions
+  imageDescription?: string; // Description of the image (e.g., "Gold Chain Ornament")
+  
   // Options for multiple choice
   options?: string[];
   
   // Range for range predictions
   minValue?: number;
   maxValue?: number;
-  unit?: string; // e.g., "₹", "%", "kg"
+  unit?: string; // e.g., "₹", "%", "kg", "grams"
   
   // Correct answer (set by admin after result reveal)
   correctAnswer?: string | number;
@@ -92,7 +99,10 @@ export type FantasyQuestion = {
   nearRangePoints?: number; // Partial points for close predictions
   nearRangeTolerance?: number; // Percentage or absolute value
   
-  // Order in game
+  // Event sponsorship
+  eventSponsorId?: string; // Event-specific sponsor (from sponsors collection)
+  
+  // Order in game (event number)
   order: number;
   
   createdAt: Timestamp | FieldValue;

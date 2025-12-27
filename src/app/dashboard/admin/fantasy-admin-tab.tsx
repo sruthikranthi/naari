@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Sparkles, Coins, TrendingUp, Loader, Edit, Trash2, MoreVertical } from 'lucide-react';
+import { Sparkles, Coins, TrendingUp, Loader, Edit, Trash2, MoreVertical, Plus } from 'lucide-react';
 import {
   createSampleGoldPriceGame,
   createSampleSareePriceGame,
@@ -44,6 +44,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Timestamp } from 'firebase/firestore';
+import { CreateGameForm } from '@/components/fantasy/create-game-form';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface FantasyAdminTabProps {
   firestore: Firestore | null;
@@ -59,6 +61,7 @@ export function FantasyAdminTab({ firestore, user, toast }: FantasyAdminTabProps
   const [showAllGames, setShowAllGames] = useState(false);
   const [editingGame, setEditingGame] = useState<FantasyGame | null>(null);
   const [deletingGame, setDeletingGame] = useState<string | null>(null);
+  const [showCreateForm, setShowCreateForm] = useState(false);
 
   const loadGames = async () => {
     if (!firestore) return;
@@ -202,8 +205,21 @@ export function FantasyAdminTab({ firestore, user, toast }: FantasyAdminTabProps
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-semibold">Create New Game</h3>
+                <p className="text-sm text-muted-foreground">
+                  Create comprehensive games with 10-18 events, sponsors, and image-based questions
+                </p>
+              </div>
+              <Button onClick={() => setShowCreateForm(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Create Custom Game
+              </Button>
+            </div>
+
             <div>
-              <h3 className="text-sm font-semibold mb-3">Quick Create - Price Prediction Games</h3>
+              <h3 className="text-sm font-semibold mb-3">Quick Create - Sample Games</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <Card className="border-2 border-dashed">
                   <CardHeader>
@@ -628,6 +644,32 @@ export function FantasyAdminTab({ firestore, user, toast }: FantasyAdminTabProps
           )}
         </CardContent>
       </Card>
+
+      {/* Create Game Dialog */}
+      <Dialog open={showCreateForm} onOpenChange={setShowCreateForm}>
+        <DialogContent className="max-w-5xl max-h-[95vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>Create New Fantasy Game</DialogTitle>
+            <DialogDescription>
+              Create a comprehensive fantasy game with 10-18 events, sponsors, and image-based questions
+            </DialogDescription>
+          </DialogHeader>
+          <div className="overflow-y-auto max-h-[calc(95vh-120px)]">
+            {firestore && user && (
+              <CreateGameForm
+                firestore={firestore}
+                userId={user.uid}
+                onSuccess={async () => {
+                  setShowCreateForm(false);
+                  await loadGames();
+                }}
+                onCancel={() => setShowCreateForm(false)}
+                toast={toast}
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Game Dialog */}
       {editingGame && (
