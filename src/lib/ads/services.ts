@@ -197,6 +197,21 @@ export async function getActiveSponsors(
   return sponsors;
 }
 
+export async function getAllSponsors(
+  firestore: Firestore
+): Promise<Sponsor[]> {
+  const snapshot = await getDocs(
+    query(
+      collection(firestore, 'sponsors'),
+      orderBy('createdAt', 'desc')
+    )
+  );
+  return snapshot.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data(),
+  })) as Sponsor[];
+}
+
 export async function updateSponsor(
   firestore: Firestore,
   sponsorId: string,

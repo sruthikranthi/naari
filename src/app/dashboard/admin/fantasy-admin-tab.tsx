@@ -60,16 +60,6 @@ export function FantasyAdminTab({ firestore, user, toast }: FantasyAdminTabProps
   const [editingGame, setEditingGame] = useState<FantasyGame | null>(null);
   const [deletingGame, setDeletingGame] = useState<string | null>(null);
 
-  if (!firestore || !user) {
-    return (
-      <Card>
-        <CardContent className="py-12 text-center">
-          <p className="text-muted-foreground">Please sign in to manage fantasy games.</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
   const loadGames = async () => {
     if (!firestore) return;
     try {
@@ -115,11 +105,21 @@ export function FantasyAdminTab({ firestore, user, toast }: FantasyAdminTabProps
 
   // Load games on mount
   useEffect(() => {
-    if (firestore) {
+    if (firestore && user) {
       loadGames();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [firestore]);
+  }, [firestore, user]);
+
+  if (!firestore || !user) {
+    return (
+      <Card>
+        <CardContent className="py-12 text-center">
+          <p className="text-muted-foreground">Please sign in to manage fantasy games.</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   const handleCreateGame = async (gameType: 'gold' | 'saree' | 'makeup') => {
     if (!firestore || !user) return;
@@ -639,6 +639,223 @@ export function FantasyAdminTab({ firestore, user, toast }: FantasyAdminTabProps
         </Dialog>
       )}
     </div>
+  );
+}
+
+// Game Card Component with Edit/Delete
+function GameCard({
+  game,
+  firestore,
+  onEdit,
+  onDelete,
+  onUpdate,
+}: {
+  game: FantasyGame;
+  firestore: Firestore;
+  onEdit: () => void;
+  onDelete: () => void;
+  onUpdate: () => void;
+}) {
+  const handleToggleStatus = async () => {
+    if (!firestore) return;
+    
+    try {
+      await updateFantasyGame(firestore, game.id, {
+        status: game.status === 'active' ? 'completed' : 'active',
+      });
+      onUpdate();
+    } catch (error) {
+      console.error('Error updating game status:', error);
+    }
+  };
+
+  return (
+    <Card className="hover:bg-muted/50 transition-colors">
+      <CardContent className="pt-6">
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-2">
+              <h3 className="font-semibold">{game.title}</h3>
+              <Badge variant={game.status === 'active' ? 'default' : 'secondary'}>
+                {game.status}
+              </Badge>
+              <Badge variant="outline">
+                {FantasyGameUtils.getCategoryDisplayName(game.category)}
+              </Badge>
+            </div>
+            <p className="text-sm text-muted-foreground mb-3">{game.description}</p>
+            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <Coins className="h-3 w-3" />
+                {game.entryCoins} coins
+              </span>
+              <span>{game.totalParticipants} participants</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Link href={`/dashboard/fantasy/${game.id}`}>
+              <Button variant="outline" size="sm">
+                View
+              </Button>
+            </Link>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={onEdit}>
+                  <Edit className="mr-2 h-4 w-4" />
+                  Edit
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleToggleStatus}>
+                  {game.status === 'active' ? 'Deactivate' : 'Activate'}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={onDelete} className="text-destructive">
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// Edit Game Dialog
+function EditGameDialog({
+  game,
+  firestore,
+  onClose,
+  onSuccess,
+  toast,
+}: {
+  game: FantasyGame;
+  firestore: Firestore;
+  onClose: () => void;
+  onSuccess: () => void;
+  toast: ReturnType<typeof useToast>['toast'];
+}) {
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    title: game.title,
+    description: game.description,
+    entryCoins: game.entryCoins,
+    status: game.status,
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      await updateFantasyGame(firestore, game.id, {
+        title: formData.title,
+        description: formData.description,
+        entryCoins: formData.entryCoins,
+        status: formData.status as any,
+      });
+
+      toast({
+        title: 'Success',
+        description: 'Game updated successfully!',
+      });
+      onSuccess();
+    } catch (error: any) {
+      console.error('Error updating game:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error.message || 'Failed to update game.',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={!!game} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Edit Fantasy Game</DialogTitle>
+          <DialogDescription>
+            Update game details and settings.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="title">Game Title</Label>
+            <Input
+              id="title"
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="description">Description</Label>
+            <Textarea
+              id="description"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              rows={4}
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="entryCoins">Entry Coins</Label>
+              <Input
+                id="entryCoins"
+                type="number"
+                min="0"
+                value={formData.entryCoins}
+                onChange={(e) => setFormData({ ...formData, entryCoins: parseInt(e.target.value) || 0 })}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="status">Status</Label>
+              <Select
+                value={formData.status}
+                onValueChange={(value) => setFormData({ ...formData, status: value as any })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 mt-4">
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={loading}>
+              {loading ? (
+                <>
+                  <Loader className="mr-2 h-4 w-4 animate-spin" />
+                  Updating...
+                </>
+              ) : (
+                'Update Game'
+              )}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 

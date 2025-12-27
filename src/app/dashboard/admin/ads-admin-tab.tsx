@@ -20,6 +20,7 @@ import {
   Eye,
   MousePointerClick,
   IndianRupee,
+  MoreVertical,
 } from 'lucide-react';
 import {
   getActiveCampaigns,
@@ -65,16 +66,16 @@ import type {
 } from '@/lib/ads/types';
 import { collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, Timestamp } from 'firebase/firestore';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 
 interface AdsAdminTabProps {
   firestore: Firestore | null;
@@ -360,17 +361,41 @@ export function AdsAdminTab({ firestore, user, toast }: AdsAdminTabProps) {
             
             {/* Revenue Tab */}
             <TabsContent value="revenue" className="space-y-4">
-              <RevenueDashboard firestore={firestore} />
+              <Card>
+                <CardHeader>
+                  <CardTitle>Revenue Dashboard</CardTitle>
+                  <CardDescription>Revenue tracking and estimation</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground">Revenue dashboard coming soon...</p>
+                </CardContent>
+              </Card>
             </TabsContent>
             
             {/* A/B Testing Tab */}
             <TabsContent value="ab-testing" className="space-y-4">
-              <ABTestingDashboard firestore={firestore} toast={toast} />
+              <Card>
+                <CardHeader>
+                  <CardTitle>A/B Testing Dashboard</CardTitle>
+                  <CardDescription>A/B testing results and analysis</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground">A/B testing dashboard coming soon...</p>
+                </CardContent>
+              </Card>
             </TabsContent>
             
             {/* Notifications Tab */}
             <TabsContent value="notifications" className="space-y-4">
-              <NotificationsDashboard firestore={firestore} user={user} toast={toast} />
+              <Card>
+                <CardHeader>
+                  <CardTitle>Notifications Dashboard</CardTitle>
+                  <CardDescription>Campaign performance notifications</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground">Notifications dashboard coming soon...</p>
+                </CardContent>
+              </Card>
             </TabsContent>
           </Tabs>
         </CardContent>
@@ -955,6 +980,309 @@ function AnalyticsDashboard({ firestore }: { firestore: Firestore | null }) {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+// Edit Campaign Dialog
+function EditCampaignDialog({
+  campaign,
+  firestore,
+  onClose,
+  onSuccess,
+  toast,
+}: {
+  campaign: AdCampaign;
+  firestore: Firestore;
+  onClose: () => void;
+  onSuccess: () => void;
+  toast: ReturnType<typeof useToast>['toast'];
+}) {
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    name: campaign.name,
+    brandName: campaign.brandName,
+    description: campaign.description || '',
+    priority: campaign.priority,
+    active: campaign.active,
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      await updateAdCampaign(firestore, campaign.id, {
+        name: formData.name,
+        brandName: formData.brandName,
+        description: formData.description,
+        priority: formData.priority,
+        active: formData.active,
+      });
+
+      toast({
+        title: 'Success',
+        description: 'Campaign updated successfully!',
+      });
+      onSuccess();
+    } catch (error: any) {
+      console.error('Error updating campaign:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error.message || 'Failed to update campaign.',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={!!campaign} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Edit Campaign</DialogTitle>
+          <DialogDescription>
+            Update campaign details and settings.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="name">Campaign Name</Label>
+            <Input
+              id="name"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="brandName">Brand Name</Label>
+            <Input
+              id="brandName"
+              value={formData.brandName}
+              onChange={(e) => setFormData({ ...formData, brandName: e.target.value })}
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="description">Description</Label>
+            <Textarea
+              id="description"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              rows={3}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="priority">Priority (1-10)</Label>
+              <Input
+                id="priority"
+                type="number"
+                min="1"
+                max="10"
+                value={formData.priority}
+                onChange={(e) => setFormData({ ...formData, priority: parseInt(e.target.value) })}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="active">Status</Label>
+              <Select
+                value={formData.active ? 'active' : 'inactive'}
+                onValueChange={(value) => setFormData({ ...formData, active: value === 'active' })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 mt-4">
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={loading}>
+              {loading ? (
+                <>
+                  <Loader className="mr-2 h-4 w-4 animate-spin" />
+                  Updating...
+                </>
+              ) : (
+                'Update Campaign'
+              )}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Edit Sponsor Dialog
+function EditSponsorDialog({
+  sponsor,
+  firestore,
+  onClose,
+  onSuccess,
+  toast,
+}: {
+  sponsor: Sponsor;
+  firestore: Firestore;
+  onClose: () => void;
+  onSuccess: () => void;
+  toast: ReturnType<typeof useToast>['toast'];
+}) {
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    name: sponsor.name,
+    logoUrl: sponsor.logoUrl,
+    websiteUrl: sponsor.websiteUrl || '',
+    description: sponsor.description || '',
+    priority: sponsor.priority,
+    active: sponsor.active,
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      await updateSponsor(firestore, sponsor.id, {
+        name: formData.name,
+        logoUrl: formData.logoUrl,
+        websiteUrl: formData.websiteUrl,
+        description: formData.description,
+        priority: formData.priority,
+        active: formData.active,
+      });
+
+      toast({
+        title: 'Success',
+        description: 'Sponsor updated successfully!',
+      });
+      onSuccess();
+    } catch (error: any) {
+      console.error('Error updating sponsor:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error.message || 'Failed to update sponsor.',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={!!sponsor} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Edit Sponsor</DialogTitle>
+          <DialogDescription>
+            Update sponsor details and settings.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="name">Sponsor Name</Label>
+            <Input
+              id="name"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="logoUrl">Logo URL</Label>
+            <Input
+              id="logoUrl"
+              type="url"
+              value={formData.logoUrl}
+              onChange={(e) => setFormData({ ...formData, logoUrl: e.target.value })}
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="websiteUrl">Website URL</Label>
+            <Input
+              id="websiteUrl"
+              type="url"
+              value={formData.websiteUrl}
+              onChange={(e) => setFormData({ ...formData, websiteUrl: e.target.value })}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="description">Description</Label>
+            <Textarea
+              id="description"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              rows={3}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="priority">Priority (1-10)</Label>
+              <Input
+                id="priority"
+                type="number"
+                min="1"
+                max="10"
+                value={formData.priority}
+                onChange={(e) => setFormData({ ...formData, priority: parseInt(e.target.value) })}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="active">Status</Label>
+              <Select
+                value={formData.active ? 'active' : 'inactive'}
+                onValueChange={(value) => setFormData({ ...formData, active: value === 'active' })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 mt-4">
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={loading}>
+              {loading ? (
+                <>
+                  <Loader className="mr-2 h-4 w-4 animate-spin" />
+                  Updating...
+                </>
+              ) : (
+                'Update Sponsor'
+              )}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 

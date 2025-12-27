@@ -23,7 +23,6 @@ import { motion } from 'framer-motion';
 import { CommentsDialog } from '@/components/comments-dialog';
 import { useFirestore, useUser } from '@/firebase';
 import { awardBlogReadCoins, awardReelWatchCoins } from '@/lib/fantasy/coin-rewards';
-import { useToast } from '@/hooks/use-toast';
 
 type PostFromFirestore = Omit<Post, 'timestamp'> & {
   timestamp: Timestamp | null;

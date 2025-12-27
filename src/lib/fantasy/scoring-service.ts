@@ -195,9 +195,6 @@ export async function checkAndAwardBadges(
   return awardedBadges;
 }
 
-// Import getUserBadges
-import { getUserBadges } from './services';
-
 /**
  * Generate leaderboard for a specific period and category
  */
