@@ -71,8 +71,13 @@ export async function createFantasyGame(
   firestore: Firestore,
   game: Omit<FantasyGame, 'id' | 'createdAt' | 'updatedAt' | 'totalParticipants' | 'totalPredictions'>
 ): Promise<string> {
+  // Filter out undefined values (Firestore doesn't allow undefined)
+  const cleanedGame = Object.fromEntries(
+    Object.entries(game).filter(([_, value]) => value !== undefined)
+  ) as Omit<FantasyGame, 'id' | 'createdAt' | 'updatedAt' | 'totalParticipants' | 'totalPredictions'>;
+  
   const gameData = {
-    ...game,
+    ...cleanedGame,
     totalParticipants: 0,
     totalPredictions: 0,
     createdAt: serverTimestamp(),
@@ -87,8 +92,12 @@ export async function updateFantasyGame(
   gameId: string,
   updates: Partial<FantasyGame>
 ): Promise<void> {
+  // Filter out undefined values (Firestore doesn't allow undefined)
+  const cleanedUpdates = Object.fromEntries(
+    Object.entries(updates).filter(([_, value]) => value !== undefined)
+  ) as Partial<FantasyGame>;
   await updateDoc(doc(firestore, 'fantasy_games', gameId), {
-    ...updates,
+    ...cleanedUpdates,
     updatedAt: serverTimestamp(),
   });
 }
