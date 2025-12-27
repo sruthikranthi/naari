@@ -23,6 +23,7 @@ import {
   Trophy
 } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import type { FantasyGame } from '@/lib/fantasy/types';
 import type { FantasyCampaign } from '@/lib/fantasy/campaign-types';
 import { FantasyGameUtils } from '@/lib/fantasy/engine';
@@ -170,6 +171,7 @@ export default function FantasyLobbyPage() {
                           fill
                           className="object-cover rounded-t-lg"
                           unoptimized
+                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                         />
                       </div>
                     )}
