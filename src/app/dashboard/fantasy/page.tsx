@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useFirestore, useUser } from '@/firebase';
 import { useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, orderBy } from 'firebase/firestore';
@@ -19,18 +19,24 @@ import {
   Coins,
   Clock,
   Users,
-  ArrowRight
+  ArrowRight,
+  Trophy
 } from 'lucide-react';
 import Link from 'next/link';
 import type { FantasyGame } from '@/lib/fantasy/types';
+import type { FantasyCampaign } from '@/lib/fantasy/campaign-types';
 import { FantasyGameUtils } from '@/lib/fantasy/engine';
 import { LEGAL_DISCLAIMER } from '@/lib/fantasy/constants';
 import { SponsorBanner } from '@/components/ads/sponsor-banner';
+import { getActiveFantasyCampaigns } from '@/lib/fantasy/campaign-services';
 
 export default function FantasyLobbyPage() {
   const firestore = useFirestore();
   const { user } = useUser();
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedView, setSelectedView] = useState<'games' | 'campaigns'>('games');
+  const [campaigns, setCampaigns] = useState<FantasyCampaign[]>([]);
+  const [loadingCampaigns, setLoadingCampaigns] = useState(false);
 
   // Query active games
   const gamesQuery = useMemoFirebase(
@@ -47,6 +53,23 @@ export default function FantasyLobbyPage() {
   );
 
   const { data: games, isLoading } = useCollection<FantasyGame>(gamesQuery);
+
+  // Load campaigns
+  useEffect(() => {
+    if (!firestore) return;
+    const loadCampaigns = async () => {
+      try {
+        setLoadingCampaigns(true);
+        const activeCampaigns = await getActiveFantasyCampaigns(firestore);
+        setCampaigns(activeCampaigns);
+      } catch (error) {
+        console.error('Error loading campaigns:', error);
+      } finally {
+        setLoadingCampaigns(false);
+      }
+    };
+    loadCampaigns();
+  }, [firestore]);
 
   // Filter games by category
   const filteredGames = games?.filter((game) => {
@@ -94,9 +117,118 @@ export default function FantasyLobbyPage() {
         </CardContent>
       </Card>
 
-      {/* Category Tabs */}
-      <Tabs value={selectedCategory} onValueChange={setSelectedCategory}>
-        <TabsList className="grid w-full grid-cols-5">
+      {/* View Tabs (Games vs Campaigns) */}
+      <Tabs value={selectedView} onValueChange={(v) => setSelectedView(v as 'games' | 'campaigns')}>
+        <TabsList className="grid w-full grid-cols-2 mb-6">
+          <TabsTrigger value="games">Individual Games</TabsTrigger>
+          <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
+        </TabsList>
+
+        {/* Campaigns View */}
+        <TabsContent value="campaigns" className="space-y-6">
+          {loadingCampaigns ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[1, 2, 3].map((i) => (
+                <Card key={i}>
+                  <CardHeader>
+                    <Skeleton className="h-6 w-3/4" />
+                    <Skeleton className="h-4 w-1/2 mt-2" />
+                  </CardHeader>
+                  <CardContent>
+                    <Skeleton className="h-20 w-full" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : campaigns.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <Trophy className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No Active Campaigns</h3>
+                <p className="text-muted-foreground">
+                  Check back soon for new fantasy campaigns with prizes!
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {campaigns.map((campaign) => {
+                const startDate = campaign.startDate instanceof Date 
+                  ? campaign.startDate 
+                  : (campaign.startDate as any)?.toDate?.() || new Date();
+                const endDate = campaign.endDate instanceof Date 
+                  ? campaign.endDate 
+                  : (campaign.endDate as any)?.toDate?.() || new Date();
+
+                return (
+                  <Card key={campaign.id} className="hover:shadow-lg transition-shadow">
+                    {campaign.imageUrl && (
+                      <div className="relative w-full h-32">
+                        <Image
+                          src={campaign.imageUrl}
+                          alt={campaign.title}
+                          fill
+                          className="object-cover rounded-t-lg"
+                          unoptimized
+                        />
+                      </div>
+                    )}
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <CardTitle className="text-lg mb-2">{campaign.title}</CardTitle>
+                          <CardDescription className="line-clamp-2">
+                            {campaign.description || 'Fantasy campaign with prizes'}
+                          </CardDescription>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-2 mt-3">
+                        <Badge variant="secondary" className="capitalize">
+                          {campaign.campaignType.replace('-', ' ')}
+                        </Badge>
+                        <Badge variant={campaign.status === 'active' ? 'default' : 'outline'}>
+                          {campaign.status}
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {campaign.prizePool && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <Trophy className="h-4 w-4 text-yellow-500" />
+                            <span className="text-muted-foreground">{campaign.prizePool}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Clock className="h-3 w-3" />
+                          <span>
+                            {endDate ? `Ends: ${endDate.toLocaleDateString()}` : 'Ongoing'}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Users className="h-3 w-3" />
+                          <span>{campaign.totalParticipants || 0} participants</span>
+                        </div>
+                        <Link href={`/dashboard/fantasy/campaigns/${campaign.id}`}>
+                          <Button className="w-full" variant="default">
+                            View Campaign
+                            <ArrowRight className="ml-2 h-4 w-4" />
+                          </Button>
+                        </Link>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* Games View */}
+        <TabsContent value="games">
+          {/* Category Tabs */}
+          <Tabs value={selectedCategory} onValueChange={setSelectedCategory}>
+            <TabsList className="grid w-full grid-cols-5">
           {categories.map((category) => {
             const Icon = category.icon;
             return (
@@ -212,6 +344,8 @@ export default function FantasyLobbyPage() {
             </div>
           )}
         </div>
+          </Tabs>
+        </TabsContent>
       </Tabs>
     </div>
   );
