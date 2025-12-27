@@ -428,7 +428,16 @@ service cloud.firestore {
     
     // Fantasy Games
     match /fantasy_games/{gameId} {
-      allow get, list: if isSignedIn();
+      allow get: if isSignedIn();
+      
+      // Require query to have filters (prevents blind lists)
+      allow list: if isSignedIn() && (
+        request.query.where.size() > 0 ||
+        request.query.orderBy.size() > 0 ||
+        request.query.limit != null ||
+        isSuperAdmin()
+      );
+      
       allow create, update, delete: if isSuperAdmin();
     }
     
