@@ -24,6 +24,9 @@ import {
 } from '@/lib/fantasy/services';
 import { FantasyGameUtils, FantasyValidationEngine } from '@/lib/fantasy/engine';
 import { PredictionForm } from '@/components/fantasy/prediction-form';
+import { ResultDeclaration } from '@/components/fantasy/result-declaration';
+import { getFantasyResults } from '@/lib/fantasy/services';
+import { Trophy, Award, CheckCircle2 } from 'lucide-react';
 
 interface FantasyGameClientProps {
   gameId: string;
@@ -454,6 +457,100 @@ export default function FantasyGameClient({ gameId }: FantasyGameClientProps) {
           )}
         </CardContent>
       </Card>
+
+      {/* Results & Scores Section */}
+      {game.status === 'results-declared' && (
+        <Card className="bg-primary/5 border-primary/20">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Trophy className="h-5 w-5" />
+              Results & Your Score
+            </CardTitle>
+            <CardDescription>
+              Game results have been declared. Check your performance!
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {/* User Score Summary */}
+              {user && (
+                <div className="p-4 bg-background rounded-lg border">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium">Your Total Points</span>
+                    <span className="text-2xl font-bold text-primary">{userTotalPoints}</span>
+                  </div>
+                  {userRank && (
+                    <div className="text-xs text-muted-foreground">
+                      Rank: #{userRank} out of {game.totalParticipants} participants
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Results for each question */}
+              <div className="space-y-3">
+                {questions.map((question, index) => {
+                  const result = results.find((r) => r.questionId === question.id);
+                  const userPred = userPredictions.get(question.id);
+                  const points = userPred?.pointsEarned || 0;
+                  const isCorrect = userPred?.isCorrect || false;
+
+                  return (
+                    <div key={question.id} className="p-4 border rounded-lg">
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-sm">
+                            Question {index + 1}: {question.question}
+                          </h4>
+                        </div>
+                        {isCorrect && (
+                          <Badge className="bg-green-500">
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                            Correct
+                          </Badge>
+                        )}
+                      </div>
+                      
+                      {result && (
+                        <div className="mt-3 space-y-2 text-sm">
+                          <div className="flex items-center justify-between">
+                            <span className="text-muted-foreground">Correct Answer:</span>
+                            <span className="font-semibold">{result.result} {question.unit || ''}</span>
+                          </div>
+                          {userPred && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-muted-foreground">Your Prediction:</span>
+                              <span>{userPred.prediction} {question.unit || ''}</span>
+                            </div>
+                          )}
+                          <div className="flex items-center justify-between pt-2 border-t">
+                            <span className="text-muted-foreground">Points Earned:</span>
+                            <span className="font-bold text-primary">{points} pts</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Admin: Result Declaration */}
+      {isAdmin && game.status === 'active' && FantasyGameUtils.canRevealResults(game) && (
+        <ResultDeclaration
+          firestore={firestore}
+          game={game}
+          questions={questions}
+          adminUserId={user?.uid || ''}
+          onResultsDeclared={async () => {
+            // Reload game to get updated status
+            window.location.reload();
+          }}
+        />
+      )}
     </div>
   );
 }
