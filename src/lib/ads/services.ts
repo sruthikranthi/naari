@@ -231,10 +231,16 @@ export async function deleteSponsor(
 
 export async function createAdCreative(
   firestore: Firestore,
-  creative: Omit<AdCreative, 'id' | 'createdAt' | 'updatedAt'>
+  creative: Omit<AdCreative, 'id' | 'createdAt' | 'updatedAt' | 'order'>
 ): Promise<string> {
+  // Filter out undefined values (Firestore doesn't allow undefined)
+  const cleanedCreative = Object.fromEntries(
+    Object.entries(creative).filter(([_, value]) => value !== undefined)
+  ) as Omit<AdCreative, 'id' | 'createdAt' | 'updatedAt' | 'order'>;
+  
   const creativeData = {
-    ...creative,
+    ...cleanedCreative,
+    order: 0,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   };

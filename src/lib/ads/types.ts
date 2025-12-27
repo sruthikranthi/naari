@@ -117,23 +117,56 @@ export type AdCampaign = {
 // AD CREATIVE SCHEMA
 // ============================================================================
 
+export type RepeatInterval = 'never' | 'daily' | 'weekly' | 'monthly' | 'always';
+
 export type AdCreative = {
   id: string;
-  campaignId: string;
+  campaignId?: string; // Optional for standalone image ads
+  sponsorId?: string; // Sponsor associated with this ad
+  
+  // Basic Info
+  title: string;
+  description?: string;
   imageUrl: string;
   clickUrl: string;
   aspectRatio?: string; // e.g., "16:9", "1:1", "4:3"
   altText: string;
-  title?: string;
-  description?: string;
-  order: number; // For rotation within campaign
+  
+  // Display Settings
+  displayDuration: number; // Seconds (3-30)
+  priority: number; // 1-100, higher = shown first
   active: boolean;
+  
+  // Date Range
+  startDate: Timestamp | FieldValue;
+  endDate: Timestamp | FieldValue;
+  
+  // View Limits
+  maxViews?: number; // Total views across all users (optional)
+  maxViewsPerUser?: number; // Max views per individual user (optional)
+  
+  // Repeat Behavior
+  allowMultipleViews: boolean; // Allow showing multiple times for same campaign/tournament
+  repeatInterval: RepeatInterval; // When to show again
+  minTimeBetweenViews?: number; // Minimum seconds between views (overrides repeat interval)
+  
+  // Targeting
+  targetCampaignIds?: string[]; // Comma-separated campaign IDs (optional)
+  targetGameIds?: string[]; // Target specific fantasy games (optional)
+  
+  // Metadata
+  order: number; // For rotation within campaign
   createdAt: Timestamp | FieldValue;
   updatedAt: Timestamp | FieldValue;
   
   // A/B Testing
   abTestVariant?: string; // Variant ID for A/B testing
   weight?: number; // Weight for rotation (0-100)
+  
+  // Performance (calculated)
+  performanceScore?: number;
+  conversionRate?: number;
+  totalConversionValue?: number;
 };
 
 // ============================================================================

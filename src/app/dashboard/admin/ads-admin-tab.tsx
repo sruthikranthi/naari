@@ -354,6 +354,51 @@ export function AdsAdminTab({ firestore, user, toast }: AdsAdminTabProps) {
               )}
             </TabsContent>
 
+            {/* Creatives Tab */}
+            <TabsContent value="creatives" className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">Image Advertisements</h3>
+                <Dialog open={showCreateCreative} onOpenChange={setShowCreateCreative}>
+                  <DialogTrigger asChild>
+                    <Button>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Create Image Ad
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-4xl max-h-[95vh] overflow-hidden">
+                    <DialogHeader>
+                      <DialogTitle>Create Advertisement</DialogTitle>
+                      <DialogDescription>
+                        Create a new image advertisement for tournament/campaign entry requirements.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="overflow-y-auto max-h-[calc(95vh-120px)]">
+                      {firestore && user && (
+                        <CreateImageAdForm
+                          firestore={firestore}
+                          userId={user.uid}
+                          onSuccess={() => {
+                            setShowCreateCreative(false);
+                            loadData();
+                          }}
+                          onCancel={() => setShowCreateCreative(false)}
+                          toast={toast}
+                        />
+                      )}
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
+
+              <Card>
+                <CardContent className="pt-6">
+                  <p className="text-muted-foreground text-center py-8">
+                    Image ads will be displayed here. Create your first ad to get started!
+                  </p>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
             {/* Analytics Tab */}
             <TabsContent value="analytics" className="space-y-4">
               <AnalyticsDashboard firestore={firestore} />
