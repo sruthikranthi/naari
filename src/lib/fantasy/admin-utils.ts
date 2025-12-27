@@ -26,11 +26,11 @@ import { GAME_CONFIGURATIONS } from './engine';
 // ============================================================================
 
 /**
- * Create a price prediction game
+ * Create a fantasy game (generic function for all game types)
  */
 export async function createPricePredictionGame(
   firestore: Firestore,
-  gameType: 'gold-ornament-price' | 'silk-saree-price' | 'makeup-beauty-price',
+  gameType: FantasyGameType,
   options: {
     title: string;
     description: string;
@@ -41,21 +41,34 @@ export async function createPricePredictionGame(
     createdBy: string;
     imageUrl?: string;
     tags?: string[];
+    category?: FantasyCategory;
   }
 ): Promise<string> {
   const config = GAME_CONFIGURATIONS[gameType];
   
+  // Determine category based on game type if not provided
+  let category: FantasyCategory = options.category || 'price-prediction';
+  if (!options.category) {
+    if (gameType.includes('budget') || gameType.includes('expense')) {
+      category = 'lifestyle-budget';
+    } else if (gameType.includes('trend') || gameType.includes('color') || gameType.includes('design') || gameType.includes('makeup')) {
+      category = 'fashion-trend';
+    } else if (gameType.includes('celebrity') || gameType.includes('actress')) {
+      category = 'celebrity-style';
+    }
+  }
+  
   const game: Omit<FantasyGame, 'id' | 'createdAt' | 'updatedAt' | 'totalParticipants' | 'totalPredictions'> = {
     title: options.title,
     description: options.description,
-    category: 'price-prediction',
+    category,
     gameType,
     status: 'active',
     startTime: Timestamp.fromDate(options.startTime),
     endTime: Timestamp.fromDate(options.endTime),
     resultRevealTime: Timestamp.fromDate(options.resultRevealTime),
     entryCoins: options.entryCoins || config.defaultEntryCoins,
-    tags: options.tags || [gameType, 'price-prediction'],
+    tags: options.tags || [gameType, category],
     createdBy: options.createdBy,
     imageUrl: options.imageUrl,
   };
