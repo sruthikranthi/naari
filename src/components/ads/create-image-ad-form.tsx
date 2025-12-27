@@ -294,13 +294,23 @@ export function CreateImageAdForm({ firestore, userId, onSuccess, onCancel, toas
           {imagePreview ? (
             <div className="relative">
               <div className="border-2 border-dashed rounded-lg p-4">
-                <Image
-                  src={imagePreview}
-                  alt="Preview"
-                  width={1200}
-                  height={675}
-                  className="w-full h-auto rounded-lg"
-                />
+                {/* Use regular img tag for data URLs, Image component for URLs */}
+                {imagePreview.startsWith('data:') ? (
+                  <img
+                    src={imagePreview}
+                    alt="Preview"
+                    className="w-full h-auto rounded-lg max-h-96 object-contain"
+                  />
+                ) : (
+                  <Image
+                    src={imagePreview}
+                    alt="Preview"
+                    width={1200}
+                    height={675}
+                    className="w-full h-auto rounded-lg"
+                    unoptimized
+                  />
+                )}
                 <Button
                   type="button"
                   variant="destructive"
