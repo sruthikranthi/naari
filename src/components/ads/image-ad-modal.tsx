@@ -58,9 +58,10 @@ export function ImageAdModal({
 
           // Record impression
           if (user) {
+            const creative = decision.ad as AdCreative;
             await recordImpression(firestore, {
               adId: decision.ad.id,
-              campaignId: (decision.ad as AdCreative).campaignId,
+              ...(creative.campaignId && { campaignId: creative.campaignId }),
               userId: user.uid,
               placement: position,
               gameId,
