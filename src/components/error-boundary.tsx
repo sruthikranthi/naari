@@ -42,10 +42,15 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    // Log error to console in development
-    if (process.env.NODE_ENV === 'development') {
-      console.error('ErrorBoundary caught an error:', error, errorInfo);
-    }
+    // Always log error to console for debugging
+    console.error('ErrorBoundary caught an error:', error);
+    console.error('Error stack:', error.stack);
+    console.error('Component stack:', errorInfo.componentStack);
+    console.error('Error details:', {
+      message: error.message,
+      name: error.name,
+      componentStack: errorInfo.componentStack,
+    });
 
     // Call optional error handler (e.g., for error reporting)
     if (this.props.onError) {
@@ -108,19 +113,24 @@ export class ErrorBoundary extends Component<Props, State> {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {process.env.NODE_ENV === 'development' && this.state.error && (
+              {this.state.error && (
                 <Alert variant="destructive">
-                  <AlertTitle>Error Details (Development Only)</AlertTitle>
+                  <AlertTitle>Error Details</AlertTitle>
                   <AlertDescription className="mt-2">
-                    <pre className="text-xs overflow-auto max-h-32">
-                      {this.state.error.toString()}
+                    <pre className="text-xs overflow-auto max-h-48 p-2 bg-muted rounded">
+                      <div className="font-semibold mb-2">Error Message:</div>
+                      <div className="mb-2">{this.state.error.message || this.state.error.toString()}</div>
+                      {this.state.error.stack && (
+                        <>
+                          <div className="font-semibold mb-2 mt-4">Stack Trace:</div>
+                          <div className="mb-2 whitespace-pre-wrap">{this.state.error.stack}</div>
+                        </>
+                      )}
                       {this.state.errorInfo?.componentStack && (
-                        <div className="mt-2">
-                          <strong>Component Stack:</strong>
-                          <pre className="text-xs mt-1">
-                            {this.state.errorInfo.componentStack}
-                          </pre>
-                        </div>
+                        <>
+                          <div className="font-semibold mb-2 mt-4">Component Stack:</div>
+                          <div className="whitespace-pre-wrap">{this.state.errorInfo.componentStack}</div>
+                        </>
                       )}
                     </pre>
                   </AlertDescription>
