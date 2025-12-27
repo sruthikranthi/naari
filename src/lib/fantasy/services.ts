@@ -11,6 +11,7 @@ import {
   getDocs,
   addDoc,
   updateDoc,
+  setDoc,
   deleteDoc,
   query,
   where,
@@ -210,21 +211,20 @@ export async function getUserWallet(
   firestore: Firestore,
   userId: string
 ): Promise<UserWallet | null> {
-  const walletDoc = await getDoc(doc(firestore, 'user_wallets', userId));
+  const walletRef = doc(firestore, 'user_wallets', userId);
+  const walletDoc = await getDoc(walletRef);
   if (!walletDoc.exists()) {
     // Create default wallet if doesn't exist
-    const defaultWallet: Omit<UserWallet, 'id'> = {
+    const defaultWallet: UserWallet = {
+      id: userId,
       userId,
       balance: 0,
       totalEarned: 0,
       totalSpent: 0,
       lastUpdated: serverTimestamp(),
     };
-    await addDoc(collection(firestore, 'user_wallets'), {
-      ...defaultWallet,
-      id: userId,
-    });
-    return { id: userId, ...defaultWallet } as UserWallet;
+    await setDoc(walletRef, defaultWallet);
+    return defaultWallet;
   }
   return { id: walletDoc.id, ...walletDoc.data() } as UserWallet;
 }

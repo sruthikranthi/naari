@@ -74,6 +74,7 @@ import type { Contest, JuryMember, Nomination } from '@/lib/contests-data';
 import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, doc, setDoc, updateDoc, deleteDoc, serverTimestamp, arrayUnion, getDoc, addDoc, query, where } from 'firebase/firestore';
 import type { ProfessionalApplication } from '@/lib/applications';
+import { FantasyAdminTab } from './fantasy-admin-tab';
 
 type UserWithRole = User & { role: 'User' | 'Professional' | 'Creator'; status: 'Active' | 'Inactive' | 'Pending' };
 
@@ -516,13 +517,14 @@ export default function AdminPanelPage() {
       />
 
       <Tabs defaultValue="dashboard">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
           <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="applications">Applications</TabsTrigger>
           <TabsTrigger value="commissions">Commissions</TabsTrigger>
           <TabsTrigger value="content">Content</TabsTrigger>
           <TabsTrigger value="contests">Contests</TabsTrigger>
+          <TabsTrigger value="fantasy">Fantasy Zone</TabsTrigger>
         </TabsList>
         
         <TabsContent value="dashboard" className="mt-6">
@@ -872,6 +874,10 @@ export default function AdminPanelPage() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="fantasy" className="mt-6">
+          <FantasyAdminTab firestore={firestore} user={user} toast={toast} />
         </TabsContent>
       </Tabs>
       

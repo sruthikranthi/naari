@@ -12,10 +12,18 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Coins, Clock, Users, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
-import type { FantasyGame, FantasyQuestion } from '@/lib/fantasy/types';
-import { getFantasyQuestions } from '@/lib/fantasy/services';
+import type { FantasyGame, FantasyQuestion, UserPrediction } from '@/lib/fantasy/types';
+import { 
+  getFantasyQuestions, 
+  getUserWallet, 
+  getUserPredictions,
+  createUserPrediction,
+  updateUserPrediction,
+  addCoinTransaction,
+  updateFantasyGame
+} from '@/lib/fantasy/services';
 import { FantasyGameUtils, FantasyValidationEngine } from '@/lib/fantasy/engine';
-import { getUserWallet } from '@/lib/fantasy/services';
+import { PredictionForm } from '@/components/fantasy/prediction-form';
 
 interface FantasyGameClientProps {
   gameId: string;
@@ -27,8 +35,11 @@ export default function FantasyGameClient({ gameId }: FantasyGameClientProps) {
   const { toast } = useToast();
   const [questions, setQuestions] = useState<FantasyQuestion[]>([]);
   const [userCoins, setUserCoins] = useState<number>(0);
+  const [userPredictions, setUserPredictions] = useState<Map<string, UserPrediction>>(new Map());
   const [loadingQuestions, setLoadingQuestions] = useState(true);
   const [loadingWallet, setLoadingWallet] = useState(true);
+  const [loadingPredictions, setLoadingPredictions] = useState(true);
+  const [submittingPrediction, setSubmittingPrediction] = useState<string | null>(null);
 
   const gameQuery = useMemoFirebase(
     () => firestore ? doc(firestore, 'fantasy_games', gameId) : null,
@@ -80,7 +91,150 @@ export default function FantasyGameClient({ gameId }: FantasyGameClientProps) {
     loadWallet();
   }, [firestore, user?.uid]);
 
-  if (isLoadingGame || loadingQuestions || loadingWallet) {
+  // Load user predictions
+  useEffect(() => {
+    if (!firestore || !user?.uid || !gameId) return;
+    
+    const loadPredictions = async () => {
+      try {
+        setLoadingPredictions(true);
+        const predictions = await getUserPredictions(firestore, user.uid, gameId);
+        const predictionsMap = new Map<string, UserPrediction>();
+        predictions.forEach((pred) => {
+          predictionsMap.set(pred.questionId, pred);
+        });
+        setUserPredictions(predictionsMap);
+      } catch (error) {
+        console.error('Error loading predictions:', error);
+      } finally {
+        setLoadingPredictions(false);
+      }
+    };
+
+    loadPredictions();
+  }, [firestore, user?.uid, gameId]);
+
+  // Handle prediction submission
+  const handlePredictionSubmit = async (
+    questionId: string,
+    prediction: string | number,
+    rangeMin?: number,
+    rangeMax?: number
+  ) => {
+    if (!firestore || !user || !game) return;
+
+    const question = questions.find((q) => q.id === questionId);
+    if (!question) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Question not found.',
+      });
+      return;
+    }
+
+    // Validate prediction
+    const validation = FantasyValidationEngine.validatePrediction(prediction, question);
+    if (!validation.valid) {
+      toast({
+        variant: 'destructive',
+        title: 'Invalid Prediction',
+        description: validation.reason,
+      });
+      return;
+    }
+
+    setSubmittingPrediction(questionId);
+
+    try {
+      const existingPred = userPredictions.get(questionId);
+      const isFirstPrediction = !existingPred && userPredictions.size === 0;
+
+      // If this is the first prediction for this game, deduct entry coins
+      if (isFirstPrediction) {
+        // Check if user has enough coins
+        if (userCoins < game.entryCoins) {
+          toast({
+            variant: 'destructive',
+            title: 'Insufficient Coins',
+            description: `You need ${game.entryCoins} coins to enter this game.`,
+          });
+          setSubmittingPrediction(null);
+          return;
+        }
+
+        // Deduct entry coins
+        await addCoinTransaction(firestore, {
+          userId: user.uid,
+          type: 'fantasy-entry',
+          amount: -game.entryCoins,
+          description: `Entry fee for ${game.title}`,
+          metadata: { gameId: game.id },
+        });
+
+        // Update wallet balance locally
+        setUserCoins((prev) => prev - game.entryCoins);
+
+        // Update game participant count
+        await updateFantasyGame(firestore, game.id, {
+          totalParticipants: game.totalParticipants + 1,
+        });
+      }
+
+      // Create or update prediction
+      if (existingPred) {
+        // Update existing prediction
+        await updateUserPrediction(firestore, existingPred.id, {
+          prediction,
+          rangeMin,
+          rangeMax,
+        });
+        toast({
+          title: 'Prediction Updated',
+          description: 'Your prediction has been updated successfully.',
+        });
+      } else {
+        // Create new prediction
+        await createUserPrediction(firestore, {
+          gameId: game.id,
+          questionId,
+          userId: user.uid,
+          prediction,
+          rangeMin,
+          rangeMax,
+        });
+        toast({
+          title: isFirstPrediction ? 'Entry Successful!' : 'Prediction Submitted',
+          description: isFirstPrediction
+            ? `You've entered the game! ${game.entryCoins} coins deducted.`
+            : 'Your prediction has been submitted successfully.',
+        });
+      }
+
+      // Reload predictions
+      const updatedPredictions = await getUserPredictions(firestore, user.uid, game.id);
+      const predictionsMap = new Map<string, UserPrediction>();
+      updatedPredictions.forEach((pred) => {
+        predictionsMap.set(pred.questionId, pred);
+      });
+      setUserPredictions(predictionsMap);
+
+      // Reload wallet
+      const wallet = await getUserWallet(firestore, user.uid);
+      setUserCoins(wallet?.balance || 0);
+    } catch (error: any) {
+      console.error('Error submitting prediction:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error.message || 'Failed to submit prediction. Please try again.',
+      });
+    } finally {
+      setSubmittingPrediction(null);
+    }
+  };
+
+  if (isLoadingGame || loadingQuestions || loadingWallet || loadingPredictions) {
     return (
       <div className="space-y-6">
         <Skeleton className="h-10 w-64" />
@@ -244,11 +398,58 @@ export default function FantasyGameClient({ gameId }: FantasyGameClientProps) {
               </p>
             </div>
           ) : (
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Prediction interface will be implemented in Phase 2.
-              </p>
-              {/* TODO: Implement prediction UI in Phase 2 */}
+            <div className="space-y-6">
+              {questions.map((question, index) => {
+                const existingPred = userPredictions.get(question.id);
+                const hasPredicted = !!existingPred;
+                
+                return (
+                  <div key={question.id} className="space-y-2">
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-sm font-semibold">
+                        Question {index + 1} of {questions.length}
+                      </h3>
+                      {hasPredicted && (
+                        <Badge variant="default" className="bg-green-500">
+                          ✓ Predicted
+                        </Badge>
+                      )}
+                    </div>
+                    <PredictionForm
+                      question={question}
+                      onSubmit={(pred, rangeMin, rangeMax) =>
+                        handlePredictionSubmit(question.id, pred, rangeMin, rangeMax)
+                      }
+                      isSubmitting={submittingPrediction === question.id}
+                      existingPrediction={existingPred?.prediction}
+                      existingRange={{
+                        min: existingPred?.rangeMin,
+                        max: existingPred?.rangeMax,
+                      }}
+                    />
+                  </div>
+                );
+              })}
+              
+              {/* Summary */}
+              {userPredictions.size > 0 && (
+                <Card className="bg-primary/5 border-primary/20">
+                  <CardContent className="pt-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium">
+                          Predictions Submitted: {userPredictions.size} / {questions.length}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {userPredictions.size === questions.length
+                            ? 'All questions answered! Good luck! 🍀'
+                            : 'Complete all questions to finalize your entry.'}
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </div>
           )}
         </CardContent>
