@@ -34,6 +34,7 @@ import type {
   RotationStrategy,
   ABTestVariant,
 } from './types';
+import type { Firestore } from 'firebase/firestore';
 
 // ============================================================================
 // AD CAMPAIGN SERVICES
@@ -226,11 +227,12 @@ export class AdDecisionEngine {
           if (this.checkTargetingRule(rule.targeting || campaign.targeting, userProfile)) {
             const creatives = await getAdCreatives(firestore, campaign.id);
             if (creatives.length > 0) {
-              // Use rotation strategy
-              const selectedCreative = this.selectCreative(
+              // Use rotation strategy (with ML support)
+              const selectedCreative = await this.selectCreative(
+                firestore,
                 creatives,
-                campaign.rotationStrategy || 'ROUND_ROBIN',
-                campaign.abTestEnabled || false
+                campaign,
+                userProfile
               );
               
               if (selectedCreative) {
@@ -358,13 +360,21 @@ export class AdDecisionEngine {
   }
   
   /**
-   * Select creative based on rotation strategy
+   * Select creative based on rotation strategy (with ML support)
    */
-  private static selectCreative(
+  private static async selectCreative(
+    firestore: Firestore,
     creatives: AdCreative[],
-    strategy: RotationStrategy,
-    abTestEnabled: boolean
-  ): AdCreative | null {
+    campaign: AdCampaign,
+    userProfile?: {
+      location?: string;
+      language?: string;
+      interests?: string[];
+      coinBalance?: number;
+      userSegment?: string;
+    }
+  ): Promise<AdCreative | null> {
+    const strategy = campaign.rotationStrategy || 'ROUND_ROBIN';
     if (creatives.length === 0) return null;
     if (creatives.length === 1) return creatives[0];
     
@@ -391,9 +401,33 @@ export class AdDecisionEngine {
         return activeCreatives[0];
         
       case 'PERFORMANCE_BASED':
-        // Select based on CTR performance (higher CTR = more likely)
-        // For now, fallback to weighted
-        return this.selectCreative(activeCreatives, 'WEIGHTED', false);
+        // Select based on real-time CTR performance
+        const { getCampaignRealTimeCTR } = await import('./real-time-ctr');
+        const ctrData = await getCampaignRealTimeCTR(firestore, campaign.id);
+        
+        // Sort by performance score
+        const performanceSorted = activeCreatives.sort((a, b) => {
+          const ctrA = ctrData.get(a.id);
+          const ctrB = ctrData.get(b.id);
+          return (ctrB?.performanceScore || 0) - (ctrA?.performanceScore || 0);
+        });
+        
+        return performanceSorted[0];
+        
+      case 'ML_OPTIMIZED':
+        // Use ML model for selection
+        if (campaign.mlConfig?.enabled) {
+          const { MLAdSelector } = await import('./ml-optimization');
+          return await MLAdSelector.selectCreative(
+            firestore,
+            activeCreatives,
+            campaign.id,
+            campaign.mlConfig,
+            userProfile
+          );
+        }
+        // Fallback to performance-based
+        return this.selectCreative(firestore, activeCreatives, campaign, userProfile);
         
       case 'RANDOM':
         // Pure random selection

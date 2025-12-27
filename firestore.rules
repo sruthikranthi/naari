@@ -563,6 +563,24 @@ service cloud.firestore {
       allow create: if isSignedIn();
       allow get, list, update, delete: if isSuperAdmin();
     }
+    
+    // Ad Conversions (tracking)
+    match /ad_conversions/{conversionId} {
+      allow create: if isSignedIn();
+      allow get, list, update, delete: if isSuperAdmin();
+    }
+    
+    // Real-Time CTR (performance tracking)
+    match /ad_real_time_ctr/{ctrId} {
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isSuperAdmin();
+    }
+    
+    // Ad Notifications
+    match /ad_notifications/{notificationId} {
+      allow create: if isSignedIn();
+      allow get, list, update, delete: if isSuperAdmin();
+    }
 
     // -------------------------------------------------------------------------
     // PAYMENT WEBHOOKS

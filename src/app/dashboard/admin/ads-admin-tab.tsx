@@ -38,6 +38,17 @@ import {
   checkCampaignPerformance,
   sendPerformanceReport,
 } from '@/lib/ads/notifications';
+import {
+  getCampaignRealTimeCTR,
+  updateDynamicWeights,
+} from '@/lib/ads/real-time-ctr';
+import {
+  BayesianABTesting,
+} from '@/lib/ads/bayesian-ab-testing';
+import {
+  getConversionRate,
+  getAdConversions,
+} from '@/lib/ads/conversion-tracking';
 import type {
   AdCampaign,
   Sponsor,
@@ -116,13 +127,15 @@ export function AdsAdminTab({ firestore, user, toast }: AdsAdminTabProps) {
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-8">
             <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
             <TabsTrigger value="sponsors">Sponsors</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
             <TabsTrigger value="revenue">Revenue</TabsTrigger>
             <TabsTrigger value="ab-testing">A/B Testing</TabsTrigger>
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
+            <TabsTrigger value="ml-performance">ML & Performance</TabsTrigger>
+            <TabsTrigger value="conversions">Conversions</TabsTrigger>
           </TabsList>
 
             {/* Campaigns Tab */}

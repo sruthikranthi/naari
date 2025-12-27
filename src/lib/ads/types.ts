@@ -44,7 +44,39 @@ export type ABTestVariant = {
   };
 };
 
-export type RotationStrategy = 'ROUND_ROBIN' | 'WEIGHTED' | 'PERFORMANCE_BASED' | 'RANDOM';
+export type RotationStrategy = 'ROUND_ROBIN' | 'WEIGHTED' | 'PERFORMANCE_BASED' | 'RANDOM' | 'ML_OPTIMIZED';
+
+export type ConversionEvent = {
+  id: string;
+  adId: string;
+  campaignId: string;
+  userId: string;
+  eventType: 'PURCHASE' | 'SIGNUP' | 'DOWNLOAD' | 'CLICK_THROUGH' | 'VIEW' | 'ENGAGEMENT';
+  value?: number; // Monetary value for purchase events
+  timestamp: Timestamp | FieldValue;
+  metadata?: Record<string, any>;
+};
+
+export type RealTimeCTR = {
+  creativeId: string;
+  campaignId: string;
+  impressions: number;
+  clicks: number;
+  ctr: number;
+  conversions: number;
+  conversionRate: number;
+  lastUpdated: Timestamp | FieldValue;
+  // Performance score for ML
+  performanceScore: number;
+};
+
+export type MLModelConfig = {
+  enabled: boolean;
+  modelType: 'THOMPSON_SAMPLING' | 'UCB' | 'EPSILON_GREEDY' | 'LINEAR_REGRESSION';
+  explorationRate?: number; // For epsilon-greedy
+  confidenceLevel?: number; // For UCB
+  updateInterval?: number; // Minutes between model updates
+};
 
 // ============================================================================
 // AD CAMPAIGN SCHEMA
@@ -74,6 +106,11 @@ export type AdCampaign = {
   abTestEnabled?: boolean;
   revenuePerClick?: number; // Revenue in INR per click
   revenuePerImpression?: number; // Revenue in INR per impression
+  
+  // ML & Performance
+  mlConfig?: MLModelConfig;
+  dynamicWeightsEnabled?: boolean;
+  minImpressionsForWeightUpdate?: number; // Minimum impressions before adjusting weights
 };
 
 // ============================================================================
