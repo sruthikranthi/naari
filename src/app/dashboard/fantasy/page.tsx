@@ -25,6 +25,7 @@ import Link from 'next/link';
 import type { FantasyGame } from '@/lib/fantasy/types';
 import { FantasyGameUtils } from '@/lib/fantasy/engine';
 import { LEGAL_DISCLAIMER } from '@/lib/fantasy/constants';
+import { SponsorBanner } from '@/components/ads/sponsor-banner';
 
 export default function FantasyLobbyPage() {
   const firestore = useFirestore();
@@ -72,6 +73,9 @@ export default function FantasyLobbyPage() {
 
   return (
     <div className="space-y-6">
+      {/* Overall Campaign Sponsor Banner */}
+      <SponsorBanner position="LOBBY_BANNER" variant="compact" />
+      
       <PageHeader
         title="Naari Fantasy Zone"
         description="Skill-based prediction games for entertainment. Test your intuition and win coins!"

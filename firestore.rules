@@ -525,6 +525,46 @@ service cloud.firestore {
     }
 
     // -------------------------------------------------------------------------
+    // AD & SPONSORSHIP SYSTEM
+    // -------------------------------------------------------------------------
+    
+    // Ad Campaigns
+    match /ad_campaigns/{campaignId} {
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isSuperAdmin();
+    }
+    
+    // Ad Creatives
+    match /ad_creatives/{creativeId} {
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isSuperAdmin();
+    }
+    
+    // Ad Placement Rules
+    match /ad_placement_rules/{ruleId} {
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isSuperAdmin();
+    }
+    
+    // Sponsors
+    match /sponsors/{sponsorId} {
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isSuperAdmin();
+    }
+    
+    // Ad Impressions (tracking)
+    match /ad_impressions/{impressionId} {
+      allow create: if isSignedIn();
+      allow get, list, update, delete: if isSuperAdmin();
+    }
+    
+    // Ad Clicks (tracking)
+    match /ad_clicks/{clickId} {
+      allow create: if isSignedIn();
+      allow get, list, update, delete: if isSuperAdmin();
+    }
+
+    // -------------------------------------------------------------------------
     // PAYMENT WEBHOOKS
     // -------------------------------------------------------------------------
     match /payment_webhooks/{webhookId} {

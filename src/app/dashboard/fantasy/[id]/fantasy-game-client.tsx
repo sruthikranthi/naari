@@ -27,6 +27,9 @@ import { PredictionForm } from '@/components/fantasy/prediction-form';
 import { ResultDeclaration } from '@/components/fantasy/result-declaration';
 import { getFantasyResults } from '@/lib/fantasy/services';
 import { Trophy, Award, CheckCircle2 } from 'lucide-react';
+import { SponsorBanner } from '@/components/ads/sponsor-banner';
+import { ImageAdModal } from '@/components/ads/image-ad-modal';
+import { InlineAdCard } from '@/components/ads/inline-ad-card';
 
 interface FantasyGameClientProps {
   gameId: string;
@@ -291,6 +294,9 @@ export default function FantasyGameClient({ gameId }: FantasyGameClientProps) {
 
   return (
     <div className="space-y-6">
+      {/* Event Sponsor Banner */}
+      {game && <SponsorBanner position="PRE_GAME" gameId={game.id} variant="compact" />}
+      
       <div className="flex items-center gap-4">
         <Link href="/dashboard/fantasy">
           <Button variant="ghost" size="icon">
@@ -551,6 +557,23 @@ export default function FantasyGameClient({ gameId }: FantasyGameClientProps) {
           }}
         />
       )}
+
+      {/* Ad Modals */}
+      <ImageAdModal
+        position="PRE_GAME"
+        gameId={game.id}
+        open={showPreGameAd}
+        onOpenChange={setShowPreGameAd}
+        userStats={userStats}
+      />
+      
+      <ImageAdModal
+        position="POST_GAME"
+        gameId={game.id}
+        open={showPostGameAd}
+        onOpenChange={setShowPostGameAd}
+        userStats={userStats}
+      />
     </div>
   );
 }

@@ -75,6 +75,7 @@ import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebas
 import { collection, doc, setDoc, updateDoc, deleteDoc, serverTimestamp, arrayUnion, getDoc, addDoc, query, where } from 'firebase/firestore';
 import type { ProfessionalApplication } from '@/lib/applications';
 import { FantasyAdminTab } from './fantasy-admin-tab';
+import { AdsAdminTab } from './ads-admin-tab';
 
 type UserWithRole = User & { role: 'User' | 'Professional' | 'Creator'; status: 'Active' | 'Inactive' | 'Pending' };
 
