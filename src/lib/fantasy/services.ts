@@ -185,6 +185,46 @@ export async function createFantasyQuestion(
   return docRef.id;
 }
 
+export async function updateFantasyQuestion(
+  firestore: Firestore,
+  questionId: string,
+  updates: Partial<FantasyQuestion>
+): Promise<void> {
+  // Filter out undefined values (Firestore doesn't allow undefined)
+  const cleanedUpdates: any = {};
+  
+  for (const [key, value] of Object.entries(updates)) {
+    if (value === undefined) {
+      continue;
+    }
+    
+    if (Array.isArray(value)) {
+      const cleanedArray = value.filter(item => item !== undefined && item !== null && item !== '');
+      if (key === 'options') {
+        if (cleanedArray.length > 0) {
+          cleanedUpdates[key] = cleanedArray;
+        }
+      } else {
+        cleanedUpdates[key] = cleanedArray;
+      }
+    } else {
+      cleanedUpdates[key] = value;
+    }
+  }
+  
+  await updateDoc(doc(firestore, 'fantasy_questions', questionId), {
+    ...cleanedUpdates,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function deleteFantasyQuestion(
+  firestore: Firestore,
+  questionId: string
+): Promise<void> {
+  await deleteDoc(doc(firestore, 'fantasy_questions', questionId));
+}
+
 // ============================================================================
 // USER PREDICTIONS
 // ============================================================================

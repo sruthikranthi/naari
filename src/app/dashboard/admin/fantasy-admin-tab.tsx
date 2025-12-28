@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Sparkles, Coins, TrendingUp, Loader, Edit, Trash2, MoreVertical, Plus } from 'lucide-react';
+import { Sparkles, Coins, TrendingUp, Loader, Edit, Trash2, MoreVertical, Plus, X, Image as ImageIcon, Upload } from 'lucide-react';
 import {
   createSampleGoldPriceGame,
   createSampleSareePriceGame,
@@ -22,8 +22,13 @@ import {
   createSampleCelebritySareeGame,
   createSampleActressFashionGame,
 } from '@/lib/fantasy/admin-utils';
-import { getActiveFantasyGames, getAllFantasyGames, updateFantasyGame, deleteFantasyGame } from '@/lib/fantasy/services';
-import type { FantasyGame } from '@/lib/fantasy/types';
+import { getActiveFantasyGames, getAllFantasyGames, updateFantasyGame, deleteFantasyGame, getFantasyQuestions, createFantasyQuestion, updateFantasyQuestion, deleteFantasyQuestion } from '@/lib/fantasy/services';
+import type { FantasyGame, FantasyQuestion, PredictionType } from '@/lib/fantasy/types';
+import { getAllSponsors } from '@/lib/ads/services';
+import type { Sponsor } from '@/lib/ads/types';
+import { useStorage } from '@/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import Image from 'next/image';
 import { FantasyGameUtils } from '@/lib/fantasy/engine';
 import Link from 'next/link';
 import {
@@ -829,7 +834,7 @@ function GameCard({
   );
 }
 
-// Edit Game Dialog
+// Edit Game Dialog with Question Management
 function EditGameDialog({
   game,
   firestore,
@@ -843,13 +848,44 @@ function EditGameDialog({
   onSuccess: () => void;
   toast: ReturnType<typeof useToast>['toast'];
 }) {
+  const storage = useStorage();
   const [loading, setLoading] = useState(false);
+  const [loadingQuestions, setLoadingQuestions] = useState(true);
+  const [questions, setQuestions] = useState<(FantasyQuestion & { isNew?: boolean })[]>([]);
+  const [sponsors, setSponsors] = useState<Sponsor[]>([]);
+  const [uploadingImage, setUploadingImage] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'details' | 'questions'>('details');
+  
   const [formData, setFormData] = useState({
     title: game.title,
     description: game.description,
     entryCoins: game.entryCoins,
     status: game.status,
   });
+
+  // Load questions and sponsors on mount
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [existingQuestions, allSponsors] = await Promise.all([
+          getFantasyQuestions(firestore, game.id),
+          getAllSponsors(firestore).catch(() => []),
+        ]);
+        setQuestions(existingQuestions);
+        setSponsors(allSponsors);
+      } catch (error) {
+        console.error('Error loading data:', error);
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: 'Failed to load game questions.',
+        });
+      } finally {
+        setLoadingQuestions(false);
+      }
+    };
+    loadData();
+  }, [firestore, game.id, toast]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -880,84 +916,484 @@ function EditGameDialog({
     }
   };
 
+  const handleAddQuestion = () => {
+    if (questions.length >= 18) {
+      toast({
+        variant: 'destructive',
+        title: 'Maximum Questions',
+        description: 'You can add up to 18 questions per game.',
+      });
+      return;
+    }
+
+    const newOrder = questions.length > 0 
+      ? Math.max(...questions.map(q => q.order)) + 1 
+      : 1;
+
+    setQuestions([
+      ...questions,
+      {
+        id: `new-${Date.now()}`,
+        gameId: game.id,
+        question: '',
+        predictionType: 'up-down',
+        order: newOrder,
+        exactMatchPoints: 100,
+        createdAt: new Date() as any,
+        updatedAt: new Date() as any,
+        isNew: true,
+      },
+    ]);
+  };
+
+  const handleUpdateQuestion = (index: number, updates: Partial<FantasyQuestion>) => {
+    const updated = [...questions];
+    updated[index] = { ...updated[index], ...updates };
+    setQuestions(updated);
+  };
+
+  const handleRemoveQuestion = async (index: number) => {
+    const question = questions[index];
+    if (!question.isNew && question.id) {
+      // Delete from Firestore
+      try {
+        await deleteFantasyQuestion(firestore, question.id);
+        toast({
+          title: 'Success',
+          description: 'Question deleted successfully.',
+        });
+      } catch (error: any) {
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: error.message || 'Failed to delete question.',
+        });
+        return;
+      }
+    }
+    // Remove from local state
+    const updated = questions.filter((_, i) => i !== index);
+    // Reorder remaining questions
+    updated.forEach((q, i) => {
+      q.order = i + 1;
+    });
+    setQuestions(updated);
+  };
+
+  const handleImageUpload = async (index: number, file: File) => {
+    if (!storage) return;
+    
+    setUploadingImage(`question-${index}`);
+    try {
+      const storageRef = ref(storage, `fantasy_questions/${game.id}/${Date.now()}_${file.name}`);
+      await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(storageRef);
+      handleUpdateQuestion(index, { imageUrl: url });
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Upload Error',
+        description: error.message || 'Failed to upload image.',
+      });
+    } finally {
+      setUploadingImage(null);
+    }
+  };
+
+  const handleSaveQuestions = async () => {
+    setLoading(true);
+    try {
+      for (const question of questions) {
+        const questionData: any = {
+          gameId: game.id,
+          question: question.question,
+          predictionType: question.predictionType,
+          order: question.order,
+          exactMatchPoints: question.exactMatchPoints,
+          ...(question.imageUrl && { imageUrl: question.imageUrl }),
+          ...(question.imageDescription && { imageDescription: question.imageDescription }),
+          ...(question.options && question.options.length > 0 && { options: question.options }),
+          ...(question.minValue !== undefined && { minValue: question.minValue }),
+          ...(question.maxValue !== undefined && { maxValue: question.maxValue }),
+          ...(question.unit && { unit: question.unit }),
+          ...(question.nearRangePoints !== undefined && { nearRangePoints: question.nearRangePoints }),
+          ...(question.nearRangeTolerance !== undefined && { nearRangeTolerance: question.nearRangeTolerance }),
+          ...(question.eventSponsorId && { eventSponsorId: question.eventSponsorId }),
+        };
+
+        if (question.isNew) {
+          await createFantasyQuestion(firestore, questionData);
+        } else if (question.id) {
+          await updateFantasyQuestion(firestore, question.id, questionData);
+        }
+      }
+
+      toast({
+        title: 'Success',
+        description: `Successfully saved ${questions.length} question(s).`,
+      });
+      
+      // Reload questions
+      const updatedQuestions = await getFantasyQuestions(firestore, game.id);
+      setQuestions(updatedQuestions);
+      setActiveTab('details');
+    } catch (error: any) {
+      console.error('Error saving questions:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error.message || 'Failed to save questions.',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Dialog open={!!game} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Fantasy Game</DialogTitle>
           <DialogDescription>
-            Update game details and settings.
+            Update game details and manage questions/events.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="title">Game Title</Label>
-            <Input
-              id="title"
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              required
-            />
-          </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              rows={4}
-              required
-            />
-          </div>
+        <div className="flex gap-2 mb-4 border-b">
+          <Button
+            type="button"
+            variant={activeTab === 'details' ? 'default' : 'ghost'}
+            onClick={() => setActiveTab('details')}
+            size="sm"
+          >
+            Game Details
+          </Button>
+          <Button
+            type="button"
+            variant={activeTab === 'questions' ? 'default' : 'ghost'}
+            onClick={() => setActiveTab('questions')}
+            size="sm"
+          >
+            Questions/Events ({questions.length})
+          </Button>
+        </div>
 
-          <div className="grid grid-cols-2 gap-4">
+        {activeTab === 'details' && (
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="entryCoins">Entry Coins</Label>
+              <Label htmlFor="title">Game Title</Label>
               <Input
-                id="entryCoins"
-                type="number"
-                min="0"
-                value={formData.entryCoins}
-                onChange={(e) => setFormData({ ...formData, entryCoins: parseInt(e.target.value) || 0 })}
+                id="title"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 required
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="status">Status</Label>
-              <Select
-                value={formData.status}
-                onValueChange={(value) => setFormData({ ...formData, status: value as any })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                rows={4}
+                required
+              />
             </div>
-          </div>
 
-          <div className="flex justify-end gap-2 mt-4">
-            <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? (
-                <>
-                  <Loader className="mr-2 h-4 w-4 animate-spin" />
-                  Updating...
-                </>
-              ) : (
-                'Update Game'
-              )}
-            </Button>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="entryCoins">Entry Coins</Label>
+                <Input
+                  id="entryCoins"
+                  type="number"
+                  min="0"
+                  value={formData.entryCoins}
+                  onChange={(e) => setFormData({ ...formData, entryCoins: parseInt(e.target.value) || 0 })}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="status">Status</Label>
+                <Select
+                  value={formData.status}
+                  onValueChange={(value) => setFormData({ ...formData, status: value as any })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="draft">Draft</SelectItem>
+                    <SelectItem value="closed">Closed</SelectItem>
+                    <SelectItem value="results-declared">Results Declared</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 mt-4">
+              <Button type="button" variant="outline" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={loading}>
+                {loading ? (
+                  <>
+                    <Loader className="mr-2 h-4 w-4 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  'Update Game'
+                )}
+              </Button>
+            </div>
+          </form>
+        )}
+
+        {activeTab === 'questions' && (
+          <div className="space-y-4">
+            {loadingQuestions ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-muted-foreground">
+                    {questions.length} question(s) • Maximum 18 questions
+                  </p>
+                  <Button
+                    type="button"
+                    onClick={handleAddQuestion}
+                    disabled={questions.length >= 18 || loading}
+                    size="sm"
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Question
+                  </Button>
+                </div>
+
+                <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+                  {questions.map((question, index) => (
+                    <Card key={question.id || index} className="border-2">
+                      <CardHeader className="pb-3">
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-base">
+                            Question {question.order} {question.isNew && <Badge variant="outline">New</Badge>}
+                          </CardTitle>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRemoveQuestion(index)}
+                            disabled={loading}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="space-y-2">
+                          <Label>Question Text *</Label>
+                          <Textarea
+                            value={question.question}
+                            onChange={(e) => handleUpdateQuestion(index, { question: e.target.value })}
+                            required
+                            rows={2}
+                            placeholder="e.g., Will gold price go up or down?"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>Prediction Type *</Label>
+                            <Select
+                              value={question.predictionType}
+                              onValueChange={(value) => handleUpdateQuestion(index, { predictionType: value as PredictionType })}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="up-down">Up/Down</SelectItem>
+                                <SelectItem value="range">Range</SelectItem>
+                                <SelectItem value="multiple-choice">Multiple Choice</SelectItem>
+                                <SelectItem value="image-weight">Image: Weight</SelectItem>
+                                <SelectItem value="image-wastage">Image: Wastage</SelectItem>
+                                <SelectItem value="image-making-charges">Image: Making Charges</SelectItem>
+                                <SelectItem value="image-price">Image: Price</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label>Exact Match Points *</Label>
+                            <Input
+                              type="number"
+                              min="0"
+                              value={question.exactMatchPoints}
+                              onChange={(e) => handleUpdateQuestion(index, { exactMatchPoints: parseInt(e.target.value) || 0 })}
+                              required
+                            />
+                          </div>
+                        </div>
+
+                        {question.predictionType === 'multiple-choice' && (
+                          <div className="space-y-2">
+                            <Label>Options (one per line) *</Label>
+                            <Textarea
+                              value={question.options?.join('\n') || ''}
+                              onChange={(e) => {
+                                const options = e.target.value.split('\n').filter(o => o.trim());
+                                handleUpdateQuestion(index, { options: options.length > 0 ? options : undefined });
+                              }}
+                              rows={4}
+                              placeholder="Option 1&#10;Option 2&#10;Option 3"
+                            />
+                          </div>
+                        )}
+
+                        {(question.predictionType === 'range' || question.predictionType.startsWith('image-')) && (
+                          <div className="grid grid-cols-3 gap-4">
+                            <div className="space-y-2">
+                              <Label>Min Value</Label>
+                              <Input
+                                type="number"
+                                value={question.minValue || ''}
+                                onChange={(e) => handleUpdateQuestion(index, { minValue: e.target.value ? parseFloat(e.target.value) : undefined })}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Max Value</Label>
+                              <Input
+                                type="number"
+                                value={question.maxValue || ''}
+                                onChange={(e) => handleUpdateQuestion(index, { maxValue: e.target.value ? parseFloat(e.target.value) : undefined })}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Unit</Label>
+                              <Input
+                                value={question.unit || ''}
+                                onChange={(e) => handleUpdateQuestion(index, { unit: e.target.value || undefined })}
+                                placeholder="₹, %, kg"
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        {question.predictionType.startsWith('image-') && (
+                          <div className="space-y-2">
+                            <Label>Question Image {question.predictionType.startsWith('image-') && '*'}</Label>
+                            {question.imageUrl ? (
+                              <div className="relative">
+                                <Image
+                                  src={question.imageUrl}
+                                  alt="Question image"
+                                  width={300}
+                                  height={200}
+                                  className="rounded-lg border"
+                                />
+                                <Button
+                                  type="button"
+                                  variant="destructive"
+                                  size="sm"
+                                  className="absolute top-2 right-2"
+                                  onClick={() => handleUpdateQuestion(index, { imageUrl: undefined })}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <div className="border-2 border-dashed rounded-lg p-4">
+                                <Input
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) handleImageUpload(index, file);
+                                  }}
+                                  disabled={uploadingImage === `question-${index}`}
+                                  className="hidden"
+                                  id={`image-upload-${index}`}
+                                />
+                                <Label
+                                  htmlFor={`image-upload-${index}`}
+                                  className="flex flex-col items-center justify-center cursor-pointer"
+                                >
+                                  {uploadingImage === `question-${index}` ? (
+                                    <Loader className="h-8 w-8 animate-spin text-primary mb-2" />
+                                  ) : (
+                                    <ImageIcon className="h-8 w-8 text-muted-foreground mb-2" />
+                                  )}
+                                  <span className="text-sm text-muted-foreground">
+                                    {uploadingImage === `question-${index}` ? 'Uploading...' : 'Upload Image'}
+                                  </span>
+                                </Label>
+                              </div>
+                            )}
+                            <Input
+                              placeholder="Image description (e.g., Gold Chain Ornament)"
+                              value={question.imageDescription || ''}
+                              onChange={(e) => handleUpdateQuestion(index, { imageDescription: e.target.value || undefined })}
+                            />
+                          </div>
+                        )}
+
+                        <div className="space-y-2">
+                          <Label>Event Sponsor (Optional)</Label>
+                          <Select
+                            value={question.eventSponsorId || 'none'}
+                            onValueChange={(value) => handleUpdateQuestion(index, { eventSponsorId: value === 'none' ? undefined : value })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select event sponsor" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">No Sponsor</SelectItem>
+                              {sponsors.map((sponsor) => (
+                                <SelectItem key={sponsor.id} value={sponsor.id}>
+                                  {sponsor.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+
+                  {questions.length === 0 && (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <p>No questions yet. Click "Add Question" to get started.</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex justify-end gap-2 mt-4 border-t pt-4">
+                  <Button type="button" variant="outline" onClick={onClose}>
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={handleSaveQuestions}
+                    disabled={loading || questions.length === 0}
+                  >
+                    {loading ? (
+                      <>
+                        <Loader className="mr-2 h-4 w-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      'Save Questions'
+                    )}
+                  </Button>
+                </div>
+              </>
+            )}
           </div>
-        </form>
+        )}
       </DialogContent>
     </Dialog>
   );
