@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Sparkles, Coins, TrendingUp, Loader, Edit, Trash2, MoreVertical, Plus, X, Image as ImageIcon, Upload } from 'lucide-react';
+import { Sparkles, Coins, TrendingUp, Loader, Edit, Trash2, MoreVertical, Plus, X, Image as ImageIcon, Upload, Database } from 'lucide-react';
 import {
   createSampleGoldPriceGame,
   createSampleSareePriceGame,
@@ -24,6 +24,7 @@ import {
 } from '@/lib/fantasy/admin-utils';
 import { getActiveFantasyGames, getAllFantasyGames, updateFantasyGame, deleteFantasyGame, getFantasyQuestions, createFantasyQuestion, updateFantasyQuestion, deleteFantasyQuestion } from '@/lib/fantasy/services';
 import type { FantasyGame, FantasyQuestion, PredictionType } from '@/lib/fantasy/types';
+import { seedAllGameQuestions } from '@/lib/fantasy/seed-questions';
 import { getAllSponsors } from '@/lib/ads/services';
 import type { Sponsor } from '@/lib/ads/types';
 import { useStorage } from '@/firebase';
@@ -494,7 +495,36 @@ export function FantasyAdminTab({ firestore, user, toast }: FantasyAdminTabProps
             {/* Celebrity & Viral Games */}
             <div>
               <h3 className="text-sm font-semibold mb-3">Celebrity & Viral Games</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Card className="border-2 border-dashed">
+                  <CardHeader>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4" />
+                      Actress Fashion Trend
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      Predict trending actress fashion styles
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Button
+                      onClick={() => handleCreateGame('actress-fashion')}
+                      disabled={isCreating === 'actress-fashion'}
+                      className="w-full"
+                      size="sm"
+                    >
+                      {isCreating === 'actress-fashion' ? (
+                        <>
+                          <Loader className="mr-2 h-4 w-4 animate-spin" />
+                          Creating...
+                        </>
+                      ) : (
+                        'Create Game'
+                      )}
+                    </Button>
+                  </CardContent>
+                </Card>
+
                 <Card className="border-2 border-dashed">
                   <CardHeader>
                     <CardTitle className="text-base flex items-center gap-2">
@@ -870,6 +900,7 @@ function EditGameDialog({
   const [sponsors, setSponsors] = useState<Sponsor[]>([]);
   const [uploadingImage, setUploadingImage] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'details' | 'questions'>('details');
+  const [seedingQuestions, setSeedingQuestions] = useState(false);
   
   const [formData, setFormData] = useState({
     title: game.title,
@@ -1015,6 +1046,33 @@ function EditGameDialog({
       });
     } finally {
       setUploadingImage(null);
+    }
+  };
+
+  const handleSeedQuestions = async () => {
+    if (!confirm(`This will seed 17-33 questions from the pool for "${game.title}". Existing questions will remain. Continue?`)) {
+      return;
+    }
+
+    try {
+      setSeedingQuestions(true);
+      const count = await seedAllGameQuestions(firestore, game.id, game.gameType);
+      toast({
+        title: 'Success',
+        description: `Successfully seeded ${count} questions from the pool.`,
+      });
+      // Reload questions to show the newly seeded ones
+      const updatedQuestions = await getFantasyQuestions(firestore, game.id);
+      setQuestions(updatedQuestions);
+    } catch (error: any) {
+      console.error('Error seeding questions:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error.message || 'Failed to seed questions.',
+      });
+    } finally {
+      setSeedingQuestions(false);
     }
   };
 
@@ -1181,15 +1239,36 @@ function EditGameDialog({
                   <p className="text-sm text-muted-foreground">
                     {questions.length} question(s) • Maximum 18 questions
                   </p>
-                  <Button
-                    type="button"
-                    onClick={handleAddQuestion}
-                    disabled={questions.length >= 18 || loading}
-                    size="sm"
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Question
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      onClick={handleSeedQuestions}
+                      disabled={seedingQuestions || loading}
+                      variant="outline"
+                      size="sm"
+                    >
+                      {seedingQuestions ? (
+                        <>
+                          <Database className="mr-2 h-4 w-4 animate-spin" />
+                          Seeding...
+                        </>
+                      ) : (
+                        <>
+                          <Database className="mr-2 h-4 w-4" />
+                          Seed Questions from Pool
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={handleAddQuestion}
+                      disabled={questions.length >= 18 || loading}
+                      size="sm"
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add Question
+                    </Button>
+                  </div>
                 </div>
 
                 <div className="space-y-4 max-h-[60vh] overflow-y-auto">

@@ -20,9 +20,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { Search, Edit, Trash2, Plus, Filter, CheckCircle, XCircle, Eye } from 'lucide-react';
+import { Search, Edit, Trash2, Plus, Filter, CheckCircle, XCircle, Eye, Database } from 'lucide-react';
 import { getAllFantasyGames } from '@/lib/fantasy/services';
 import type { FantasyGame } from '@/lib/fantasy/types';
+import { seedAllGameQuestions } from '@/lib/fantasy/seed-questions';
 
 interface QuestionPoolManagerProps {
   firestore: Firestore;
@@ -42,6 +43,7 @@ export function QuestionPoolManager({ firestore, user, toast }: QuestionPoolMana
   const [editingQuestion, setEditingQuestion] = useState<FantasyQuestion | null>(null);
   const [creatingQuestion, setCreatingQuestion] = useState(false);
   const [selectedGameForCreate, setSelectedGameForCreate] = useState<string>('');
+  const [seedingGame, setSeedingGame] = useState<string | null>(null);
 
   useEffect(() => {
     loadGames();
@@ -128,6 +130,49 @@ export function QuestionPoolManager({ firestore, user, toast }: QuestionPoolMana
         title: 'Error',
         description: error.message || 'Failed to delete question.',
       });
+    }
+  };
+
+  const handleSeedQuestions = async () => {
+    if (!selectedGameId || selectedGameId === 'all') {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Please select a game first.',
+      });
+      return;
+    }
+
+    const game = games.find(g => g.id === selectedGameId);
+    if (!game) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Game not found.',
+      });
+      return;
+    }
+
+    if (!confirm(`This will seed 30-50 questions for "${game.title}". Continue?`)) {
+      return;
+    }
+
+    try {
+      setSeedingGame(selectedGameId);
+      const count = await seedAllGameQuestions(firestore, selectedGameId, game.gameType);
+      toast({
+        title: 'Success',
+        description: `Successfully seeded ${count} questions for ${game.title}.`,
+      });
+      loadQuestions();
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error.message || 'Failed to seed questions.',
+      });
+    } finally {
+      setSeedingGame(null);
     }
   };
 
@@ -235,6 +280,25 @@ export function QuestionPoolManager({ firestore, user, toast }: QuestionPoolMana
                 className="pl-8"
               />
             </div>
+            {selectedGameId !== 'all' && (
+              <Button
+                onClick={handleSeedQuestions}
+                disabled={seedingGame === selectedGameId}
+                variant="outline"
+              >
+                {seedingGame === selectedGameId ? (
+                  <>
+                    <Database className="mr-2 h-4 w-4 animate-spin" />
+                    Seeding...
+                  </>
+                ) : (
+                  <>
+                    <Database className="mr-2 h-4 w-4" />
+                    Seed Questions
+                  </>
+                )}
+              </Button>
+            )}
             <Button onClick={() => setCreatingQuestion(true)}>
               <Plus className="mr-2 h-4 w-4" />
               Create Question

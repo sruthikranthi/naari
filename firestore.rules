@@ -450,7 +450,9 @@ service cloud.firestore {
     
     // Fantasy Events
     match /fantasy_events/{eventId} {
-      allow get, list: if isSignedIn();
+      allow get: if isSignedIn();
+      // Allow list queries - Firestore requires where/orderBy/limit which our queries have
+      allow list: if isSignedIn();
       allow create, update, delete: if isSuperAdmin();
     }
     
