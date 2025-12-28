@@ -12,6 +12,7 @@ import {
   createFantasyQuestion,
   updateFantasyGame,
 } from './services';
+import { seedAllGameQuestions } from './seed-questions';
 import type {
   FantasyGame,
   FantasyQuestion,
@@ -96,7 +97,8 @@ export async function createGameQuestion(
     nearRangePoints?: number;
     nearRangeTolerance?: number;
     order: number;
-  }
+  },
+  adminUserId: string
 ): Promise<string> {
   const gameConfig = await getGameConfigForQuestion(firestore, gameId);
   
@@ -114,6 +116,10 @@ export async function createGameQuestion(
     nearRangePoints: question.nearRangePoints ?? gameConfig.defaultNearRangePoints,
     nearRangeTolerance: question.nearRangeTolerance ?? gameConfig.defaultNearRangeTolerance,
     order: question.order,
+    // Question pool fields - default values for admin-created questions
+    source: 'admin',
+    isActive: true,
+    createdBy: adminUserId,
     // Only include optional fields if they're defined
     ...(options !== undefined && options.length > 0 && { options }),
     ...(question.minValue !== undefined && { minValue: question.minValue }),
@@ -171,14 +177,14 @@ export async function createSampleGoldPriceGame(
     exactMatchPoints: 150,
     nearRangePoints: 75,
     nearRangeTolerance: 5, // 5% tolerance
-  });
+  }, adminUserId);
 
   await createGameQuestion(firestore, gameId, {
     question: 'Will the gold ornament market price go up or down this week?',
     predictionType: 'up-down',
     order: 2,
     exactMatchPoints: 100,
-  });
+  }, adminUserId);
 
   return gameId;
 }
@@ -206,24 +212,32 @@ export async function createSampleSareePriceGame(
     tags: ['saree', 'silk', 'price', 'fashion', 'market'],
   });
 
-  await createGameQuestion(firestore, gameId, {
-    question: 'What will be the average retail market price range for a premium silk saree?',
-    predictionType: 'range',
-    minValue: 5000,
-    maxValue: 50000,
-    unit: '₹',
-    order: 1,
-    exactMatchPoints: 150,
-    nearRangePoints: 75,
-    nearRangeTolerance: 10,
-  });
+  // Seed questions from pool
+  try {
+    const questionCount = await seedAllGameQuestions(firestore, gameId, 'silk-saree-price');
+    console.log(`✅ Seeded ${questionCount} questions for silk-saree-price game`);
+  } catch (error) {
+    console.error('Error seeding questions, falling back to manual creation:', error);
+    // Fallback
+    await createGameQuestion(firestore, gameId, {
+      question: 'What will be the average retail market price range for a premium silk saree?',
+      predictionType: 'range',
+      minValue: 5000,
+      maxValue: 50000,
+      unit: '₹',
+      order: 1,
+      exactMatchPoints: 150,
+      nearRangePoints: 75,
+      nearRangeTolerance: 10,
+    }, adminUserId);
 
-  await createGameQuestion(firestore, gameId, {
-    question: 'Will silk saree market prices increase or decrease this week?',
-    predictionType: 'up-down',
-    order: 2,
-    exactMatchPoints: 100,
-  });
+    await createGameQuestion(firestore, gameId, {
+      question: 'Will silk saree market prices increase or decrease this week?',
+      predictionType: 'up-down',
+      order: 2,
+      exactMatchPoints: 100,
+    }, adminUserId);
+  }
 
   return gameId;
 }
@@ -251,31 +265,39 @@ export async function createSampleMakeupPriceGame(
     tags: ['makeup', 'beauty', 'price', 'cosmetics', 'market'],
   });
 
-  await createGameQuestion(firestore, gameId, {
-    question: 'What will be the average market price of a premium lipstick?',
-    predictionType: 'range',
-    minValue: 200,
-    maxValue: 3000,
-    unit: '₹',
-    order: 1,
-    exactMatchPoints: 120,
-    nearRangePoints: 60,
-    nearRangeTolerance: 10,
-  });
+  // Seed questions from pool
+  try {
+    const questionCount = await seedAllGameQuestions(firestore, gameId, 'makeup-beauty-price');
+    console.log(`✅ Seeded ${questionCount} questions for makeup-beauty-price game`);
+  } catch (error) {
+    console.error('Error seeding questions, falling back to manual creation:', error);
+    // Fallback
+    await createGameQuestion(firestore, gameId, {
+      question: 'What will be the average market price of a premium lipstick?',
+      predictionType: 'range',
+      minValue: 200,
+      maxValue: 3000,
+      unit: '₹',
+      order: 1,
+      exactMatchPoints: 120,
+      nearRangePoints: 60,
+      nearRangeTolerance: 10,
+    }, adminUserId);
 
-  await createGameQuestion(firestore, gameId, {
-    question: 'Which beauty product category will see the highest market price increase?',
-    predictionType: 'multiple-choice',
-    options: [
-      'Skincare',
-      'Makeup',
-      'Haircare',
-      'Fragrances',
-      'Wellness Products',
-    ],
-    order: 2,
-    exactMatchPoints: 130,
-  });
+    await createGameQuestion(firestore, gameId, {
+      question: 'Which beauty product category will see the highest market price increase?',
+      predictionType: 'multiple-choice',
+      options: [
+        'Skincare',
+        'Makeup',
+        'Haircare',
+        'Fragrances',
+        'Wellness Products',
+      ],
+      order: 2,
+      exactMatchPoints: 130,
+    }, adminUserId);
+  }
 
   return gameId;
 }
@@ -307,43 +329,51 @@ export async function createSampleVegetablePriceGame(
     tags: ['vegetable', 'price', 'market', 'prediction'],
   });
 
-  await createGameQuestion(firestore, gameId, {
-    question: 'What will be the market price per kg of tomatoes?',
-    predictionType: 'range',
-    minValue: 20,
-    maxValue: 150,
-    unit: '₹/kg',
-    order: 1,
-    exactMatchPoints: 120,
-    nearRangePoints: 60,
-    nearRangeTolerance: 10,
-  });
+  // Seed questions from pool
+  try {
+    const questionCount = await seedAllGameQuestions(firestore, gameId, 'vegetable-price');
+    console.log(`✅ Seeded ${questionCount} questions for vegetable-price game`);
+  } catch (error) {
+    console.error('Error seeding questions, falling back to manual creation:', error);
+    // Fallback
+    await createGameQuestion(firestore, gameId, {
+      question: 'What will be the market price per kg of tomatoes?',
+      predictionType: 'range',
+      minValue: 20,
+      maxValue: 150,
+      unit: '₹/kg',
+      order: 1,
+      exactMatchPoints: 120,
+      nearRangePoints: 60,
+      nearRangeTolerance: 10,
+    }, adminUserId);
 
-  await createGameQuestion(firestore, gameId, {
-    question: 'What will be the market price per kg of onions?',
-    predictionType: 'range',
-    minValue: 15,
-    maxValue: 100,
-    unit: '₹/kg',
-    order: 2,
-    exactMatchPoints: 120,
-    nearRangePoints: 60,
-    nearRangeTolerance: 10,
-  });
+    await createGameQuestion(firestore, gameId, {
+      question: 'What will be the market price per kg of onions?',
+      predictionType: 'range',
+      minValue: 15,
+      maxValue: 100,
+      unit: '₹/kg',
+      order: 2,
+      exactMatchPoints: 120,
+      nearRangePoints: 60,
+      nearRangeTolerance: 10,
+    }, adminUserId);
 
-  await createGameQuestion(firestore, gameId, {
-    question: 'Which vegetable will have the highest market price this week?',
-    predictionType: 'multiple-choice',
-    options: [
-      'Tomato',
-      'Onion',
-      'Potato',
-      'Green Chillies',
-      'Brinjal',
-    ],
-    order: 3,
-    exactMatchPoints: 100,
-  });
+    await createGameQuestion(firestore, gameId, {
+      question: 'Which vegetable will have the highest market price this week?',
+      predictionType: 'multiple-choice',
+      options: [
+        'Tomato',
+        'Onion',
+        'Potato',
+        'Green Chillies',
+        'Brinjal',
+      ],
+      order: 3,
+      exactMatchPoints: 100,
+    }, adminUserId);
+  }
 
   return gameId;
 }
@@ -371,43 +401,51 @@ export async function createSampleFruitPriceGame(
     tags: ['fruit', 'price', 'market', 'prediction', 'seasonal'],
   });
 
-  await createGameQuestion(firestore, gameId, {
-    question: 'What will be the market price per kg of apples?',
-    predictionType: 'range',
-    minValue: 80,
-    maxValue: 300,
-    unit: '₹/kg',
-    order: 1,
-    exactMatchPoints: 120,
-    nearRangePoints: 60,
-    nearRangeTolerance: 10,
-  });
+  // Seed questions from pool
+  try {
+    const questionCount = await seedAllGameQuestions(firestore, gameId, 'fruit-price');
+    console.log(`✅ Seeded ${questionCount} questions for fruit-price game`);
+  } catch (error) {
+    console.error('Error seeding questions, falling back to manual creation:', error);
+    // Fallback
+    await createGameQuestion(firestore, gameId, {
+      question: 'What will be the market price per kg of apples?',
+      predictionType: 'range',
+      minValue: 80,
+      maxValue: 300,
+      unit: '₹/kg',
+      order: 1,
+      exactMatchPoints: 120,
+      nearRangePoints: 60,
+      nearRangeTolerance: 10,
+    }, adminUserId);
 
-  await createGameQuestion(firestore, gameId, {
-    question: 'What will be the market price per kg of bananas?',
-    predictionType: 'range',
-    minValue: 30,
-    maxValue: 100,
-    unit: '₹/kg',
-    order: 2,
-    exactMatchPoints: 120,
-    nearRangePoints: 60,
-    nearRangeTolerance: 10,
-  });
+    await createGameQuestion(firestore, gameId, {
+      question: 'What will be the market price per kg of bananas?',
+      predictionType: 'range',
+      minValue: 30,
+      maxValue: 100,
+      unit: '₹/kg',
+      order: 2,
+      exactMatchPoints: 120,
+      nearRangePoints: 60,
+      nearRangeTolerance: 10,
+    }, adminUserId);
 
-  await createGameQuestion(firestore, gameId, {
-    question: 'Which fruit will have the highest market price this week?',
-    predictionType: 'multiple-choice',
-    options: [
-      'Apple',
-      'Banana',
-      'Mango (seasonal)',
-      'Orange',
-      'Grapes',
-    ],
-    order: 3,
-    exactMatchPoints: 100,
-  });
+    await createGameQuestion(firestore, gameId, {
+      question: 'Which fruit will have the highest market price this week?',
+      predictionType: 'multiple-choice',
+      options: [
+        'Apple',
+        'Banana',
+        'Mango (seasonal)',
+        'Orange',
+        'Grapes',
+      ],
+      order: 3,
+      exactMatchPoints: 100,
+    }, adminUserId);
+  }
 
   return gameId;
 }
@@ -439,35 +477,43 @@ export async function createSampleSareeColorTrendGame(
     tags: ['saree', 'color', 'trend', 'fashion'],
   });
 
-  await createGameQuestion(firestore, gameId, {
-    question: 'Which saree color will be most popular this season?',
-    predictionType: 'multiple-choice',
-    options: [
-      'Red & Maroon',
-      'Blue & Navy',
-      'Green & Emerald',
-      'Pink & Rose',
-      'Yellow & Gold',
-      'Purple & Lavender',
-    ],
-    order: 1,
-    exactMatchPoints: 100,
-  });
+  // Seed questions from pool
+  try {
+    const questionCount = await seedAllGameQuestions(firestore, gameId, 'saree-color-trend');
+    console.log(`✅ Seeded ${questionCount} questions for saree-color-trend game`);
+  } catch (error) {
+    console.error('Error seeding questions, falling back to manual creation:', error);
+    // Fallback
+    await createGameQuestion(firestore, gameId, {
+      question: 'Which saree color will be most popular this season?',
+      predictionType: 'multiple-choice',
+      options: [
+        'Red & Maroon',
+        'Blue & Navy',
+        'Green & Emerald',
+        'Pink & Rose',
+        'Yellow & Gold',
+        'Purple & Lavender',
+      ],
+      order: 1,
+      exactMatchPoints: 100,
+    }, adminUserId);
 
-  await createGameQuestion(firestore, gameId, {
-    question: 'Which saree fabric will trend the most?',
-    predictionType: 'multiple-choice',
-    options: [
-      'Silk',
-      'Cotton',
-      'Georgette',
-      'Chiffon',
-      'Linen',
-      'Organza',
-    ],
-    order: 2,
-    exactMatchPoints: 100,
-  });
+    await createGameQuestion(firestore, gameId, {
+      question: 'Which saree fabric will trend the most?',
+      predictionType: 'multiple-choice',
+      options: [
+        'Silk',
+        'Cotton',
+        'Georgette',
+        'Chiffon',
+        'Linen',
+        'Organza',
+      ],
+      order: 2,
+      exactMatchPoints: 100,
+    }, adminUserId);
+  }
 
   return gameId;
 }
@@ -495,35 +541,43 @@ export async function createSampleJewelryTrendGame(
     tags: ['jewelry', 'design', 'trend', 'fashion'],
   });
 
-  await createGameQuestion(firestore, gameId, {
-    question: 'Which jewelry design style will be most popular?',
-    predictionType: 'multiple-choice',
-    options: [
-      'Traditional Kundan',
-      'Modern Minimalist',
-      'Antique & Vintage',
-      'Contemporary Fusion',
-      'Temple Jewelry',
-      'Polki & Jadau',
-    ],
-    order: 1,
-    exactMatchPoints: 100,
-  });
+  // Seed questions from pool
+  try {
+    const questionCount = await seedAllGameQuestions(firestore, gameId, 'jewelry-design-trend');
+    console.log(`✅ Seeded ${questionCount} questions for jewelry-design-trend game`);
+  } catch (error) {
+    console.error('Error seeding questions, falling back to manual creation:', error);
+    // Fallback
+    await createGameQuestion(firestore, gameId, {
+      question: 'Which jewelry design style will be most popular?',
+      predictionType: 'multiple-choice',
+      options: [
+        'Traditional Kundan',
+        'Modern Minimalist',
+        'Antique & Vintage',
+        'Contemporary Fusion',
+        'Temple Jewelry',
+        'Polki & Jadau',
+      ],
+      order: 1,
+      exactMatchPoints: 100,
+    }, adminUserId);
 
-  await createGameQuestion(firestore, gameId, {
-    question: 'Which jewelry piece will trend the most?',
-    predictionType: 'multiple-choice',
-    options: [
-      'Necklace & Choker',
-      'Earrings & Jhumkas',
-      'Bangles & Bracelets',
-      'Rings & Finger Rings',
-      'Maang Tikka & Matha Patti',
-      'Nose Ring & Nath',
-    ],
-    order: 2,
-    exactMatchPoints: 100,
-  });
+    await createGameQuestion(firestore, gameId, {
+      question: 'Which jewelry piece will trend the most?',
+      predictionType: 'multiple-choice',
+      options: [
+        'Necklace & Choker',
+        'Earrings & Jhumkas',
+        'Bangles & Bracelets',
+        'Rings & Finger Rings',
+        'Maang Tikka & Matha Patti',
+        'Nose Ring & Nath',
+      ],
+      order: 2,
+      exactMatchPoints: 100,
+    }, adminUserId);
+  }
 
   return gameId;
 }
@@ -551,35 +605,43 @@ export async function createSampleBridalMakeupTrendGame(
     tags: ['bridal', 'makeup', 'trend', 'beauty'],
   });
 
-  await createGameQuestion(firestore, gameId, {
-    question: 'Which bridal makeup look will be most popular?',
-    predictionType: 'multiple-choice',
-    options: [
-      'Natural & Dewy',
-      'Glamorous & Bold',
-      'Traditional & Classic',
-      'Modern & Minimal',
-      'Smoky & Dramatic',
-      'Soft & Romantic',
-    ],
-    order: 1,
-    exactMatchPoints: 100,
-  });
+  // Seed questions from pool
+  try {
+    const questionCount = await seedAllGameQuestions(firestore, gameId, 'bridal-makeup-trend');
+    console.log(`✅ Seeded ${questionCount} questions for bridal-makeup-trend game`);
+  } catch (error) {
+    console.error('Error seeding questions, falling back to manual creation:', error);
+    // Fallback
+    await createGameQuestion(firestore, gameId, {
+      question: 'Which bridal makeup look will be most popular?',
+      predictionType: 'multiple-choice',
+      options: [
+        'Natural & Dewy',
+        'Glamorous & Bold',
+        'Traditional & Classic',
+        'Modern & Minimal',
+        'Smoky & Dramatic',
+        'Soft & Romantic',
+      ],
+      order: 1,
+      exactMatchPoints: 100,
+    }, adminUserId);
 
-  await createGameQuestion(firestore, gameId, {
-    question: 'Which lip color will trend for brides?',
-    predictionType: 'multiple-choice',
-    options: [
-      'Classic Red',
-      'Pink & Rose',
-      'Coral & Peach',
-      'Berry & Wine',
-      'Nude & Brown',
-      'Fuchsia & Magenta',
-    ],
-    order: 2,
-    exactMatchPoints: 100,
-  });
+    await createGameQuestion(firestore, gameId, {
+      question: 'Which lip color will trend for brides?',
+      predictionType: 'multiple-choice',
+      options: [
+        'Classic Red',
+        'Pink & Rose',
+        'Coral & Peach',
+        'Berry & Wine',
+        'Nude & Brown',
+        'Fuchsia & Magenta',
+      ],
+      order: 2,
+      exactMatchPoints: 100,
+    }, adminUserId);
+  }
 
   return gameId;
 }
@@ -611,37 +673,45 @@ export async function createSampleCelebritySareeGame(
     tags: ['celebrity', 'saree', 'style', 'fashion'],
   });
 
-  await createGameQuestion(firestore, gameId, {
-    question: 'Which celebrity saree look will be most talked about?',
-    predictionType: 'multiple-choice',
-    options: [
-      'Deepika Padukone',
-      'Priyanka Chopra',
-      'Alia Bhatt',
-      'Anushka Sharma',
-      'Kareena Kapoor',
-      'Katrina Kaif',
-      'Sonam Kapoor',
-      'Other Celebrity',
-    ],
-    order: 1,
-    exactMatchPoints: 100,
-  });
+  // Seed questions from pool
+  try {
+    const questionCount = await seedAllGameQuestions(firestore, gameId, 'celebrity-saree-look');
+    console.log(`✅ Seeded ${questionCount} questions for celebrity-saree-look game`);
+  } catch (error) {
+    console.error('Error seeding questions, falling back to manual creation:', error);
+    // Fallback
+    await createGameQuestion(firestore, gameId, {
+      question: 'Which celebrity saree look will be most talked about?',
+      predictionType: 'multiple-choice',
+      options: [
+        'Deepika Padukone',
+        'Priyanka Chopra',
+        'Alia Bhatt',
+        'Anushka Sharma',
+        'Kareena Kapoor',
+        'Katrina Kaif',
+        'Sonam Kapoor',
+        'Other Celebrity',
+      ],
+      order: 1,
+      exactMatchPoints: 100,
+    }, adminUserId);
 
-  await createGameQuestion(firestore, gameId, {
-    question: 'Which saree style will celebrities wear most?',
-    predictionType: 'multiple-choice',
-    options: [
-      'Traditional Silk Saree',
-      'Modern Designer Saree',
-      'Lehenga Style Saree',
-      'Pre-Draped Saree',
-      'Saree Gown',
-      'Contemporary Saree',
-    ],
-    order: 2,
-    exactMatchPoints: 100,
-  });
+    await createGameQuestion(firestore, gameId, {
+      question: 'Which saree style will celebrities wear most?',
+      predictionType: 'multiple-choice',
+      options: [
+        'Traditional Silk Saree',
+        'Modern Designer Saree',
+        'Lehenga Style Saree',
+        'Pre-Draped Saree',
+        'Saree Gown',
+        'Contemporary Saree',
+      ],
+      order: 2,
+      exactMatchPoints: 100,
+    }, adminUserId);
+  }
 
   return gameId;
 }
@@ -669,35 +739,43 @@ export async function createSampleActressFashionGame(
     tags: ['actress', 'fashion', 'trend', 'celebrity'],
   });
 
-  await createGameQuestion(firestore, gameId, {
-    question: 'Which actress fashion style will trend the most?',
-    predictionType: 'multiple-choice',
-    options: [
-      'Ethnic & Traditional',
-      'Western & Modern',
-      'Fusion & Indo-Western',
-      'Minimalist & Chic',
-      'Bold & Statement',
-      'Vintage & Retro',
-    ],
-    order: 1,
-    exactMatchPoints: 100,
-  });
+  // Seed questions from pool
+  try {
+    const questionCount = await seedAllGameQuestions(firestore, gameId, 'actress-fashion-trend');
+    console.log(`✅ Seeded ${questionCount} questions for actress-fashion-trend game`);
+  } catch (error) {
+    console.error('Error seeding questions, falling back to manual creation:', error);
+    // Fallback
+    await createGameQuestion(firestore, gameId, {
+      question: 'Which actress fashion style will trend the most?',
+      predictionType: 'multiple-choice',
+      options: [
+        'Ethnic & Traditional',
+        'Western & Modern',
+        'Fusion & Indo-Western',
+        'Minimalist & Chic',
+        'Bold & Statement',
+        'Vintage & Retro',
+      ],
+      order: 1,
+      exactMatchPoints: 100,
+    }, adminUserId);
 
-  await createGameQuestion(firestore, gameId, {
-    question: 'Which fashion accessory will be most popular?',
-    predictionType: 'multiple-choice',
-    options: [
-      'Statement Jewelry',
-      'Designer Handbags',
-      'Trendy Footwear',
-      'Sunglasses & Eyewear',
-      'Hair Accessories',
-      'Belts & Waist Chains',
-    ],
-    order: 2,
-    exactMatchPoints: 100,
-  });
+    await createGameQuestion(firestore, gameId, {
+      question: 'Which fashion accessory will be most popular?',
+      predictionType: 'multiple-choice',
+      options: [
+        'Statement Jewelry',
+        'Designer Handbags',
+        'Trendy Footwear',
+        'Sunglasses & Eyewear',
+        'Hair Accessories',
+        'Belts & Waist Chains',
+      ],
+      order: 2,
+      exactMatchPoints: 100,
+    }, adminUserId);
+  }
 
   return gameId;
 }
@@ -725,35 +803,43 @@ export async function createSampleViralFashionLookGame(
     tags: ['viral', 'fashion', 'trend', 'social'],
   });
 
-  await createGameQuestion(firestore, gameId, {
-    question: 'Which fashion look will be most shared on social media?',
-    predictionType: 'multiple-choice',
-    options: [
-      'Ethnic & Traditional',
-      'Western & Modern',
-      'Fusion & Indo-Western',
-      'Minimalist & Chic',
-      'Bold & Statement',
-      'Vintage & Retro',
-    ],
-    order: 1,
-    exactMatchPoints: 100,
-  });
+  // Seed questions from pool
+  try {
+    const questionCount = await seedAllGameQuestions(firestore, gameId, 'viral-fashion-look');
+    console.log(`✅ Seeded ${questionCount} questions for viral-fashion-look game`);
+  } catch (error) {
+    console.error('Error seeding questions, falling back to manual creation:', error);
+    // Fallback
+    await createGameQuestion(firestore, gameId, {
+      question: 'Which fashion look will be most shared on social media?',
+      predictionType: 'multiple-choice',
+      options: [
+        'Ethnic & Traditional',
+        'Western & Modern',
+        'Fusion & Indo-Western',
+        'Minimalist & Chic',
+        'Bold & Statement',
+        'Vintage & Retro',
+      ],
+      order: 1,
+      exactMatchPoints: 100,
+    }, adminUserId);
 
-  await createGameQuestion(firestore, gameId, {
-    question: 'Which fashion item will go viral this week?',
-    predictionType: 'multiple-choice',
-    options: [
-      'Designer Saree',
-      'Statement Jewelry',
-      'Trendy Handbag',
-      'Celebrity Outfit',
-      'Vintage Accessories',
-      'Traditional Wear',
-    ],
-    order: 2,
-    exactMatchPoints: 100,
-  });
+    await createGameQuestion(firestore, gameId, {
+      question: 'Which fashion item will go viral this week?',
+      predictionType: 'multiple-choice',
+      options: [
+        'Designer Saree',
+        'Statement Jewelry',
+        'Trendy Handbag',
+        'Celebrity Outfit',
+        'Vintage Accessories',
+        'Traditional Wear',
+      ],
+      order: 2,
+      exactMatchPoints: 100,
+    }, adminUserId);
+  }
 
   return gameId;
 }
@@ -785,17 +871,25 @@ export async function createSampleDailyGroceryPriceGame(
     tags: ['grocery', 'price', 'market', 'staples', 'daily'],
   });
 
-  await createGameQuestion(firestore, gameId, {
-    question: 'What will be the average retail market price per kg of rice?',
-    predictionType: 'range',
-    minValue: 30,
-    maxValue: 150,
-    unit: '₹/kg',
-    order: 1,
-    exactMatchPoints: 120,
-    nearRangePoints: 60,
-    nearRangeTolerance: 10,
-  });
+  // Seed questions from pool
+  try {
+    const questionCount = await seedAllGameQuestions(firestore, gameId, 'daily-grocery-price');
+    console.log(`✅ Seeded ${questionCount} questions for daily-grocery-price game`);
+  } catch (error) {
+    console.error('Error seeding questions, falling back to manual creation:', error);
+    // Fallback
+    await createGameQuestion(firestore, gameId, {
+      question: 'What will be the average retail market price per kg of rice?',
+      predictionType: 'range',
+      minValue: 30,
+      maxValue: 150,
+      unit: '₹/kg',
+      order: 1,
+      exactMatchPoints: 120,
+      nearRangePoints: 60,
+      nearRangeTolerance: 10,
+    }, adminUserId);
+  }
 
   await createGameQuestion(firestore, gameId, {
     question: 'What will be the average retail market price per kg of wheat flour?',
@@ -807,7 +901,7 @@ export async function createSampleDailyGroceryPriceGame(
     exactMatchPoints: 120,
     nearRangePoints: 60,
     nearRangeTolerance: 10,
-  });
+  }, adminUserId);
 
   await createGameQuestion(firestore, gameId, {
     question: 'What will be the average retail market price per kg of sugar?',
@@ -819,7 +913,7 @@ export async function createSampleDailyGroceryPriceGame(
     exactMatchPoints: 120,
     nearRangePoints: 60,
     nearRangeTolerance: 10,
-  });
+  }, adminUserId);
 
   await createGameQuestion(firestore, gameId, {
     question: 'What will be the average retail market price per liter of cooking oil?',
@@ -831,7 +925,7 @@ export async function createSampleDailyGroceryPriceGame(
     exactMatchPoints: 120,
     nearRangePoints: 60,
     nearRangeTolerance: 10,
-  });
+  }, adminUserId);
 
   return gameId;
 }

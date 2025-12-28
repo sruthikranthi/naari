@@ -51,6 +51,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Timestamp } from 'firebase/firestore';
 import { CreateGameForm } from '@/components/fantasy/create-game-form';
 import { CreateCampaignForm } from '@/components/fantasy/create-campaign-form';
+import { QuestionPoolManager } from '@/components/fantasy/question-pool-manager';
+import { EventManager } from '@/components/fantasy/event-manager';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface FantasyAdminTabProps {
   firestore: Firestore | null;
@@ -68,6 +71,7 @@ export function FantasyAdminTab({ firestore, user, toast }: FantasyAdminTabProps
   const [deletingGame, setDeletingGame] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showCreateCampaign, setShowCreateCampaign] = useState(false);
+  const [activeTab, setActiveTab] = useState<'games' | 'questions' | 'events'>('games');
 
   const loadGames = async () => {
     if (!firestore) return;
@@ -210,7 +214,15 @@ export function FantasyAdminTab({ firestore, user, toast }: FantasyAdminTabProps
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'games' | 'questions' | 'events')}>
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="games">Games</TabsTrigger>
+              <TabsTrigger value="questions">Question Pool</TabsTrigger>
+              <TabsTrigger value="events">Events</TabsTrigger>
+            </TabsList>
+
+            {/* Games Tab */}
+            <TabsContent value="games" className="space-y-4 mt-4">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="text-lg font-semibold">Create New Game or Campaign</h3>
@@ -577,35 +589,32 @@ export function FantasyAdminTab({ firestore, user, toast }: FantasyAdminTabProps
                 </Card>
               </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
 
-      {/* Games List */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>{showAllGames ? 'All Games' : 'Active Games'}</CardTitle>
-              <CardDescription>
-                {showAllGames ? 'All fantasy games (active and inactive)' : 'Currently running fantasy games'}
-              </CardDescription>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                onClick={() => setShowAllGames(!showAllGames)}
-                variant="outline"
-                size="sm"
-              >
-                {showAllGames ? 'Show Active Only' : 'Show All Games'}
-              </Button>
-              <Button onClick={loadGames} variant="outline" size="sm">
-                Refresh
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
+            {/* Games List */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>{showAllGames ? 'All Games' : 'Active Games'}</CardTitle>
+                    <CardDescription>
+                      {showAllGames ? 'All fantasy games (active and inactive)' : 'Currently running fantasy games'}
+                    </CardDescription>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      onClick={() => setShowAllGames(!showAllGames)}
+                      variant="outline"
+                      size="sm"
+                    >
+                      {showAllGames ? 'Show Active Only' : 'Show All Games'}
+                    </Button>
+                    <Button onClick={loadGames} variant="outline" size="sm">
+                      Refresh
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
           {loadingGames ? (
             <div className="flex h-48 w-full items-center justify-center">
               <Loader className="h-8 w-8 animate-spin text-primary" />
@@ -631,6 +640,32 @@ export function FantasyAdminTab({ firestore, user, toast }: FantasyAdminTabProps
               ))}
             </div>
           )}
+              </CardContent>
+            </Card>
+            </TabsContent>
+
+            {/* Question Pool Tab */}
+            <TabsContent value="questions" className="mt-4">
+              {firestore && user && (
+                <QuestionPoolManager
+                  firestore={firestore}
+                  user={user}
+                  toast={toast}
+                />
+              )}
+            </TabsContent>
+
+            {/* Events Tab */}
+            <TabsContent value="events" className="mt-4">
+              {firestore && user && (
+                <EventManager
+                  firestore={firestore}
+                  user={user}
+                  toast={toast}
+                />
+              )}
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
 
@@ -687,10 +722,11 @@ export function FantasyAdminTab({ firestore, user, toast }: FantasyAdminTabProps
       </Dialog>
 
       {/* Edit Game Dialog */}
-      {editingGame && (
+      {editingGame && firestore && user && (
         <EditGameDialog
           game={editingGame}
           firestore={firestore}
+          user={user}
           onClose={() => setEditingGame(null)}
           onSuccess={() => {
             setEditingGame(null);
@@ -815,12 +851,14 @@ function GameCard({
 function EditGameDialog({
   game,
   firestore,
+  user,
   onClose,
   onSuccess,
   toast,
 }: {
   game: FantasyGame;
   firestore: Firestore;
+  user: FirebaseUser;
   onClose: () => void;
   onSuccess: () => void;
   toast: ReturnType<typeof useToast>['toast'];
@@ -904,7 +942,7 @@ function EditGameDialog({
     }
 
     const newOrder = questions.length > 0 
-      ? Math.max(...questions.map(q => q.order)) + 1 
+      ? Math.max(...questions.map(q => q.order ?? 0).filter(o => o > 0)) + 1 
       : 1;
 
     setQuestions([
@@ -916,6 +954,9 @@ function EditGameDialog({
         predictionType: 'up-down',
         order: newOrder,
         exactMatchPoints: 100,
+        source: 'admin',
+        isActive: true,
+        createdBy: user.uid,
         createdAt: new Date() as any,
         updatedAt: new Date() as any,
         isNew: true,

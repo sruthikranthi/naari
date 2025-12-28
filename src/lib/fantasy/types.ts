@@ -72,6 +72,9 @@ export type FantasyGame = {
 // FANTASY QUESTION SCHEMA
 // ============================================================================
 
+export type QuestionDifficulty = 'easy' | 'medium' | 'hard';
+export type QuestionSource = 'market' | 'trend' | 'celebrity' | 'admin' | 'system';
+
 export type FantasyQuestion = {
   id: string;
   gameId: string;
@@ -102,9 +105,42 @@ export type FantasyQuestion = {
   // Event sponsorship
   eventSponsorId?: string; // Event-specific sponsor (from sponsors collection)
   
-  // Order in game (event number)
-  order: number;
+  // Order in game (event number) - optional for pool questions
+  order?: number;
   
+  // Question pool & rotation fields
+  difficulty?: QuestionDifficulty; // easy | medium | hard
+  tags?: string[]; // daily, seasonal, wedding, festival, trending, etc.
+  source: QuestionSource; // market | trend | celebrity | admin | system
+  isActive: boolean; // Whether question is available for selection
+  createdBy: 'system' | string; // 'system' for auto-generated, userId for admin-created
+  
+  createdAt: Timestamp | FieldValue;
+  updatedAt: Timestamp | FieldValue;
+};
+
+// ============================================================================
+// FANTASY EVENT SCHEMA
+// ============================================================================
+
+export type FantasyEvent = {
+  id: string;
+  name: string;
+  gameId: string; // Which game this event belongs to
+  description?: string;
+  
+  // Timing
+  startTime: Timestamp | FieldValue;
+  endTime: Timestamp | FieldValue;
+  
+  // Questions assigned to this event
+  questionIds: string[]; // References to fantasy_questions
+  
+  // Status
+  isActive: boolean;
+  
+  // Metadata
+  createdBy: string; // Admin user ID
   createdAt: Timestamp | FieldValue;
   updatedAt: Timestamp | FieldValue;
 };

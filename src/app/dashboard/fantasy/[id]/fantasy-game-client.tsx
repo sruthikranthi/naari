@@ -20,8 +20,10 @@ import {
   createUserPrediction,
   updateUserPrediction,
   addCoinTransaction,
-  updateFantasyGame
+  updateFantasyGame,
+  getActiveFantasyEvents,
 } from '@/lib/fantasy/services';
+import { selectQuestionsForGame } from '@/lib/fantasy/question-selector';
 import { FantasyGameUtils, FantasyValidationEngine } from '@/lib/fantasy/engine';
 import { PredictionForm } from '@/components/fantasy/prediction-form';
 import { ResultDeclaration } from '@/components/fantasy/result-declaration';
@@ -59,29 +61,54 @@ export default function FantasyGameClient({ gameId }: FantasyGameClientProps) {
 
   const { data: game, isLoading: isLoadingGame } = useDoc<FantasyGame>(gameQuery);
 
-  // Load questions
+  // Load questions from pool (using question selection logic)
   useEffect(() => {
-    if (!firestore || !gameId) return;
+    if (!firestore || !gameId || !game) return;
     
     const loadQuestions = async () => {
       try {
         setLoadingQuestions(true);
-        const fetchedQuestions = await getFantasyQuestions(firestore, gameId);
-        setQuestions(fetchedQuestions);
+        
+        // Check if there's an active event for this game
+        const activeEvents = await getActiveFantasyEvents(firestore, gameId);
+        const activeEvent = activeEvents.length > 0 ? activeEvents[0] : null;
+        
+        // Use question selector to get 2-3 questions from pool
+        // If there's an active event, use its questions; otherwise use general pool
+        const selectedQuestions = await selectQuestionsForGame(firestore, gameId, {
+          count: 3,
+          minCount: 2,
+          eventId: activeEvent?.id,
+          prioritizeSeasonal: true,
+        });
+        
+        // If no questions from pool, fallback to all questions (backward compatibility)
+        if (selectedQuestions.length === 0) {
+          const allQuestions = await getFantasyQuestions(firestore, gameId);
+          setQuestions(allQuestions);
+        } else {
+          setQuestions(selectedQuestions);
+        }
       } catch (error) {
         console.error('Error loading questions:', error);
-        toast({
-          variant: 'destructive',
-          title: 'Error',
-          description: 'Failed to load game questions.',
-        });
+        // Fallback to old method for backward compatibility
+        try {
+          const fetchedQuestions = await getFantasyQuestions(firestore, gameId);
+          setQuestions(fetchedQuestions);
+        } catch (fallbackError) {
+          toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'Failed to load game questions.',
+          });
+        }
       } finally {
         setLoadingQuestions(false);
       }
     };
 
     loadQuestions();
-  }, [firestore, gameId, toast]);
+  }, [firestore, gameId, game, toast]);
 
   // Load user wallet
   useEffect(() => {

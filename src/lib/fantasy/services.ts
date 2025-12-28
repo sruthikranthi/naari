@@ -25,6 +25,7 @@ import {
 import type {
   FantasyGame,
   FantasyQuestion,
+  FantasyEvent,
   UserPrediction,
   FantasyResult,
   UserWallet,
@@ -134,14 +135,25 @@ export async function getFantasyQuestions(
 ): Promise<FantasyQuestion[]> {
   const q = query(
     collection(firestore, 'fantasy_questions'),
-    where('gameId', '==', gameId),
-    orderBy('order', 'asc')
+    where('gameId', '==', gameId)
   );
   const snapshot = await getDocs(q);
-  return snapshot.docs.map((doc) => ({
+  const questions = snapshot.docs.map((doc) => ({
     id: doc.id,
     ...doc.data(),
   })) as FantasyQuestion[];
+  
+  // Sort by order if available, otherwise by createdAt
+  questions.sort((a, b) => {
+    if (a.order !== undefined && b.order !== undefined) {
+      return a.order - b.order;
+    }
+    if (a.order !== undefined) return -1;
+    if (b.order !== undefined) return 1;
+    return 0;
+  });
+  
+  return questions;
 }
 
 export async function createFantasyQuestion(
@@ -223,6 +235,160 @@ export async function deleteFantasyQuestion(
   questionId: string
 ): Promise<void> {
   await deleteDoc(doc(firestore, 'fantasy_questions', questionId));
+}
+
+// Get questions by game with filtering
+export async function getFantasyQuestionsByGame(
+  firestore: Firestore,
+  gameId: string,
+  options?: {
+    isActive?: boolean;
+    tags?: string[];
+    source?: string;
+    difficulty?: string;
+    limit?: number;
+  }
+): Promise<FantasyQuestion[]> {
+  let q: Query = query(
+    collection(firestore, 'fantasy_questions'),
+    where('gameId', '==', gameId)
+  );
+
+  if (options?.isActive !== undefined) {
+    q = query(q, where('isActive', '==', options.isActive));
+  }
+
+  if (options?.source) {
+    q = query(q, where('source', '==', options.source));
+  }
+
+  if (options?.difficulty) {
+    q = query(q, where('difficulty', '==', options.difficulty));
+  }
+
+  if (options?.limit) {
+    q = query(q, limit(options.limit));
+  }
+
+  const snapshot = await getDocs(q);
+  let questions = snapshot.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data(),
+  })) as FantasyQuestion[];
+
+  // Filter by tags if provided (client-side since Firestore doesn't support array-contains-any easily)
+  if (options?.tags && options.tags.length > 0) {
+    questions = questions.filter((q) => {
+      if (!q.tags || q.tags.length === 0) return false;
+      return options.tags!.some((tag) => q.tags!.includes(tag));
+    });
+  }
+
+  // Sort by order if available, otherwise by createdAt
+  questions.sort((a, b) => {
+    if (a.order !== undefined && b.order !== undefined) {
+      return a.order - b.order;
+    }
+    if (a.order !== undefined) return -1;
+    if (b.order !== undefined) return 1;
+    return 0;
+  });
+
+  return questions;
+}
+
+// ============================================================================
+// FANTASY EVENTS
+// ============================================================================
+
+export async function createFantasyEvent(
+  firestore: Firestore,
+  event: Omit<FantasyEvent, 'id' | 'createdAt' | 'updatedAt'>
+): Promise<string> {
+  const eventData = {
+    ...event,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  };
+  const docRef = await addDoc(collection(firestore, 'fantasy_events'), eventData);
+  return docRef.id;
+}
+
+export async function getFantasyEvent(
+  firestore: Firestore,
+  eventId: string
+): Promise<FantasyEvent | null> {
+  const eventDoc = await getDoc(doc(firestore, 'fantasy_events', eventId));
+  if (!eventDoc.exists()) return null;
+  return { id: eventDoc.id, ...eventDoc.data() } as FantasyEvent;
+}
+
+export async function getFantasyEventsByGame(
+  firestore: Firestore,
+  gameId: string
+): Promise<FantasyEvent[]> {
+  const q = query(
+    collection(firestore, 'fantasy_events'),
+    where('gameId', '==', gameId),
+    orderBy('startTime', 'desc')
+  );
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data(),
+  })) as FantasyEvent[];
+}
+
+export async function getActiveFantasyEvents(
+  firestore: Firestore,
+  gameId?: string
+): Promise<FantasyEvent[]> {
+  const now = Timestamp.now();
+  let q: Query = query(
+    collection(firestore, 'fantasy_events'),
+    where('isActive', '==', true),
+    where('startTime', '<=', now),
+    where('endTime', '>=', now)
+  );
+
+  if (gameId) {
+    q = query(q, where('gameId', '==', gameId));
+  }
+
+  q = query(q, orderBy('startTime', 'asc'));
+
+  try {
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    })) as FantasyEvent[];
+  } catch (error: any) {
+    // Handle missing index gracefully
+    if (error.code === 9) {
+      console.warn('Firestore index missing for active events query. Returning empty array.');
+      return [];
+    }
+    throw error;
+  }
+}
+
+export async function updateFantasyEvent(
+  firestore: Firestore,
+  eventId: string,
+  updates: Partial<FantasyEvent>
+): Promise<void> {
+  await updateDoc(doc(firestore, 'fantasy_events', eventId), {
+    ...updates,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function deleteFantasyEvent(
+  firestore: Firestore,
+  eventId: string
+): Promise<void> {
+  await deleteDoc(doc(firestore, 'fantasy_events', eventId));
 }
 
 // ============================================================================
