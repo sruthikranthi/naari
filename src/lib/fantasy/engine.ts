@@ -51,45 +51,25 @@ export const GAME_CONFIGURATIONS: Record<FantasyGameType, GameConfiguration> = {
     requiresRange: false,
     requiresOptions: false,
   },
-  // Lifestyle & Budget Games
-  'kitchen-budget': {
-    gameType: 'kitchen-budget',
-    defaultEntryCoins: 15,
+  // Price Prediction Games (Additional)
+  'vegetable-price': {
+    gameType: 'vegetable-price',
+    defaultEntryCoins: 10,
     defaultExactMatchPoints: 120,
     defaultNearRangePoints: 60,
     defaultNearRangeTolerance: 10,
     allowedPredictionTypes: ['range', 'multiple-choice'],
-    requiresRange: true,
+    requiresRange: false,
     requiresOptions: false,
   },
-  'wedding-budget': {
-    gameType: 'wedding-budget',
-    defaultEntryCoins: 20,
-    defaultExactMatchPoints: 150,
-    defaultNearRangePoints: 75,
-    defaultNearRangeTolerance: 10,
-    allowedPredictionTypes: ['range', 'multiple-choice'],
-    requiresRange: true,
-    requiresOptions: false,
-  },
-  'festival-expense': {
-    gameType: 'festival-expense',
-    defaultEntryCoins: 15,
+  'fruit-price': {
+    gameType: 'fruit-price',
+    defaultEntryCoins: 10,
     defaultExactMatchPoints: 120,
     defaultNearRangePoints: 60,
     defaultNearRangeTolerance: 10,
     allowedPredictionTypes: ['range', 'multiple-choice'],
-    requiresRange: true,
-    requiresOptions: false,
-  },
-  'home-monthly-expense': {
-    gameType: 'home-monthly-expense',
-    defaultEntryCoins: 15,
-    defaultExactMatchPoints: 120,
-    defaultNearRangePoints: 60,
-    defaultNearRangeTolerance: 10,
-    allowedPredictionTypes: ['range', 'multiple-choice'],
-    requiresRange: true,
+    requiresRange: false,
     requiresOptions: false,
   },
   // Fashion & Trend Games
@@ -148,6 +128,30 @@ export const GAME_CONFIGURATIONS: Record<FantasyGameType, GameConfiguration> = {
     requiresOptions: true,
     minOptions: 3,
     maxOptions: 8,
+  },
+  // Celebrity & Viral
+  'viral-fashion-look': {
+    gameType: 'viral-fashion-look',
+    defaultEntryCoins: 10,
+    defaultExactMatchPoints: 100,
+    defaultNearRangePoints: 0,
+    defaultNearRangeTolerance: 0,
+    allowedPredictionTypes: ['multiple-choice'],
+    requiresRange: false,
+    requiresOptions: true,
+    minOptions: 3,
+    maxOptions: 8,
+  },
+  // Daily Grocery Staples
+  'daily-grocery-price': {
+    gameType: 'daily-grocery-price',
+    defaultEntryCoins: 10,
+    defaultExactMatchPoints: 120,
+    defaultNearRangePoints: 60,
+    defaultNearRangeTolerance: 10,
+    allowedPredictionTypes: ['range'],
+    requiresRange: true,
+    requiresOptions: false,
   },
 };
 
@@ -351,9 +355,9 @@ export class FantasyGameUtils {
   static getCategoryDisplayName(category: string): string {
     const names: Record<string, string> = {
       'price-prediction': 'Price Prediction',
-      'lifestyle-budget': 'Lifestyle & Budget',
-      'fashion-trend': 'Fashion & Trend',
-      'celebrity-style': 'Celebrity & Style',
+      'trend-fashion': 'Trend & Fashion',
+      'celebrity-viral': 'Celebrity & Viral',
+      'daily-grocery': 'Daily Grocery Staples',
     };
     return names[category] || category;
   }
@@ -366,15 +370,15 @@ export class FantasyGameUtils {
       'gold-ornament-price': 'Gold Ornament Price',
       'silk-saree-price': 'Silk Saree Price',
       'makeup-beauty-price': 'Makeup & Beauty Price',
-      'kitchen-budget': 'Kitchen Budget',
-      'wedding-budget': 'Wedding Budget',
-      'festival-expense': 'Festival Expense',
-      'home-monthly-expense': 'Home Monthly Expense',
+      'vegetable-price': 'Vegetable Price',
+      'fruit-price': 'Fruit Price',
       'saree-color-trend': 'Saree Color Trend',
       'jewelry-design-trend': 'Jewelry Design Trend',
       'bridal-makeup-trend': 'Bridal Makeup Trend',
-      'celebrity-saree-look': 'Celebrity Saree Look',
       'actress-fashion-trend': 'Actress Fashion Trend',
+      'celebrity-saree-look': 'Celebrity Saree Look',
+      'viral-fashion-look': 'Viral Fashion Look',
+      'daily-grocery-price': 'Daily Grocery Price',
     };
     return names[gameType] || gameType;
   }

@@ -12,15 +12,15 @@ import {
   createSampleGoldPriceGame,
   createSampleSareePriceGame,
   createSampleMakeupPriceGame,
-  createSampleKitchenBudgetGame,
-  createSampleWeddingBudgetGame,
-  createSampleFestivalExpenseGame,
-  createSampleHomeExpenseGame,
+  createSampleVegetablePriceGame,
+  createSampleFruitPriceGame,
   createSampleSareeColorTrendGame,
   createSampleJewelryTrendGame,
   createSampleBridalMakeupTrendGame,
-  createSampleCelebritySareeGame,
   createSampleActressFashionGame,
+  createSampleCelebritySareeGame,
+  createSampleViralFashionLookGame,
+  createSampleDailyGroceryPriceGame,
 } from '@/lib/fantasy/admin-utils';
 import { getActiveFantasyGames, getAllFantasyGames, updateFantasyGame, deleteFantasyGame, getFantasyQuestions, createFantasyQuestion, updateFantasyQuestion, deleteFantasyQuestion } from '@/lib/fantasy/services';
 import type { FantasyGame, FantasyQuestion, PredictionType } from '@/lib/fantasy/types';
@@ -147,17 +147,11 @@ export function FantasyAdminTab({ firestore, user, toast }: FantasyAdminTabProps
         case 'makeup':
           gameId = await createSampleMakeupPriceGame(firestore, user.uid);
           break;
-        case 'kitchen':
-          gameId = await createSampleKitchenBudgetGame(firestore, user.uid);
+        case 'vegetable':
+          gameId = await createSampleVegetablePriceGame(firestore, user.uid);
           break;
-        case 'wedding':
-          gameId = await createSampleWeddingBudgetGame(firestore, user.uid);
-          break;
-        case 'festival':
-          gameId = await createSampleFestivalExpenseGame(firestore, user.uid);
-          break;
-        case 'home':
-          gameId = await createSampleHomeExpenseGame(firestore, user.uid);
+        case 'fruit':
+          gameId = await createSampleFruitPriceGame(firestore, user.uid);
           break;
         case 'saree-color':
           gameId = await createSampleSareeColorTrendGame(firestore, user.uid);
@@ -168,11 +162,17 @@ export function FantasyAdminTab({ firestore, user, toast }: FantasyAdminTabProps
         case 'bridal-makeup':
           gameId = await createSampleBridalMakeupTrendGame(firestore, user.uid);
           break;
+        case 'actress-fashion':
+          gameId = await createSampleActressFashionGame(firestore, user.uid);
+          break;
         case 'celebrity-saree':
           gameId = await createSampleCelebritySareeGame(firestore, user.uid);
           break;
-        case 'actress-fashion':
-          gameId = await createSampleActressFashionGame(firestore, user.uid);
+        case 'viral-fashion':
+          gameId = await createSampleViralFashionLookGame(firestore, user.uid);
+          break;
+        case 'daily-grocery':
+          gameId = await createSampleDailyGroceryPriceGame(firestore, user.uid);
           break;
         default:
           throw new Error(`Unknown game type: ${gameType}`);
@@ -322,28 +322,28 @@ export function FantasyAdminTab({ firestore, user, toast }: FantasyAdminTabProps
               </div>
             </div>
 
-            {/* Lifestyle & Budget Games */}
+            {/* Price Prediction Games (Additional) */}
             <div>
-              <h3 className="text-sm font-semibold mb-3">Lifestyle & Budget Games</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <h3 className="text-sm font-semibold mb-3">Price Prediction Games (Additional)</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Card className="border-2 border-dashed">
                   <CardHeader>
                     <CardTitle className="text-base flex items-center gap-2">
                       <TrendingUp className="h-4 w-4" />
-                      Kitchen Budget
+                      Vegetable Price
                     </CardTitle>
                     <CardDescription className="text-xs">
-                      Monthly kitchen expense prediction
+                      Predict market price per kg for vegetables
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <Button
-                      onClick={() => handleCreateGame('kitchen')}
-                      disabled={isCreating === 'kitchen'}
+                      onClick={() => handleCreateGame('vegetable')}
+                      disabled={isCreating === 'vegetable'}
                       className="w-full"
                       size="sm"
                     >
-                      {isCreating === 'kitchen' ? (
+                      {isCreating === 'vegetable' ? (
                         <>
                           <Loader className="mr-2 h-4 w-4 animate-spin" />
                           Creating...
@@ -359,78 +359,20 @@ export function FantasyAdminTab({ firestore, user, toast }: FantasyAdminTabProps
                   <CardHeader>
                     <CardTitle className="text-base flex items-center gap-2">
                       <Sparkles className="h-4 w-4" />
-                      Wedding Budget
+                      Fruit Price
                     </CardTitle>
                     <CardDescription className="text-xs">
-                      Wedding expense prediction
+                      Predict market price per kg for fruits
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <Button
-                      onClick={() => handleCreateGame('wedding')}
-                      disabled={isCreating === 'wedding'}
+                      onClick={() => handleCreateGame('fruit')}
+                      disabled={isCreating === 'fruit'}
                       className="w-full"
                       size="sm"
                     >
-                      {isCreating === 'wedding' ? (
-                        <>
-                          <Loader className="mr-2 h-4 w-4 animate-spin" />
-                          Creating...
-                        </>
-                      ) : (
-                        'Create Game'
-                      )}
-                    </Button>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-2 border-dashed">
-                  <CardHeader>
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <Coins className="h-4 w-4" />
-                      Festival Expense
-                    </CardTitle>
-                    <CardDescription className="text-xs">
-                      Festival expense prediction
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Button
-                      onClick={() => handleCreateGame('festival')}
-                      disabled={isCreating === 'festival'}
-                      className="w-full"
-                      size="sm"
-                    >
-                      {isCreating === 'festival' ? (
-                        <>
-                          <Loader className="mr-2 h-4 w-4 animate-spin" />
-                          Creating...
-                        </>
-                      ) : (
-                        'Create Game'
-                      )}
-                    </Button>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-2 border-dashed">
-                  <CardHeader>
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <TrendingUp className="h-4 w-4" />
-                      Home Expense
-                    </CardTitle>
-                    <CardDescription className="text-xs">
-                      Monthly home expense prediction
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Button
-                      onClick={() => handleCreateGame('home')}
-                      disabled={isCreating === 'home'}
-                      className="w-full"
-                      size="sm"
-                    >
-                      {isCreating === 'home' ? (
+                      {isCreating === 'fruit' ? (
                         <>
                           <Loader className="mr-2 h-4 w-4 animate-spin" />
                           Creating...
@@ -444,9 +386,9 @@ export function FantasyAdminTab({ firestore, user, toast }: FantasyAdminTabProps
               </div>
             </div>
 
-            {/* Fashion & Trend Games */}
+            {/* Trend & Fashion Games */}
             <div>
-              <h3 className="text-sm font-semibold mb-3">Fashion & Trend Games</h3>
+              <h3 className="text-sm font-semibold mb-3">Trend & Fashion Games</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <Card className="border-2 border-dashed">
                   <CardHeader>
@@ -537,9 +479,9 @@ export function FantasyAdminTab({ firestore, user, toast }: FantasyAdminTabProps
               </div>
             </div>
 
-            {/* Celebrity & Style Games */}
+            {/* Celebrity & Viral Games */}
             <div>
-              <h3 className="text-sm font-semibold mb-3">Celebrity & Style Games</h3>
+              <h3 className="text-sm font-semibold mb-3">Celebrity & Viral Games</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Card className="border-2 border-dashed">
                   <CardHeader>
@@ -574,20 +516,55 @@ export function FantasyAdminTab({ firestore, user, toast }: FantasyAdminTabProps
                   <CardHeader>
                     <CardTitle className="text-base flex items-center gap-2">
                       <Coins className="h-4 w-4" />
-                      Actress Fashion Trend
+                      Viral Fashion Look
                     </CardTitle>
                     <CardDescription className="text-xs">
-                      Predict trending actress fashion
+                      Predict most shared/liked fashion look
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <Button
-                      onClick={() => handleCreateGame('actress-fashion')}
-                      disabled={isCreating === 'actress-fashion'}
+                      onClick={() => handleCreateGame('viral-fashion')}
+                      disabled={isCreating === 'viral-fashion'}
                       className="w-full"
                       size="sm"
                     >
-                      {isCreating === 'actress-fashion' ? (
+                      {isCreating === 'viral-fashion' ? (
+                        <>
+                          <Loader className="mr-2 h-4 w-4 animate-spin" />
+                          Creating...
+                        </>
+                      ) : (
+                        'Create Game'
+                      )}
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+
+            {/* Daily Grocery Staples */}
+            <div>
+              <h3 className="text-sm font-semibold mb-3">Daily Grocery Staples</h3>
+              <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+                <Card className="border-2 border-dashed">
+                  <CardHeader>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4" />
+                      Daily Grocery Price
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      Predict India average retail price for daily staples
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Button
+                      onClick={() => handleCreateGame('daily-grocery')}
+                      disabled={isCreating === 'daily-grocery'}
+                      className="w-full"
+                      size="sm"
+                    >
+                      {isCreating === 'daily-grocery' ? (
                         <>
                           <Loader className="mr-2 h-4 w-4 animate-spin" />
                           Creating...

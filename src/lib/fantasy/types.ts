@@ -6,27 +6,27 @@ import { Timestamp, FieldValue } from 'firebase/firestore';
 
 export type FantasyCategory = 
   | 'price-prediction'
-  | 'lifestyle-budget'
-  | 'fashion-trend'
-  | 'celebrity-style';
+  | 'trend-fashion'
+  | 'celebrity-viral'
+  | 'daily-grocery';
 
 export type FantasyGameType =
-  // Price Prediction
+  // Price Prediction (5 games)
   | 'gold-ornament-price'
   | 'silk-saree-price'
   | 'makeup-beauty-price'
-  // Lifestyle & Budget
-  | 'kitchen-budget'
-  | 'wedding-budget'
-  | 'festival-expense'
-  | 'home-monthly-expense'
-  // Fashion & Trend
+  | 'vegetable-price'
+  | 'fruit-price'
+  // Trend & Fashion (4 games)
   | 'saree-color-trend'
   | 'jewelry-design-trend'
   | 'bridal-makeup-trend'
-  // Celebrity & Style
+  | 'actress-fashion-trend'
+  // Celebrity & Viral (2 games)
   | 'celebrity-saree-look'
-  | 'actress-fashion-trend';
+  | 'viral-fashion-look'
+  // Daily Grocery Staples (1 game)
+  | 'daily-grocery-price';
 
 export type PredictionType = 'up-down' | 'range' | 'multiple-choice' | 'image-weight' | 'image-wastage' | 'image-making-charges' | 'image-price';
 
