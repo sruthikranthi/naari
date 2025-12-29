@@ -507,6 +507,7 @@ export function AdsAdminTab({ firestore, user, toast }: AdsAdminTabProps) {
                         <CreateImageAdForm
                           firestore={firestore}
                           userId={user.uid}
+                          existingCreative={editingCreative}
                           onSuccess={() => {
                             setEditingCreative(null);
                             loadData();
