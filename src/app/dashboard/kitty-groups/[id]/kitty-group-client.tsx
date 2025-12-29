@@ -54,7 +54,9 @@ import { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { CameraCapture } from '@/components/camera-capture';
 import { useFirestore, useUser } from '@/firebase';
-import { doc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { doc, updateDoc, deleteDoc, arrayUnion } from 'firebase/firestore';
+import { useRouter } from 'next/navigation';
+import { Label } from '@/components/ui/label';
 import { searchUsers } from '@/lib/search';
 import { Loader2, Search, UserPlus } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -124,6 +126,14 @@ export function KittyGroupClient({ group, groupMembers, upcomingEvent, currentUs
   const [isAddingMember, setIsAddingMember] = useState<string | null>(null);
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [settingsForm, setSettingsForm] = useState({
+    name: group.name,
+    contribution: group.contribution,
+  });
 
   const isHost = currentUser.name === group.nextTurn;
   const isGroupAdmin = group.memberIds && group.memberIds.length > 0 && group.memberIds[0] === currentUser.id;
@@ -427,15 +437,154 @@ export function KittyGroupClient({ group, groupMembers, upcomingEvent, currentUs
             </>
           )}
 
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() =>
-              handleAction('Settings Opened', 'You can edit group settings.')
-            }
-          >
-            <Settings className="h-4 w-4" />
-          </Button>
+          {isGroupAdmin && (
+            <Dialog open={isSettingsDialogOpen} onOpenChange={setIsSettingsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                >
+                  <Settings className="h-4 w-4" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[500px]">
+                <DialogHeader>
+                  <DialogTitle>Group Settings</DialogTitle>
+                  <DialogDescription>
+                    Edit your kitty group settings. Only group admins can modify these.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="group-name">Group Name</Label>
+                    <Input
+                      id="group-name"
+                      value={settingsForm.name}
+                      onChange={(e) => setSettingsForm({ ...settingsForm, name: e.target.value })}
+                      placeholder="Enter group name"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="contribution">Contribution Amount (₹)</Label>
+                    <Input
+                      id="contribution"
+                      type="number"
+                      value={settingsForm.contribution}
+                      onChange={(e) => setSettingsForm({ ...settingsForm, contribution: Number(e.target.value) })}
+                      placeholder="Enter contribution amount"
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button
+                    variant="destructive"
+                    onClick={() => {
+                      setIsSettingsDialogOpen(false);
+                      setIsDeleteDialogOpen(true);
+                    }}
+                  >
+                    Delete Group
+                  </Button>
+                  <Button variant="outline" onClick={() => setIsSettingsDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={async () => {
+                      if (!firestore || !groupId) return;
+                      setIsUpdating(true);
+                      try {
+                        const groupRef = doc(firestore, 'kitty_groups', groupId);
+                        await updateDoc(groupRef, {
+                          name: settingsForm.name,
+                          contribution: settingsForm.contribution,
+                        });
+                        toast({
+                          title: 'Settings Updated!',
+                          description: 'Your group settings have been saved.',
+                        });
+                        setIsSettingsDialogOpen(false);
+                        // Reload page to reflect changes
+                        window.location.reload();
+                      } catch (error: any) {
+                        console.error('Error updating group:', error);
+                        toast({
+                          variant: 'destructive',
+                          title: 'Error',
+                          description: error.message || 'Failed to update group settings. You may not have permission.',
+                        });
+                      } finally {
+                        setIsUpdating(false);
+                      }
+                    }}
+                    disabled={isUpdating}
+                  >
+                    {isUpdating ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      'Save Changes'
+                    )}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          )}
+
+          {/* Delete Confirmation Dialog */}
+          <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>Delete Kitty Group</DialogTitle>
+                <DialogDescription>
+                  Are you sure you want to delete &quot;{group.name}&quot;? This action cannot be undone. All group data, members, and history will be permanently deleted.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={async () => {
+                    if (!firestore || !groupId) return;
+                    setIsDeleting(true);
+                    try {
+                      const groupRef = doc(firestore, 'kitty_groups', groupId);
+                      await deleteDoc(groupRef);
+                      toast({
+                        title: 'Group Deleted',
+                        description: 'The kitty group has been permanently deleted.',
+                      });
+                      // Redirect to kitty groups page
+                      window.location.href = '/dashboard/kitty-groups';
+                    } catch (error: any) {
+                      console.error('Error deleting group:', error);
+                      toast({
+                        variant: 'destructive',
+                        title: 'Error',
+                        description: error.message || 'Failed to delete group. You may not have permission. Only super admins can delete groups.',
+                      });
+                      setIsDeleteDialogOpen(false);
+                    } finally {
+                      setIsDeleting(false);
+                    }
+                  }}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Deleting...
+                    </>
+                  ) : (
+                    'Delete Group'
+                  )}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 

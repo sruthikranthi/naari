@@ -110,6 +110,15 @@ export default function AdminPanelPage() {
   );
   const { data: kittyGroupsData, isLoading: areKittyLoading } = useCollection<KittyGroup>(kittyGroupsQuery);
 
+  // Tambola games query - super admin can see all
+  const tambolaGamesQuery = useMemoFirebase(() => 
+    (firestore && user) 
+      ? query(collection(firestore, 'tambola_games'), where('adminId', '==', user.uid))
+      : null, 
+    [firestore, user]
+  );
+  const { data: tambolaGamesData, isLoading: areTambolaLoading } = useCollection<any>(tambolaGamesQuery);
+
   const contestsQuery = useMemoFirebase(() => (firestore && user ? collection(firestore, 'contests') : null), [firestore, user]);
   const { data: contestsData, isLoading: areContestsLoading } = useCollection<Contest>(contestsQuery);
   
@@ -175,7 +184,7 @@ export default function AdminPanelPage() {
   }, [contestsData]);
 
   // Memos for derived data
-  const isLoading = isUserLoading || areContestsLoading || areUsersLoading || areProfLoading || areCommLoading || areKittyLoading || areAppsLoading;
+  const isLoading = isUserLoading || areContestsLoading || areUsersLoading || areProfLoading || areCommLoading || areKittyLoading || areTambolaLoading || areAppsLoading;
 
   const allContestsForTable = useMemo(() => {
     if(!contestsData) return [];
@@ -821,12 +830,89 @@ export default function AdminPanelPage() {
                              </TableHeader>
                              <TableBody>
                                  {kittyGroupsData?.map(k => (
-                                     <TableRow key={k.id}>
-                                         <TableCell>{k.name}</TableCell>
-                                         <TableCell>{k.memberIds.length.toLocaleString()}</TableCell>
-                                          <TableCell className="text-right"><Button variant="ghost" size="sm">Manage</Button></TableCell>
-                                     </TableRow>
-                                 ))}
+                                    <TableRow key={k.id}>
+                                        <TableCell>{k.name}</TableCell>
+                                        <TableCell>{k.memberIds.length.toLocaleString()}</TableCell>
+                                         <TableCell className="text-right">
+                                           <Button 
+                                             variant="destructive" 
+                                             size="sm"
+                                             onClick={async () => {
+                                               if (!confirm(`Are you sure you want to delete "${k.name}"? This action cannot be undone.`)) return;
+                                               try {
+                                                 await deleteDoc(doc(firestore, 'kitty_groups', k.id));
+                                                 toast({
+                                                   title: 'Success',
+                                                   description: 'Kitty group deleted successfully.',
+                                                 });
+                                               } catch (error: any) {
+                                                 toast({
+                                                   variant: 'destructive',
+                                                   title: 'Error',
+                                                   description: error.message || 'Failed to delete kitty group.',
+                                                 });
+                                               }
+                                             }}
+                                           >
+                                             Delete
+                                           </Button>
+                                         </TableCell>
+                                    </TableRow>
+                                ))}
+                             </TableBody>
+                         </Table>
+                       )}
+                     </CardContent>
+                 </Card>
+                  <Card>
+                     <CardHeader><CardTitle>Tambola Games</CardTitle></CardHeader>
+                     <CardContent>
+                       {areTambolaLoading ? <Loader className="mx-auto my-12 h-6 w-6 animate-spin text-primary" /> : (
+                         <Table>
+                             <TableHeader>
+                                 <TableRow>
+                                     <TableHead>Game Name</TableHead>
+                                     <TableHead>Players</TableHead>
+                                      <TableHead className="text-right">Actions</TableHead>
+                                 </TableRow>
+                             </TableHeader>
+                             <TableBody>
+                                 {tambolaGamesData && tambolaGamesData.length > 0 ? tambolaGamesData.map((game: any) => (
+                                    <TableRow key={game.id}>
+                                        <TableCell>{game.name || game.title || `Tambola Game ${game.id.substring(0, 8)}`}</TableCell>
+                                        <TableCell>{(game.playerIds?.length || 0).toLocaleString()}</TableCell>
+                                         <TableCell className="text-right">
+                                           <Button 
+                                             variant="destructive" 
+                                             size="sm"
+                                             onClick={async () => {
+                                               if (!confirm(`Are you sure you want to delete this tambola game? This action cannot be undone.`)) return;
+                                               try {
+                                                 await deleteDoc(doc(firestore, 'tambola_games', game.id));
+                                                 toast({
+                                                   title: 'Success',
+                                                   description: 'Tambola game deleted successfully.',
+                                                 });
+                                               } catch (error: any) {
+                                                 toast({
+                                                   variant: 'destructive',
+                                                   title: 'Error',
+                                                   description: error.message || 'Failed to delete tambola game. Only super admins can delete games.',
+                                                 });
+                                               }
+                                             }}
+                                           >
+                                             Delete
+                                           </Button>
+                                         </TableCell>
+                                    </TableRow>
+                                )) : (
+                                  <TableRow>
+                                    <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
+                                      No tambola games found
+                                    </TableCell>
+                                  </TableRow>
+                                )}
                              </TableBody>
                          </Table>
                        )}

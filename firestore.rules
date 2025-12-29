@@ -138,7 +138,9 @@ service cloud.firestore {
         || (isSignedIn() &&
            ((resource.data.memberIds.size() > 0 &&
              resource.data.memberIds[0] == request.auth.uid &&
-             request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberIds']))
+             (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberIds']) ||
+              request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'contribution']) ||
+              request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberIds', 'name', 'contribution'])))
             ||
             (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberIds']) &&
              request.resource.data.memberIds.hasAll(resource.data.memberIds) &&
@@ -146,7 +148,10 @@ service cloud.firestore {
              request.auth.uid in request.resource.data.memberIds &&
              !(request.auth.uid in resource.data.memberIds))));
 
-      allow delete: if isSuperAdmin();
+      allow delete: if isSuperAdmin()
+        || (isSignedIn() &&
+           resource.data.memberIds.size() > 0 &&
+           resource.data.memberIds[0] == request.auth.uid);
     }
 
     // -------------------------------------------------------------------------
