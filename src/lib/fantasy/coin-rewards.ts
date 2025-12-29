@@ -236,15 +236,26 @@ export async function canClaimDailyLogin(
       // Also check the createdAt timestamp
       if (tx.createdAt) {
         try {
-          const txDate = tx.createdAt instanceof Date 
-            ? tx.createdAt 
-            : (tx.createdAt as any)?.toDate 
-            ? (tx.createdAt as any).toDate() 
-            : new Date(tx.createdAt);
+          // Handle Firestore Timestamp and FieldValue types
+          let txDate: Date | null = null;
           
-          const txDateStr = txDate.toISOString().split('T')[0];
-          if (txDateStr === today) {
-            return true;
+          if (tx.createdAt instanceof Date) {
+            txDate = tx.createdAt;
+          } else if (typeof tx.createdAt === 'object' && tx.createdAt !== null) {
+            // Check if it's a Firestore Timestamp with toDate method
+            if ('toDate' in tx.createdAt && typeof (tx.createdAt as any).toDate === 'function') {
+              txDate = (tx.createdAt as any).toDate();
+            } else if ('seconds' in tx.createdAt && typeof (tx.createdAt as any).seconds === 'number') {
+              // Firestore Timestamp with seconds property
+              txDate = new Date((tx.createdAt as any).seconds * 1000);
+            }
+          }
+          
+          if (txDate) {
+            const txDateStr = txDate.toISOString().split('T')[0];
+            if (txDateStr === today) {
+              return true;
+            }
           }
         } catch (e) {
           // If date parsing fails, fall back to description check
