@@ -23,6 +23,15 @@ export async function awardDailyLoginCoins(
 ): Promise<{ awarded: boolean; coins: number; message: string }> {
   try {
     // Check if user already claimed today
+    const alreadyClaimed = await canClaimDailyLogin(firestore, userId);
+    if (!alreadyClaimed) {
+      return {
+        awarded: false,
+        coins: 0,
+        message: 'You have already claimed your daily bonus today. Come back tomorrow!',
+      };
+    }
+
     const wallet = await getUserWallet(firestore, userId);
     if (!wallet) {
       throw new Error('Wallet not found');
@@ -30,10 +39,6 @@ export async function awardDailyLoginCoins(
 
     // Get today's date string (YYYY-MM-DD)
     const today = new Date().toISOString().split('T')[0];
-    
-    // Check last transaction date (simplified - in production, you'd check transaction history)
-    // For now, we'll check if there's a daily login transaction today
-    // This is a simplified check - in production, you'd want to query transactions
     
     // Award coins
     await addCoinTransaction(firestore, {
@@ -212,12 +217,48 @@ export async function canClaimDailyLogin(
   userId: string
 ): Promise<boolean> {
   try {
-    // In production, you'd query transactions to check if there's a daily-login
-    // transaction for today. For now, we'll return true (simplified)
-    // This should be implemented with proper transaction history checking
-    return true;
+    // Get today's date string (YYYY-MM-DD)
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Get all coin transactions for this user
+    const { getCoinTransactions } = await import('./services');
+    const transactions = await getCoinTransactions(firestore, userId, 100);
+    
+    // Check if there's a daily-login transaction for today
+    const hasDailyLoginToday = transactions.some((tx) => {
+      if (tx.type !== 'daily-login') return false;
+      
+      // Check if the transaction description contains today's date
+      if (tx.description && tx.description.includes(today)) {
+        return true;
+      }
+      
+      // Also check the createdAt timestamp
+      if (tx.createdAt) {
+        try {
+          const txDate = tx.createdAt instanceof Date 
+            ? tx.createdAt 
+            : (tx.createdAt as any)?.toDate 
+            ? (tx.createdAt as any).toDate() 
+            : new Date(tx.createdAt);
+          
+          const txDateStr = txDate.toISOString().split('T')[0];
+          if (txDateStr === today) {
+            return true;
+          }
+        } catch (e) {
+          // If date parsing fails, fall back to description check
+        }
+      }
+      
+      return false;
+    });
+    
+    // Return true if no daily login found for today
+    return !hasDailyLoginToday;
   } catch (error) {
     console.error('Error checking daily login claim:', error);
+    // On error, return false to prevent duplicate claims
     return false;
   }
 }
