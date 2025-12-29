@@ -687,25 +687,94 @@ export async function getRedeemableItems(
   firestore: Firestore,
   options?: { activeOnly?: boolean; category?: string }
 ): Promise<RedeemableItem[]> {
-  let q: Query = query(
-    collection(firestore, 'redeemable_items'),
-    orderBy('priority', 'desc'),
-    orderBy('createdAt', 'desc')
-  );
+  try {
+    let q: Query;
+    
+    // Build query based on filters
+    if (options?.activeOnly && options?.category) {
+      // Both filters - need composite index
+      q = query(
+        collection(firestore, 'redeemable_items'),
+        where('isActive', '==', true),
+        where('category', '==', options.category),
+        orderBy('priority', 'desc')
+      );
+    } else if (options?.activeOnly) {
+      // Only active filter
+      q = query(
+        collection(firestore, 'redeemable_items'),
+        where('isActive', '==', true),
+        orderBy('priority', 'desc')
+      );
+    } else if (options?.category) {
+      // Only category filter
+      q = query(
+        collection(firestore, 'redeemable_items'),
+        where('category', '==', options.category),
+        orderBy('priority', 'desc')
+      );
+    } else {
+      // No filters - just order by priority
+      q = query(
+        collection(firestore, 'redeemable_items'),
+        orderBy('priority', 'desc')
+      );
+    }
 
-  if (options?.activeOnly) {
-    q = query(q, where('isActive', '==', true));
+    const snapshot = await getDocs(q);
+    const items = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    })) as RedeemableItem[];
+    
+    // Sort by createdAt if we have it (client-side fallback)
+    return items.sort((a, b) => {
+      const aTime = a.createdAt instanceof Date 
+        ? a.createdAt.getTime()
+        : (a.createdAt as any)?.toDate?.()?.getTime() || 0;
+      const bTime = b.createdAt instanceof Date 
+        ? b.createdAt.getTime()
+        : (b.createdAt as any)?.toDate?.()?.getTime() || 0;
+      return bTime - aTime;
+    });
+  } catch (error: any) {
+    // If query fails (e.g., missing index), try simpler query
+    if (error.code === 9) {
+      console.warn('Firestore index missing for redeemable_items query. Using simpler query.');
+      try {
+        let q: Query = query(collection(firestore, 'redeemable_items'));
+        
+        if (options?.activeOnly) {
+          q = query(q, where('isActive', '==', true));
+        }
+        
+        const snapshot = await getDocs(q);
+        const items = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as RedeemableItem[];
+        
+        // Client-side sorting
+        return items.sort((a, b) => {
+          const aPriority = a.priority || 0;
+          const bPriority = b.priority || 0;
+          if (bPriority !== aPriority) return bPriority - aPriority;
+          
+          const aTime = a.createdAt instanceof Date 
+            ? a.createdAt.getTime()
+            : (a.createdAt as any)?.toDate?.()?.getTime() || 0;
+          const bTime = b.createdAt instanceof Date 
+            ? b.createdAt.getTime()
+            : (b.createdAt as any)?.toDate?.()?.getTime() || 0;
+          return bTime - aTime;
+        });
+      } catch (fallbackError) {
+        console.error('Error loading redeemable items (fallback):', fallbackError);
+        throw fallbackError;
+      }
+    }
+    throw error;
   }
-
-  if (options?.category) {
-    q = query(q, where('category', '==', options.category));
-  }
-
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map((doc) => ({
-    id: doc.id,
-    ...doc.data(),
-  })) as RedeemableItem[];
 }
 
 export async function getRedeemableItem(

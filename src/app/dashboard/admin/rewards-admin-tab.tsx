@@ -593,6 +593,54 @@ export function RewardsAdminTab({ firestore, user, toast }: RewardsAdminTabProps
           />
         </DialogContent>
       </Dialog>
+
+      {/* Create/Edit Reward Item Dialog */}
+      <Dialog open={showCreateItem || !!editingItem} onOpenChange={(open) => {
+        if (!open) {
+          setShowCreateItem(false);
+          setEditingItem(null);
+        }
+      }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editingItem ? 'Edit Reward Item' : 'Create Reward Item'}</DialogTitle>
+            <DialogDescription>
+              {editingItem ? 'Update the reward item details.' : 'Add a new item to the rewards catalog.'}
+            </DialogDescription>
+          </DialogHeader>
+          {firestore && (
+            <RedeemableItemForm
+              firestore={firestore}
+              item={editingItem || null}
+              onSuccess={() => {
+                setShowCreateItem(false);
+                setEditingItem(null);
+                loadData();
+              }}
+              toast={toast}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Redemptions Manager Dialog */}
+      <Dialog open={showRedemptions} onOpenChange={setShowRedemptions}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>All Redemptions</DialogTitle>
+            <DialogDescription>
+              View and manage all user redemptions.
+            </DialogDescription>
+          </DialogHeader>
+          {firestore && (
+            <RedemptionsManager
+              firestore={firestore}
+              toast={toast}
+              onUpdate={loadData}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
