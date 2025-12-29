@@ -510,21 +510,34 @@ service cloud.firestore {
     
     // User Wallets (Coins)
     match /user_wallets/{walletId} {
-      // Users can read their own wallet
-      allow get: if isSignedIn() && resource.data.userId == request.auth.uid;
+      // Users can read their own wallet (walletId should match userId)
+      allow get: if isSignedIn() && (
+        walletId == request.auth.uid ||
+        (resource != null && resource.data.userId == request.auth.uid) ||
+        isSuperAdmin()
+      );
       
       // Super admins can list all wallets, regular users need filtered queries
       allow list: if isSignedIn() && (
         isSuperAdmin() ||
-        request.query.where.size() > 0
+        request.query.where.size() > 0 ||
+        request.query.orderBy.size() > 0 ||
+        request.query.limit != null
       );
       
-      // System can create/update wallets (via admin or server functions)
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      // Users can create their own wallet (walletId must match userId)
+      allow create: if isSignedIn() && 
+        walletId == request.auth.uid &&
+        request.resource.data.userId == request.auth.uid;
+      
+      // Users can update their own wallet, admins can update any
       allow update: if isSignedIn() && (
-        resource.data.userId == request.auth.uid ||
+        walletId == request.auth.uid ||
+        (resource != null && resource.data.userId == request.auth.uid) ||
         isSuperAdmin()
       );
+      
+      allow delete: if isSuperAdmin();
       
       allow delete: if false; // Wallets should never be deleted
     }
