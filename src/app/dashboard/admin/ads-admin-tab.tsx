@@ -61,6 +61,11 @@ import {
   getConversionRate,
   getAdConversions,
 } from '@/lib/ads/conversion-tracking';
+import { RevenueDashboard } from '@/components/ads/revenue-dashboard';
+import { ABTestingDashboard } from '@/components/ads/ab-testing-dashboard';
+import { NotificationsDashboard } from '@/components/ads/notifications-dashboard';
+import { MLPerformanceDashboard } from '@/components/ads/ml-performance-dashboard';
+import { ConversionsDashboard } from '@/components/ads/conversions-dashboard';
 import type {
   AdCampaign,
   Sponsor,
@@ -523,41 +528,27 @@ export function AdsAdminTab({ firestore, user, toast }: AdsAdminTabProps) {
             
             {/* Revenue Tab */}
             <TabsContent value="revenue" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Revenue Dashboard</CardTitle>
-                  <CardDescription>Revenue tracking and estimation</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground">Revenue dashboard coming soon...</p>
-                </CardContent>
-              </Card>
+              <RevenueDashboard firestore={firestore} />
             </TabsContent>
             
             {/* A/B Testing Tab */}
             <TabsContent value="ab-testing" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>A/B Testing Dashboard</CardTitle>
-                  <CardDescription>A/B testing results and analysis</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground">A/B testing dashboard coming soon...</p>
-                </CardContent>
-              </Card>
+              <ABTestingDashboard firestore={firestore} campaigns={allCampaigns} toast={toast} onUpdate={loadData} />
             </TabsContent>
             
             {/* Notifications Tab */}
             <TabsContent value="notifications" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Notifications Dashboard</CardTitle>
-                  <CardDescription>Campaign performance notifications</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground">Notifications dashboard coming soon...</p>
-                </CardContent>
-              </Card>
+              <NotificationsDashboard firestore={firestore} campaigns={allCampaigns} toast={toast} />
+            </TabsContent>
+            
+            {/* ML & Performance Tab */}
+            <TabsContent value="ml-performance" className="space-y-4">
+              <MLPerformanceDashboard firestore={firestore} campaigns={allCampaigns} toast={toast} onUpdate={loadData} />
+            </TabsContent>
+            
+            {/* Conversions Tab */}
+            <TabsContent value="conversions" className="space-y-4">
+              <ConversionsDashboard firestore={firestore} creatives={creatives} />
             </TabsContent>
           </Tabs>
         </CardContent>
