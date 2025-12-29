@@ -464,8 +464,13 @@ service cloud.firestore {
     // User Predictions
     match /user_predictions/{predictionId} {
       // Users can create their own predictions
-      // Ensure userId matches authenticated user
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      // Ensure userId matches authenticated user and required fields are present
+      allow create: if isSignedIn() && 
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.gameId != null &&
+        request.resource.data.questionId != null &&
+        request.resource.data.prediction != null &&
+        request.resource.data.submittedAt != null;
       
       // Users can read their own predictions, admins can read all
       allow get: if isSignedIn() && (
@@ -476,6 +481,8 @@ service cloud.firestore {
       // Users can list their own predictions, admins can list all
       allow list: if isSignedIn() && (
         request.query.where.size() > 0 || // Must have where clause
+        request.query.orderBy.size() > 0 ||
+        request.query.limit != null ||
         isSuperAdmin()
       );
       
