@@ -30,14 +30,20 @@ import { FantasyGameUtils } from '@/lib/fantasy/engine';
 import { LEGAL_DISCLAIMER } from '@/lib/fantasy/constants';
 import { SponsorBanner } from '@/components/ads/sponsor-banner';
 import { getActiveFantasyCampaigns } from '@/lib/fantasy/campaign-services';
+import { getLeaderboard } from '@/lib/fantasy/services';
+import { LeaderboardCard } from '@/components/fantasy/leaderboard-card';
+import type { LeaderboardPeriod } from '@/lib/fantasy/types';
 
 export default function FantasyLobbyPage() {
   const firestore = useFirestore();
   const { user } = useUser();
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [selectedView, setSelectedView] = useState<'games' | 'campaigns'>('games');
+  const [selectedView, setSelectedView] = useState<'games' | 'campaigns' | 'leaderboard'>('games');
   const [campaigns, setCampaigns] = useState<FantasyCampaign[]>([]);
   const [loadingCampaigns, setLoadingCampaigns] = useState(false);
+  const [leaderboard, setLeaderboard] = useState<any>(null);
+  const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
+  const [leaderboardPeriod, setLeaderboardPeriod] = useState<LeaderboardPeriod>('weekly');
 
   // Query active games
   const gamesQuery = useMemoFirebase(
@@ -71,6 +77,23 @@ export default function FantasyLobbyPage() {
     };
     loadCampaigns();
   }, [firestore]);
+
+  // Load leaderboard
+  useEffect(() => {
+    if (!firestore || selectedView !== 'leaderboard') return;
+    const loadLeaderboard = async () => {
+      try {
+        setLoadingLeaderboard(true);
+        const lb = await getLeaderboard(firestore, leaderboardPeriod);
+        setLeaderboard(lb);
+      } catch (error) {
+        console.error('Error loading leaderboard:', error);
+      } finally {
+        setLoadingLeaderboard(false);
+      }
+    };
+    loadLeaderboard();
+  }, [firestore, selectedView, leaderboardPeriod]);
 
   // Filter games by category
   const filteredGames = games?.filter((game) => {
@@ -118,11 +141,12 @@ export default function FantasyLobbyPage() {
         </CardContent>
       </Card>
 
-      {/* View Tabs (Games vs Campaigns) */}
-      <Tabs value={selectedView} onValueChange={(v) => setSelectedView(v as 'games' | 'campaigns')}>
-        <TabsList className="grid w-full grid-cols-2 mb-6">
+      {/* View Tabs (Games vs Campaigns vs Leaderboard) */}
+      <Tabs value={selectedView} onValueChange={(v) => setSelectedView(v as 'games' | 'campaigns' | 'leaderboard')}>
+        <TabsList className="grid w-full grid-cols-3 mb-6">
           <TabsTrigger value="games">Individual Games</TabsTrigger>
           <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
+          <TabsTrigger value="leaderboard">Leaderboard</TabsTrigger>
         </TabsList>
 
         {/* Campaigns View */}
@@ -223,6 +247,47 @@ export default function FantasyLobbyPage() {
                 );
               })}
             </div>
+          )}
+        </TabsContent>
+
+        {/* Leaderboard View */}
+        <TabsContent value="leaderboard" className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-bold">Fantasy Leaderboard</h2>
+            <Tabs value={leaderboardPeriod} onValueChange={(v) => setLeaderboardPeriod(v as LeaderboardPeriod)}>
+              <TabsList>
+                <TabsTrigger value="daily">Daily</TabsTrigger>
+                <TabsTrigger value="weekly">Weekly</TabsTrigger>
+                <TabsTrigger value="monthly">Monthly</TabsTrigger>
+                <TabsTrigger value="all-time">All Time</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+          
+          {loadingLeaderboard ? (
+            <Card>
+              <CardContent className="py-12">
+                <div className="flex items-center justify-center">
+                  <Trophy className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+              </CardContent>
+            </Card>
+          ) : leaderboard && leaderboard.entries && leaderboard.entries.length > 0 ? (
+            <LeaderboardCard 
+              entries={leaderboard.entries} 
+              period={leaderboardPeriod}
+              title={`${leaderboardPeriod.charAt(0).toUpperCase() + leaderboardPeriod.slice(1)} Leaderboard`}
+            />
+          ) : (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <Trophy className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No Leaderboard Data</h3>
+                <p className="text-muted-foreground">
+                  Play some games to see your ranking on the leaderboard!
+                </p>
+              </CardContent>
+            </Card>
           )}
         </TabsContent>
 

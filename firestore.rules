@@ -488,6 +488,14 @@ service cloud.firestore {
       allow create, update, delete: if isSuperAdmin();
     }
     
+    // Leaderboards
+    match /leaderboards/{leaderboardId} {
+      // All signed-in users can read leaderboards
+      allow get, list: if isSignedIn();
+      // Only super admins can create/update/delete leaderboards
+      allow create, update, delete: if isSuperAdmin();
+    }
+    
     // User Wallets (Coins)
     match /user_wallets/{walletId} {
       // Users can read their own wallet

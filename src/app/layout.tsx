@@ -8,6 +8,12 @@ import { ErrorBoundary } from '@/components/error-boundary';
 import { OfflineIndicator } from '@/components/offline-indicator';
 import { ServiceWorkerRegistration } from '@/components/service-worker-registration';
 
+// Get the site URL for absolute image URLs
+// Priority: NEXT_PUBLIC_SITE_URL > VERCEL_URL > default
+const siteUrl = 
+  process.env.NEXT_PUBLIC_SITE_URL || 
+  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://naarimani.com');
+
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
@@ -18,6 +24,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: 'Naarimani - India\'s First Women-Only Social Platform',
   description:
     'India\'s first women-only social platform for safety, friendship, learning, support & empowerment.',
@@ -33,12 +40,13 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     siteName: 'Naarimani',
+    url: siteUrl,
     title: 'Naarimani - India\'s First Women-Only Social Platform',
     description:
       'India\'s first women-only social platform for safety, friendship, learning, support & empowerment.',
     images: [
       {
-        url: '/icon-512x512.png',
+        url: `${siteUrl}/icon-512x512.png`,
         width: 512,
         height: 512,
         alt: 'Naarimani Logo',
@@ -47,10 +55,10 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Naarimani',
+    title: 'Naarimani - India\'s First Women-Only Social Platform',
     description:
       'India\'s first women-only social platform for safety, friendship, learning, support & empowerment.',
-    images: ['/icon-512x512.png'],
+    images: [`${siteUrl}/icon-512x512.png`],
   },
   icons: {
     icon: [
