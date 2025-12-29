@@ -15,7 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AdCard, type Ad } from '@/components/ad-card';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Trophy, ArrowRight } from 'lucide-react';
+import { Trophy, ArrowRight, Gift } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 
@@ -175,6 +175,25 @@ function PageContent() {
               <Link href="/dashboard/fantasy#leaderboard">
                 <Button className="w-full" variant="default">
                   View Leaderboard
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+          <Card className="border-green-500/20 bg-green-500/5">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Gift className="h-5 w-5 text-green-600" />
+                Rewards Catalog
+              </CardTitle>
+              <CardDescription>
+                Redeem your coins for vouchers, gifts & prizes!
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Link href="/dashboard/rewards">
+                <Button className="w-full" variant="default">
+                  Browse Rewards
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>

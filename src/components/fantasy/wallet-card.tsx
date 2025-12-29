@@ -12,6 +12,7 @@ import { awardDailyLoginCoins, canClaimDailyLogin } from '@/lib/fantasy/coin-rew
 import { useToast } from '@/hooks/use-toast';
 import type { CoinTransaction } from '@/lib/fantasy/types';
 import { formatDistanceToNow } from 'date-fns';
+import Link from 'next/link';
 
 export function WalletCard() {
   const firestore = useFirestore();
@@ -223,7 +224,7 @@ export function WalletCard() {
         </div>
 
         {/* Earning Tips */}
-        <div className="p-3 bg-muted rounded-lg">
+        <div className="p-3 bg-muted rounded-lg space-y-3">
           <p className="text-xs font-medium mb-2">💡 Ways to Earn Coins:</p>
           <ul className="text-xs text-muted-foreground space-y-1">
             <li>• Daily login: 10 coins</li>
@@ -233,6 +234,12 @@ export function WalletCard() {
             <li>• Refer friends: 50 coins</li>
             <li>• Win fantasy games: Bonus coins!</li>
           </ul>
+          <Link href="/dashboard/rewards">
+            <Button variant="outline" className="w-full mt-3" size="sm">
+              <Gift className="mr-2 h-4 w-4" />
+              Redeem Coins for Rewards
+            </Button>
+          </Link>
         </div>
       </CardContent>
     </Card>
