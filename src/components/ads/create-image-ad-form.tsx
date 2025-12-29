@@ -39,28 +39,36 @@ export function CreateImageAdForm({ firestore, userId, onSuccess, onCancel, toas
   const [sponsors, setSponsors] = useState<Sponsor[]>([]);
   const [games, setGames] = useState<FantasyGame[]>([]);
   const [campaigns, setCampaigns] = useState<FantasyCampaign[]>([]);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(existingCreative?.imageUrl || null);
   const [imageFile, setImageFile] = useState<File | null>(null);
 
   // Form state
   const [formData, setFormData] = useState({
-    sponsorId: undefined as string | undefined,
-    title: '',
-    description: '',
-    imageUrl: '',
-    clickUrl: '',
-    displayDuration: 5,
-    priority: 1,
-    startDate: '',
-    endDate: '',
-    status: 'active' as 'active' | 'inactive',
-    maxViews: '',
-    maxViewsPerUser: '',
-    allowMultipleViews: true,
-    repeatInterval: 'never' as RepeatInterval,
-    minTimeBetweenViews: '',
-    targetCampaignIds: '',
-    targetGameIds: '',
+    sponsorId: existingCreative?.sponsorId || undefined as string | undefined,
+    title: existingCreative?.title || '',
+    description: existingCreative?.description || '',
+    imageUrl: existingCreative?.imageUrl || '',
+    clickUrl: existingCreative?.clickUrl || '',
+    displayDuration: existingCreative?.displayDuration || 5,
+    priority: existingCreative?.priority || 1,
+    startDate: existingCreative?.startDate 
+      ? (existingCreative.startDate instanceof Date 
+          ? existingCreative.startDate.toISOString().split('T')[0]
+          : (existingCreative.startDate as any)?.toDate?.()?.toISOString().split('T')[0] || '')
+      : '',
+    endDate: existingCreative?.endDate
+      ? (existingCreative.endDate instanceof Date
+          ? existingCreative.endDate.toISOString().split('T')[0]
+          : (existingCreative.endDate as any)?.toDate?.()?.toISOString().split('T')[0] || '')
+      : '',
+    status: (existingCreative?.active ? 'active' : 'inactive') as 'active' | 'inactive',
+    maxViews: existingCreative?.maxViews?.toString() || '',
+    maxViewsPerUser: existingCreative?.maxViewsPerUser?.toString() || '',
+    allowMultipleViews: existingCreative?.allowMultipleViews ?? true,
+    repeatInterval: existingCreative?.repeatInterval || 'never' as RepeatInterval,
+    minTimeBetweenViews: existingCreative?.minTimeBetweenViews?.toString() || '',
+    targetCampaignIds: existingCreative?.targetCampaignIds?.join(', ') || '',
+    targetGameIds: existingCreative?.targetGameIds?.join(', ') || '',
   });
 
   // Load data
