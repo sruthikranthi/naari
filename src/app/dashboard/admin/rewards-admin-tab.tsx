@@ -635,6 +635,7 @@ export function RewardsAdminTab({ firestore, user, toast }: RewardsAdminTabProps
           {firestore && (
             <RedemptionsManager
               firestore={firestore}
+              redemptions={redemptions}
               toast={toast}
               onUpdate={loadData}
             />
