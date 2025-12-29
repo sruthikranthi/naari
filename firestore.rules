@@ -665,8 +665,11 @@ service cloud.firestore {
       allow get: if isSignedIn() && resource.data.userId == request.auth.uid;
       
       // Users can list their own redemptions
+      // Super admins can list all redemptions
       allow list: if isSignedIn() && (
         request.query.where.size() > 0 ||
+        request.query.orderBy.size() > 0 ||
+        request.query.limit != null ||
         isSuperAdmin()
       );
       
