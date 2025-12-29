@@ -459,12 +459,8 @@ service cloud.firestore {
     // User Predictions
     match /user_predictions/{predictionId} {
       // Users can create their own predictions
-      // Ensure userId matches authenticated user and required fields are present
-      allow create: if isSignedIn() && 
-        request.resource.data.userId == request.auth.uid &&
-        request.resource.data.gameId != null &&
-        request.resource.data.questionId != null &&
-        request.resource.data.prediction != null;
+      // Ensure userId matches authenticated user
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
       
       // Users can read their own predictions, admins can read all
       allow get: if isSignedIn() && (
