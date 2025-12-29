@@ -123,6 +123,26 @@ export async function getAdCreatives(
   })) as AdCreative[];
 }
 
+export async function getAllAdCreatives(
+  firestore: Firestore,
+  options?: { activeOnly?: boolean }
+): Promise<AdCreative[]> {
+  let q: Query = query(
+    collection(firestore, 'ad_creatives'),
+    orderBy('createdAt', 'desc')
+  );
+  
+  if (options?.activeOnly) {
+    q = query(q, where('active', '==', true));
+  }
+  
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data(),
+  })) as AdCreative[];
+}
+
 export async function getPlacementRules(
   firestore: Firestore,
   campaignId: string,

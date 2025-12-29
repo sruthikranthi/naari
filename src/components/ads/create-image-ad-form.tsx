@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Upload, Image as ImageIcon, Loader, X } from 'lucide-react';
-import { createAdCreative } from '@/lib/ads/services';
+import { createAdCreative, updateAdCreative } from '@/lib/ads/services';
 import { getAllSponsors } from '@/lib/ads/services';
 import { getAllFantasyGames } from '@/lib/fantasy/services';
 import { getAllFantasyCampaigns } from '@/lib/fantasy/campaign-services';
@@ -28,9 +28,10 @@ interface CreateImageAdFormProps {
   onSuccess: () => void;
   onCancel: () => void;
   toast: (props: { title: string; description?: string; variant?: 'default' | 'destructive' }) => void;
+  existingCreative?: AdCreative | null;
 }
 
-export function CreateImageAdForm({ firestore, userId, onSuccess, onCancel, toast }: CreateImageAdFormProps) {
+export function CreateImageAdForm({ firestore, userId, onSuccess, onCancel, toast, existingCreative }: CreateImageAdFormProps) {
   const storage = useStorage();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);

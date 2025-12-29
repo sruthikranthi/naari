@@ -35,6 +35,7 @@ import {
   createAdCreative,
   updateAdCreative,
   deleteAdCreative,
+  getAllAdCreatives,
 } from '@/lib/ads/services';
 import { CreateImageAdForm } from '@/components/ads/create-image-ad-form';
 import {
@@ -99,22 +100,26 @@ export function AdsAdminTab({ firestore, user, toast }: AdsAdminTabProps) {
   const [editingSponsor, setEditingSponsor] = useState<Sponsor | null>(null);
   const [selectedCampaignForCreative, setSelectedCampaignForCreative] = useState<string | null>(null);
   const [showCreateCreative, setShowCreateCreative] = useState(false);
+  const [creatives, setCreatives] = useState<AdCreative[]>([]);
+  const [editingCreative, setEditingCreative] = useState<AdCreative | null>(null);
 
   const loadData = useCallback(async () => {
     if (!firestore) return;
     
     setLoading(true);
     try {
-      const [activeCampaigns, allCampaignsData, activeSponsors, allSponsorsData] = await Promise.all([
+      const [activeCampaigns, allCampaignsData, activeSponsors, allSponsorsData, allCreatives] = await Promise.all([
         getActiveCampaigns(firestore),
         getAllCampaigns(firestore),
         getActiveSponsors(firestore),
         getAllSponsors(firestore),
+        getAllAdCreatives(firestore),
       ]);
       setCampaigns(activeCampaigns);
       setAllCampaigns(allCampaignsData);
       setSponsors(activeSponsors);
       setAllSponsors(allSponsorsData);
+      setCreatives(allCreatives);
     } catch (error) {
       console.error('Error loading ads data:', error);
       toast({
@@ -391,13 +396,124 @@ export function AdsAdminTab({ firestore, user, toast }: AdsAdminTabProps) {
                 </Dialog>
               </div>
 
-              <Card>
-                <CardContent className="pt-6">
-                  <p className="text-muted-foreground text-center py-8">
-                    Image ads will be displayed here. Create your first ad to get started!
-                  </p>
-                </CardContent>
-              </Card>
+              {loading ? (
+                <div className="flex h-48 w-full items-center justify-center">
+                  <Loader className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : creatives.length === 0 ? (
+                <Card>
+                  <CardContent className="pt-6">
+                    <p className="text-muted-foreground text-center py-8">
+                      Image ads will be displayed here. Create your first ad to get started!
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {creatives.map((creative) => (
+                    <Card key={creative.id}>
+                      <CardContent className="pt-6">
+                        <div className="space-y-3">
+                          {creative.imageUrl && (
+                            <div className="relative h-48 w-full rounded-lg overflow-hidden bg-muted">
+                              <img 
+                                src={creative.imageUrl} 
+                                alt={creative.altText || creative.title} 
+                                className="object-cover w-full h-full"
+                              />
+                            </div>
+                          )}
+                          <div>
+                            <div className="flex items-center justify-between mb-1">
+                              <h4 className="font-semibold">{creative.title}</h4>
+                              <Badge variant={creative.active ? 'default' : 'secondary'}>
+                                {creative.active ? 'Active' : 'Inactive'}
+                              </Badge>
+                            </div>
+                            {creative.description && (
+                              <p className="text-sm text-muted-foreground mb-2">{creative.description}</p>
+                            )}
+                            <div className="flex items-center justify-between text-xs text-muted-foreground">
+                              <span>Duration: {creative.displayDuration}s</span>
+                              <span>Priority: {creative.priority}</span>
+                            </div>
+                            {creative.startDate && (
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {creative.startDate instanceof Date
+                                  ? creative.startDate.toLocaleDateString()
+                                  : (creative.startDate as any)?.toDate?.()?.toLocaleDateString() || 'N/A'}
+                                {' - '}
+                                {creative.endDate instanceof Date
+                                  ? creative.endDate.toLocaleDateString()
+                                  : (creative.endDate as any)?.toDate?.()?.toLocaleDateString() || 'N/A'}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setEditingCreative(creative)}
+                              className="flex-1"
+                            >
+                              <Edit className="mr-2 h-4 w-4" />
+                              Edit
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={async () => {
+                                if (!confirm(`Delete "${creative.title}"?`)) return;
+                                try {
+                                  await deleteAdCreative(firestore!, creative.id);
+                                  toast({ title: 'Success', description: 'Creative deleted.' });
+                                  loadData();
+                                } catch (error: any) {
+                                  toast({
+                                    variant: 'destructive',
+                                    title: 'Error',
+                                    description: error.message || 'Failed to delete creative.',
+                                  });
+                                }
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+
+              {/* Edit Creative Dialog */}
+              {editingCreative && (
+                <Dialog open={!!editingCreative} onOpenChange={(open) => !open && setEditingCreative(null)}>
+                  <DialogContent className="max-w-4xl max-h-[95vh] overflow-hidden">
+                    <DialogHeader>
+                      <DialogTitle>Edit Ad Creative</DialogTitle>
+                      <DialogDescription>
+                        Update the ad creative details.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="overflow-y-auto max-h-[calc(95vh-120px)]">
+                      {firestore && user && (
+                        <CreateImageAdForm
+                          firestore={firestore}
+                          userId={user.uid}
+                          onSuccess={() => {
+                            setEditingCreative(null);
+                            loadData();
+                          }}
+                          onCancel={() => setEditingCreative(null)}
+                          toast={toast}
+                        />
+                      )}
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              )}
             </TabsContent>
 
             {/* Analytics Tab */}
