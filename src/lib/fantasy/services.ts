@@ -421,10 +421,23 @@ export async function createUserPrediction(
   firestore: Firestore,
   prediction: Omit<UserPrediction, 'id' | 'submittedAt'>
 ): Promise<string> {
-  const predictionData = {
-    ...prediction,
+  // Filter out undefined values - Firestore doesn't allow them
+  const predictionData: Record<string, any> = {
+    gameId: prediction.gameId,
+    questionId: prediction.questionId,
+    userId: prediction.userId,
+    prediction: prediction.prediction,
     submittedAt: serverTimestamp(),
   };
+  
+  // Only include optional fields if they are defined
+  if (prediction.rangeMin !== undefined) {
+    predictionData.rangeMin = prediction.rangeMin;
+  }
+  if (prediction.rangeMax !== undefined) {
+    predictionData.rangeMax = prediction.rangeMax;
+  }
+  
   const docRef = await addDoc(collection(firestore, 'user_predictions'), predictionData);
   return docRef.id;
 }
@@ -434,7 +447,30 @@ export async function updateUserPrediction(
   predictionId: string,
   updates: Partial<UserPrediction>
 ): Promise<void> {
-  await updateDoc(doc(firestore, 'user_predictions', predictionId), updates);
+  // Filter out undefined values - Firestore doesn't allow them
+  const updateData: Record<string, any> = {};
+  
+  // Only include fields that are defined
+  if (updates.prediction !== undefined) {
+    updateData.prediction = updates.prediction;
+  }
+  if (updates.rangeMin !== undefined) {
+    updateData.rangeMin = updates.rangeMin;
+  }
+  if (updates.rangeMax !== undefined) {
+    updateData.rangeMax = updates.rangeMax;
+  }
+  if (updates.pointsEarned !== undefined) {
+    updateData.pointsEarned = updates.pointsEarned;
+  }
+  if (updates.isCorrect !== undefined) {
+    updateData.isCorrect = updates.isCorrect;
+  }
+  if (updates.scoredAt !== undefined) {
+    updateData.scoredAt = updates.scoredAt;
+  }
+  
+  await updateDoc(doc(firestore, 'user_predictions', predictionId), updateData);
 }
 
 // ============================================================================
