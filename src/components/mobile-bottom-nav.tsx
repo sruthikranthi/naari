@@ -1,6 +1,6 @@
 'use client';
 
-import { Home, Users, Store, MessageCircle, User } from 'lucide-react';
+import { Home, Users, Sparkles, MessageCircle, User } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -9,7 +9,7 @@ import { motion } from 'framer-motion';
 const mobileNavItems = [
   { href: '/dashboard', icon: Home, label: 'Home' },
   { href: '/dashboard/communities', icon: Users, label: 'Communities' },
-  { href: '/dashboard/marketplace', icon: Store, label: 'Marketplace' },
+  { href: '/dashboard/fantasy', icon: Sparkles, label: 'Fantasy' },
   { href: '/dashboard/chat', icon: MessageCircle, label: 'Chat' },
   { href: '/dashboard/profile', icon: User, label: 'Profile' },
 ];
