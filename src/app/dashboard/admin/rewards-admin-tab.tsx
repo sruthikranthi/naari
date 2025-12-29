@@ -419,6 +419,133 @@ export function RewardsAdminTab({ firestore, user, toast }: RewardsAdminTabProps
                 </CardContent>
               </Card>
             </TabsContent>
+
+            {/* Rewards Catalog Tab */}
+            <TabsContent value="catalog" className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">Rewards Catalog</h3>
+                <Button onClick={() => setShowCreateItem(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create Reward Item
+                </Button>
+              </div>
+
+              {loading ? (
+                <div className="flex h-48 w-full items-center justify-center">
+                  <Loader className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : redeemableItems.length === 0 ? (
+                <div className="text-center py-12">
+                  <Gift className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground">No reward items found. Create one to get started!</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {redeemableItems.map((item) => (
+                    <Card key={item.id}>
+                      <CardContent className="pt-6">
+                        <div className="space-y-3">
+                          {item.imageUrl && (
+                            <div className="relative h-32 w-full rounded-lg overflow-hidden bg-muted">
+                              <img src={item.imageUrl} alt={item.name} className="object-cover w-full h-full" />
+                            </div>
+                          )}
+                          <div>
+                            <div className="flex items-center justify-between mb-1">
+                              <h4 className="font-semibold">{item.name}</h4>
+                              <Badge variant={item.isActive ? 'default' : 'secondary'}>
+                                {item.isActive ? 'Active' : 'Inactive'}
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground mb-2">{item.description}</p>
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-xs text-muted-foreground">Cost</p>
+                                <p className="font-bold text-lg">{item.coinCost} coins</p>
+                              </div>
+                              {item.stock !== undefined && (
+                                <div>
+                                  <p className="text-xs text-muted-foreground">Stock</p>
+                                  <p className="font-semibold">{item.stock} left</p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setEditingItem(item)}
+                              className="flex-1"
+                            >
+                              <Edit className="mr-2 h-4 w-4" />
+                              Edit
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={async () => {
+                                if (!confirm(`Delete "${item.name}"?`)) return;
+                                try {
+                                  await deleteRedeemableItem(firestore, item.id);
+                                  toast({ title: 'Success', description: 'Item deleted.' });
+                                  loadData();
+                                } catch (error: any) {
+                                  toast({
+                                    variant: 'destructive',
+                                    title: 'Error',
+                                    description: error.message || 'Failed to delete item.',
+                                  });
+                                }
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+
+              {/* Redemptions Management */}
+              <Card className="mt-6">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>Recent Redemptions</CardTitle>
+                    <Button variant="outline" onClick={() => setShowRedemptions(true)}>
+                      View All Redemptions
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {redemptions.length === 0 ? (
+                    <p className="text-muted-foreground text-center py-4">No redemptions yet.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {redemptions.slice(0, 10).map((redemption) => (
+                        <div key={redemption.id} className="flex items-center justify-between p-3 border rounded-lg">
+                          <div>
+                            <p className="font-semibold">{redemption.itemName}</p>
+                            <p className="text-xs text-muted-foreground">
+                              User: {redemption.userId.slice(0, 8)}... • {redemption.coinCost} coins
+                            </p>
+                          </div>
+                          <Badge variant={
+                            redemption.status === 'fulfilled' ? 'default' :
+                            redemption.status === 'pending' ? 'secondary' :
+                            redemption.status === 'rejected' ? 'destructive' : 'outline'
+                          }>
+                            {redemption.status}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
           </Tabs>
         </CardContent>
       </Card>
