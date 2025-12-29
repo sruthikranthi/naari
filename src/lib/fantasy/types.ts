@@ -208,7 +208,8 @@ export type CoinTransactionType =
   | 'fantasy-win'
   | 'fantasy-bonus'
   | 'admin-grant'
-  | 'admin-deduct';
+  | 'admin-deduct'
+  | 'redemption';
 
 export type CoinTransaction = {
   id: string;
@@ -222,6 +223,8 @@ export type CoinTransaction = {
     reelId?: string;
     quizId?: string;
     referralUserId?: string;
+    itemId?: string;
+    redemptionId?: string;
   };
   createdAt: Timestamp | FieldValue;
 };
@@ -233,6 +236,47 @@ export type UserWallet = {
   totalEarned: number; // Lifetime coins earned
   totalSpent: number; // Lifetime coins spent
   lastUpdated: Timestamp | FieldValue;
+};
+
+// ============================================================================
+// REDEEMABLE ITEMS (REWARDS CATALOG)
+// ============================================================================
+
+export type RewardCategory = 'voucher' | 'gift' | 'prize' | 'discount' | 'cashback';
+
+export type RedeemableItem = {
+  id: string;
+  name: string;
+  description: string;
+  category: RewardCategory;
+  coinCost: number; // Coins required to redeem
+  imageUrl?: string;
+  value?: string; // e.g., "₹500", "20% off", "Free shipping"
+  terms?: string; // Terms and conditions
+  expiryDays?: number; // Days until voucher expires after redemption
+  stock?: number; // Available quantity (null = unlimited)
+  isActive: boolean;
+  priority: number; // Display order (higher = shown first)
+  createdBy: string; // Admin user ID
+  createdAt: Timestamp | FieldValue;
+  updatedAt: Timestamp | FieldValue;
+};
+
+export type RedemptionStatus = 'pending' | 'approved' | 'rejected' | 'fulfilled' | 'expired';
+
+export type UserRedemption = {
+  id: string;
+  userId: string;
+  itemId: string;
+  itemName: string; // Snapshot of item name at time of redemption
+  coinCost: number; // Snapshot of cost at time of redemption
+  status: RedemptionStatus;
+  redeemedAt: Timestamp | FieldValue;
+  fulfilledAt?: Timestamp | FieldValue;
+  expiryDate?: Timestamp | FieldValue;
+  voucherCode?: string; // For vouchers/discounts
+  metadata?: Record<string, any>; // Additional data
+  notes?: string; // Admin notes
 };
 
 // ============================================================================

@@ -18,6 +18,7 @@ import {
   Calendar,
   Sparkles,
   Trophy,
+  Gift,
 } from 'lucide-react';
 
 import {
@@ -47,6 +48,7 @@ const navItems = [
   { href: '/dashboard/subscriptions', icon: Crown, label: 'Subscriptions' },
   { href: '/dashboard/admin', icon: Shield, label: 'Admin Panel', adminOnly: true },
   { href: '/dashboard/fantasy#leaderboard', icon: Trophy, label: 'Leaderboard' },
+  { href: '/dashboard/rewards', icon: Gift, label: 'Rewards' },
 ];
 
 export function MainNav() {

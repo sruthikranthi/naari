@@ -637,5 +637,47 @@ service cloud.firestore {
       allow read: if false;
       allow update, delete: if false;
     }
+
+    // -------------------------------------------------------------------------
+    // REDEEMABLE ITEMS (REWARDS CATALOG)
+    // -------------------------------------------------------------------------
+    match /redeemable_items/{itemId} {
+      // Anyone signed in can read active items
+      allow get: if isSignedIn();
+      
+      // List queries must have filters (where clause, orderBy, or limit)
+      allow list: if isSignedIn() && (
+        request.query.where.size() > 0 ||
+        request.query.orderBy.size() > 0 ||
+        request.query.limit != null ||
+        isSuperAdmin()
+      );
+      
+      // Only super admins can create, update, or delete items
+      allow create, update, delete: if isSuperAdmin();
+    }
+
+    // -------------------------------------------------------------------------
+    // USER REDEMPTIONS
+    // -------------------------------------------------------------------------
+    match /user_redemptions/{redemptionId} {
+      // Users can read their own redemptions
+      allow get: if isSignedIn() && resource.data.userId == request.auth.uid;
+      
+      // Users can list their own redemptions
+      allow list: if isSignedIn() && (
+        request.query.where.size() > 0 ||
+        isSuperAdmin()
+      );
+      
+      // Users can create redemptions (redeem items)
+      allow create: if isSignedIn() && 
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.itemId != null &&
+        request.resource.data.coinCost != null;
+      
+      // Only super admins can update redemptions (approve, fulfill, etc.)
+      allow update, delete: if isSuperAdmin();
+    }
   }
 }

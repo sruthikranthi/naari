@@ -25,11 +25,20 @@ import {
   getCoinTransactions,
   getUserBadges,
   awardBadge,
+  createRedeemableItem,
+  updateRedeemableItem,
+  deleteRedeemableItem,
+  getRedeemableItems,
+  getAllRedemptions,
+  updateRedemptionStatus,
 } from '@/lib/fantasy/services';
 import type {
   UserWallet,
   UserBadge,
   CoinTransaction,
+  RedeemableItem,
+  UserRedemption,
+  RedemptionStatus,
 } from '@/lib/fantasy/types';
 import { collection, query, where, getDocs, doc, getDoc, updateDoc, Timestamp, serverTimestamp } from 'firebase/firestore';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -38,6 +47,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { BADGE_DEFINITIONS, COIN_REWARDS } from '@/lib/fantasy/constants';
+import { RedeemableItemForm } from '@/components/rewards/redeemable-item-form';
+import { RedemptionsManager } from '@/components/rewards/redemptions-manager';
 
 interface RewardsAdminTabProps {
   firestore: Firestore | null;
@@ -46,7 +57,7 @@ interface RewardsAdminTabProps {
 }
 
 export function RewardsAdminTab({ firestore, user, toast }: RewardsAdminTabProps) {
-  const [activeTab, setActiveTab] = useState<'wallets' | 'badges' | 'transactions' | 'rewards'>('wallets');
+  const [activeTab, setActiveTab] = useState<'wallets' | 'badges' | 'transactions' | 'rewards' | 'catalog'>('wallets');
   const [wallets, setWallets] = useState<Array<{ userId: string; wallet: UserWallet }>>([]);
   const [badges, setBadges] = useState<Array<{ userId: string; badges: UserBadge[] }>>([]);
   const [transactions, setTransactions] = useState<CoinTransaction[]>([]);
@@ -54,6 +65,11 @@ export function RewardsAdminTab({ firestore, user, toast }: RewardsAdminTabProps
   const [selectedUserId, setSelectedUserId] = useState<string>('');
   const [showAwardCoins, setShowAwardCoins] = useState(false);
   const [showAwardBadge, setShowAwardBadge] = useState(false);
+  const [redeemableItems, setRedeemableItems] = useState<RedeemableItem[]>([]);
+  const [redemptions, setRedemptions] = useState<UserRedemption[]>([]);
+  const [showCreateItem, setShowCreateItem] = useState(false);
+  const [editingItem, setEditingItem] = useState<RedeemableItem | null>(null);
+  const [showRedemptions, setShowRedemptions] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!firestore) return;
@@ -99,6 +115,14 @@ export function RewardsAdminTab({ firestore, user, toast }: RewardsAdminTabProps
         })
         .slice(0, 100); // Last 100 transactions
       setTransactions(transactionsData);
+
+      // Load redeemable items
+      const items = await getRedeemableItems(firestore);
+      setRedeemableItems(items);
+
+      // Load redemptions
+      const allRedemptions = await getAllRedemptions(firestore, { limit: 100 });
+      setRedemptions(allRedemptions);
     } catch (error) {
       console.error('Error loading rewards data:', error);
       toast({
@@ -141,11 +165,12 @@ export function RewardsAdminTab({ firestore, user, toast }: RewardsAdminTabProps
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="wallets">Wallets</TabsTrigger>
               <TabsTrigger value="badges">Badges</TabsTrigger>
               <TabsTrigger value="transactions">Transactions</TabsTrigger>
               <TabsTrigger value="rewards">Award Rewards</TabsTrigger>
+              <TabsTrigger value="catalog">Rewards Catalog</TabsTrigger>
             </TabsList>
 
             {/* Wallets Tab */}

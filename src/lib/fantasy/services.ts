@@ -32,6 +32,9 @@ import type {
   CoinTransaction,
   UserBadge,
   Leaderboard,
+  RedeemableItem,
+  UserRedemption,
+  RedemptionStatus,
 } from './types';
 
 // ============================================================================
@@ -641,6 +644,222 @@ export async function awardBadge(
     badgeDescription: badgeDef.description,
     badgeIcon: badgeDef.icon,
   });
+}
+
+// ============================================================================
+// REDEEMABLE ITEMS (REWARDS CATALOG)
+// ============================================================================
+
+export async function createRedeemableItem(
+  firestore: Firestore,
+  item: Omit<RedeemableItem, 'id' | 'createdAt' | 'updatedAt'> & { createdBy?: string }
+): Promise<string> {
+  const itemData = {
+    ...item,
+    createdBy: item.createdBy || 'system',
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  };
+  const docRef = await addDoc(collection(firestore, 'redeemable_items'), itemData);
+  return docRef.id;
+}
+
+export async function updateRedeemableItem(
+  firestore: Firestore,
+  itemId: string,
+  updates: Partial<Omit<RedeemableItem, 'id' | 'createdAt' | 'createdBy'>>
+): Promise<void> {
+  const updateData = {
+    ...updates,
+    updatedAt: serverTimestamp(),
+  };
+  await updateDoc(doc(firestore, 'redeemable_items', itemId), updateData);
+}
+
+export async function deleteRedeemableItem(
+  firestore: Firestore,
+  itemId: string
+): Promise<void> {
+  await deleteDoc(doc(firestore, 'redeemable_items', itemId));
+}
+
+export async function getRedeemableItems(
+  firestore: Firestore,
+  options?: { activeOnly?: boolean; category?: string }
+): Promise<RedeemableItem[]> {
+  let q: Query = query(
+    collection(firestore, 'redeemable_items'),
+    orderBy('priority', 'desc'),
+    orderBy('createdAt', 'desc')
+  );
+
+  if (options?.activeOnly) {
+    q = query(q, where('isActive', '==', true));
+  }
+
+  if (options?.category) {
+    q = query(q, where('category', '==', options.category));
+  }
+
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data(),
+  })) as RedeemableItem[];
+}
+
+export async function getRedeemableItem(
+  firestore: Firestore,
+  itemId: string
+): Promise<RedeemableItem | null> {
+  const docRef = doc(firestore, 'redeemable_items', itemId);
+  const docSnap = await getDoc(docRef);
+  if (!docSnap.exists()) {
+    return null;
+  }
+  return { id: docSnap.id, ...docSnap.data() } as RedeemableItem;
+}
+
+// ============================================================================
+// USER REDEMPTIONS
+// ============================================================================
+
+export async function redeemItem(
+  firestore: Firestore,
+  userId: string,
+  itemId: string
+): Promise<{ success: boolean; redemptionId?: string; error?: string }> {
+  try {
+    // Get item
+    const item = await getRedeemableItem(firestore, itemId);
+    if (!item) {
+      return { success: false, error: 'Item not found' };
+    }
+
+    if (!item.isActive) {
+      return { success: false, error: 'Item is not available' };
+    }
+
+    // Check stock
+    if (item.stock !== undefined && item.stock <= 0) {
+      return { success: false, error: 'Item is out of stock' };
+    }
+
+    // Get user wallet
+    const wallet = await getUserWallet(firestore, userId);
+    if (!wallet) {
+      return { success: false, error: 'Wallet not found' };
+    }
+
+    if (wallet.balance < item.coinCost) {
+      return { success: false, error: `Insufficient coins. Need ${item.coinCost} coins.` };
+    }
+
+    // Create redemption
+    const expiryDate = item.expiryDays
+      ? Timestamp.fromDate(new Date(Date.now() + item.expiryDays * 24 * 60 * 60 * 1000))
+      : undefined;
+
+    const redemptionData: Omit<UserRedemption, 'id'> = {
+      userId,
+      itemId,
+      itemName: item.name,
+      coinCost: item.coinCost,
+      status: 'pending',
+      redeemedAt: serverTimestamp(),
+      expiryDate,
+      metadata: {},
+    };
+
+    const redemptionRef = await addDoc(collection(firestore, 'user_redemptions'), redemptionData);
+
+    // Deduct coins
+    await addCoinTransaction(firestore, {
+      userId,
+      type: 'redemption',
+      amount: -item.coinCost,
+      description: `Redeemed: ${item.name}`,
+      metadata: { itemId, redemptionId: redemptionRef.id },
+    });
+
+    // Update stock if limited
+    if (item.stock !== undefined) {
+      await updateRedeemableItem(firestore, itemId, {
+        stock: item.stock - 1,
+      });
+    }
+
+    return { success: true, redemptionId: redemptionRef.id };
+  } catch (error: any) {
+    console.error('Error redeeming item:', error);
+    return { success: false, error: error.message || 'Failed to redeem item' };
+  }
+}
+
+export async function getUserRedemptions(
+  firestore: Firestore,
+  userId: string
+): Promise<UserRedemption[]> {
+  const q = query(
+    collection(firestore, 'user_redemptions'),
+    where('userId', '==', userId),
+    orderBy('redeemedAt', 'desc')
+  );
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data(),
+  })) as UserRedemption[];
+}
+
+export async function updateRedemptionStatus(
+  firestore: Firestore,
+  redemptionId: string,
+  status: RedemptionStatus,
+  voucherCode?: string,
+  notes?: string
+): Promise<void> {
+  const updateData: Partial<UserRedemption> = {
+    status,
+  };
+
+  if (status === 'fulfilled') {
+    updateData.fulfilledAt = serverTimestamp();
+  }
+
+  if (voucherCode) {
+    updateData.voucherCode = voucherCode;
+  }
+
+  if (notes) {
+    updateData.notes = notes;
+  }
+
+  await updateDoc(doc(firestore, 'user_redemptions', redemptionId), updateData);
+}
+
+export async function getAllRedemptions(
+  firestore: Firestore,
+  options?: { status?: RedemptionStatus; limit?: number }
+): Promise<UserRedemption[]> {
+  let q: Query = query(
+    collection(firestore, 'user_redemptions'),
+    orderBy('redeemedAt', 'desc')
+  );
+
+  if (options?.status) {
+    q = query(q, where('status', '==', options.status));
+  }
+
+  if (options?.limit) {
+    q = query(q, limit(options.limit));
+  }
+
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data(),
+  })) as UserRedemption[];
 }
 
 export async function updateUserWalletBalance(
