@@ -564,7 +564,7 @@ export function KittyGroupClient({ group, groupMembers, upcomingEvent, currentUs
                       toast({
                         variant: 'destructive',
                         title: 'Error',
-                        description: error.message || 'Failed to delete group. You may not have permission. Only super admins can delete groups.',
+                        description: error.message || 'Failed to delete group. You may not have permission. Only group admins and super admins can delete groups.',
                       });
                       setIsDeleteDialogOpen(false);
                     } finally {
