@@ -209,12 +209,21 @@ export function CreateImageAdForm({ firestore, userId, onSuccess, onCancel, toas
         ...(targetGameIds && targetGameIds.length > 0 && { targetGameIds }),
       };
 
-      await createAdCreative(firestore, creativeData);
-
-      toast({
-        title: 'Ad Created!',
-        description: 'Image advertisement created successfully.',
-      });
+      if (existingCreative) {
+        // Update existing creative
+        await updateAdCreative(firestore, existingCreative.id, creativeData);
+        toast({
+          title: 'Ad Updated!',
+          description: 'Image advertisement updated successfully.',
+        });
+      } else {
+        // Create new creative
+        await createAdCreative(firestore, creativeData);
+        toast({
+          title: 'Ad Created!',
+          description: 'Image advertisement created successfully.',
+        });
+      }
 
       onSuccess();
     } catch (error: any) {
