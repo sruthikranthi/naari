@@ -70,10 +70,22 @@ service cloud.firestore {
         (request.resource.data.author.id == resource.data.author.id &&
          request.resource.data.content == resource.data.content &&
          request.resource.data.comments is int &&
-         request.resource.data.comments >= 0)
+         request.resource.data.comments >= 0) ||
+        // Allow updates for poll vote counts (pollOptions array)
+        (request.resource.data.pollOptions is list &&
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pollOptions']))
       );
 
       allow delete: if isSignedIn() && resource.data.author.id == request.auth.uid;
+
+      // Poll votes subcollection
+      match /poll_votes/{voteId} {
+        allow get, list: if isSignedIn();
+        allow create: if isSignedIn() && 
+          request.resource.data.userId == request.auth.uid &&
+          request.resource.data.optionIndex != null;
+        allow update, delete: if false; // Votes cannot be changed or deleted
+      }
 
       match /comments/{commentId} {
         allow get, list: if isSignedIn();
