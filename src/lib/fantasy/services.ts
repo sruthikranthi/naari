@@ -739,13 +739,24 @@ export async function getRedeemableItems(
     });
   } catch (error: any) {
     // If query fails (e.g., missing index), try simpler query
-    if (error.code === 9) {
+    if (error.code === 9 || error.code === 'failed-precondition') {
       console.warn('Firestore index missing for redeemable_items query. Using simpler query.');
       try {
-        let q: Query = query(collection(firestore, 'redeemable_items'));
+        let q: Query;
         
         if (options?.activeOnly) {
-          q = query(q, where('isActive', '==', true));
+          // Use where clause + orderBy to satisfy rules
+          q = query(
+            collection(firestore, 'redeemable_items'),
+            where('isActive', '==', true),
+            orderBy('priority', 'desc')
+          );
+        } else {
+          // Use orderBy to satisfy rules (must have orderBy, where, or limit)
+          q = query(
+            collection(firestore, 'redeemable_items'),
+            orderBy('priority', 'desc')
+          );
         }
         
         const snapshot = await getDocs(q);
@@ -754,8 +765,14 @@ export async function getRedeemableItems(
           ...doc.data(),
         })) as RedeemableItem[];
         
+        // Client-side sorting for category filter if needed
+        let filteredItems = items;
+        if (options?.category) {
+          filteredItems = items.filter(item => item.category === options.category);
+        }
+        
         // Client-side sorting
-        return items.sort((a, b) => {
+        return filteredItems.sort((a, b) => {
           const aPriority = a.priority || 0;
           const bPriority = b.priority || 0;
           if (bPriority !== aPriority) return bPriority - aPriority;
@@ -773,6 +790,7 @@ export async function getRedeemableItems(
         throw fallbackError;
       }
     }
+    console.error('Error loading redeemable items:', error);
     throw error;
   }
 }
