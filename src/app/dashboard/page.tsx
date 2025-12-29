@@ -14,6 +14,10 @@ import { ReferralCard } from '@/components/fantasy/referral-card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AdCard, type Ad } from '@/components/ad-card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Trophy, ArrowRight } from 'lucide-react';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 
 type PostFromFirestore = {
   id: string;
@@ -157,6 +161,25 @@ function PageContent() {
         <div className="sticky top-20 hidden space-y-6 lg:block">
           <WalletCard />
           <ReferralCard />
+          <Card className="border-primary/20 bg-primary/5">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Trophy className="h-5 w-5 text-primary" />
+                Fantasy Leaderboard
+              </CardTitle>
+              <CardDescription>
+                See top performers in fantasy games
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Link href="/dashboard/fantasy#leaderboard">
+                <Button className="w-full" variant="default">
+                  View Leaderboard
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
           <Suggestions />
           <TrendingHashtags />
         </div>

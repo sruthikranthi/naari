@@ -17,6 +17,7 @@ import {
   Crown,
   Calendar,
   Sparkles,
+  Trophy,
 } from 'lucide-react';
 
 import {
@@ -32,48 +33,20 @@ const SUPER_ADMIN_ID = process.env.NEXT_PUBLIC_SUPER_ADMIN_ID || 'ebixEzJ8UuYjIY
 const navItems = [
   { href: '/dashboard', icon: Home, label: 'Dashboard' },
   { href: '/dashboard/communities', icon: Users, label: 'Communities' },
-  { href: '/dashboard/marketplace', icon: Store, label: 'Marketplace' },
-  { href: '/dashboard/kitty-groups', icon: Wallet, label: 'Kitty Groups' },
   { href: '/dashboard/chat', icon: MessageCircle, label: 'Chat' },
-  { href: '/dashboard/wellness', icon: HeartPulse, label: 'Wellness' },
-  { href: '/dashboard/learning', icon: BookOpen, label: 'Learning' },
+  { href: '/dashboard/kitty-groups', icon: Wallet, label: 'Kitty Groups' },
+  { href: '/dashboard/fantasy', icon: Sparkles, label: 'Naari Fantasy' },
   { href: '/dashboard/tambola', icon: Ticket, label: 'Tambola' },
-  {
-    href: '/dashboard/support-directory',
-    icon: HeartHandshake,
-    label: 'Support Directory',
-  },
-  {
-    href: '/dashboard/contests',
-    icon: Award,
-    label: 'Contests',
-  },
-  {
-    href: '/dashboard/professional-hub',
-    icon: Briefcase,
-    label: 'Professional Hub',
-  },
-  {
-    href: '/dashboard/admin',
-    icon: Shield,
-    label: 'Admin Panel',
-    adminOnly: true, // Only show to super admin
-  },
-  {
-    href: '/dashboard/subscriptions',
-    icon: Crown,
-    label: 'Subscriptions',
-  },
-  {
-    href: '/dashboard/upcoming',
-    icon: Calendar,
-    label: 'Upcoming',
-  },
-  {
-    href: '/dashboard/fantasy',
-    icon: Sparkles,
-    label: 'Fantasy Zone',
-  },
+  { href: '/dashboard/contests', icon: Award, label: 'Contests' },
+  { href: '/dashboard/learning', icon: BookOpen, label: 'Learning' },
+  { href: '/dashboard/wellness', icon: HeartPulse, label: 'Wellness' },
+  { href: '/dashboard/marketplace', icon: Store, label: 'Marketplace' },
+  { href: '/dashboard/upcoming', icon: Calendar, label: 'Upcoming' },
+  { href: '/dashboard/professional-hub', icon: Briefcase, label: 'Professional Hub' },
+  { href: '/dashboard/support-directory', icon: HeartHandshake, label: 'Support Directory' },
+  { href: '/dashboard/subscriptions', icon: Crown, label: 'Subscriptions' },
+  { href: '/dashboard/admin', icon: Shield, label: 'Admin Panel', adminOnly: true },
+  { href: '/dashboard/fantasy#leaderboard', icon: Trophy, label: 'Leaderboard' },
 ];
 
 export function MainNav() {

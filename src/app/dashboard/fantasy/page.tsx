@@ -45,6 +45,16 @@ export default function FantasyLobbyPage() {
   const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
   const [leaderboardPeriod, setLeaderboardPeriod] = useState<LeaderboardPeriod>('weekly');
 
+  // Check URL hash for leaderboard tab
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash;
+      if (hash === '#leaderboard') {
+        setSelectedView('leaderboard');
+      }
+    }
+  }, []);
+
   // Query active games
   const gamesQuery = useMemoFirebase(
     () => {

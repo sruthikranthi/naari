@@ -64,7 +64,7 @@ export function ImageAdModal({
               ...(creative.campaignId && { campaignId: creative.campaignId }),
               userId: user.uid,
               placement: position,
-              gameId,
+              ...(gameId && { gameId }), // Only include gameId if it's defined
             });
           }
         } else {
@@ -91,7 +91,7 @@ export function ImageAdModal({
         ...(ad.campaignId && { campaignId: ad.campaignId }),
         userId: user.uid,
         placement: position,
-        gameId,
+        ...(gameId && { gameId }), // Only include gameId if it's defined
         clickUrl: ad.clickUrl,
       });
 

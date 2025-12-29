@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Coins, Clock, Users, AlertCircle } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Coins, Clock, Users, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import type { FantasyGame, FantasyQuestion, UserPrediction } from '@/lib/fantasy/types';
 import { 
@@ -32,6 +32,10 @@ import { Trophy, Award, CheckCircle2 } from 'lucide-react';
 import { SponsorBanner } from '@/components/ads/sponsor-banner';
 import { ImageAdModal } from '@/components/ads/image-ad-modal';
 import { InlineAdCard } from '@/components/ads/inline-ad-card';
+import { getLeaderboard } from '@/lib/fantasy/services';
+import { LeaderboardCard } from '@/components/fantasy/leaderboard-card';
+import type { LeaderboardPeriod } from '@/lib/fantasy/types';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface FantasyGameClientProps {
   gameId: string;
@@ -53,6 +57,9 @@ export default function FantasyGameClient({ gameId }: FantasyGameClientProps) {
   const [showPreGameAd, setShowPreGameAd] = useState(false);
   const [showPostGameAd, setShowPostGameAd] = useState(false);
   const [userStats, setUserStats] = useState({ predictionsCount: 0, gamesPlayed: 0 });
+  const [gameLeaderboard, setGameLeaderboard] = useState<any>(null);
+  const [loadingGameLeaderboard, setLoadingGameLeaderboard] = useState(false);
+  const [leaderboardPeriod, setLeaderboardPeriod] = useState<LeaderboardPeriod>('weekly');
 
   const gameQuery = useMemoFirebase(
     () => firestore ? doc(firestore, 'fantasy_games', gameId) : null,
@@ -170,6 +177,25 @@ export default function FantasyGameClient({ gameId }: FantasyGameClientProps) {
 
     loadResults();
   }, [firestore, gameId, game?.status]);
+
+  // Load leaderboard for this game
+  useEffect(() => {
+    if (!firestore || !game) return;
+    
+    const loadGameLeaderboard = async () => {
+      try {
+        setLoadingGameLeaderboard(true);
+        const lb = await getLeaderboard(firestore, leaderboardPeriod, game.gameType, game.category);
+        setGameLeaderboard(lb);
+      } catch (error) {
+        console.error('Error loading game leaderboard:', error);
+      } finally {
+        setLoadingGameLeaderboard(false);
+      }
+    };
+    
+    loadGameLeaderboard();
+  }, [firestore, game, leaderboardPeriod]);
 
   // Handle prediction submission
   const handlePredictionSubmit = async (
@@ -600,6 +626,56 @@ export default function FantasyGameClient({ gameId }: FantasyGameClientProps) {
           </CardContent>
         </Card>
       )}
+
+      {/* Leaderboard Section */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Trophy className="h-5 w-5 text-primary" />
+                Game Leaderboard
+              </CardTitle>
+              <CardDescription>
+                Top performers for this game
+              </CardDescription>
+            </div>
+            <Link href="/dashboard/fantasy#leaderboard">
+              <Button variant="outline" size="sm">
+                View Full Leaderboard
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Tabs value={leaderboardPeriod} onValueChange={(v) => setLeaderboardPeriod(v as LeaderboardPeriod)}>
+            <TabsList className="mb-4">
+              <TabsTrigger value="daily">Daily</TabsTrigger>
+              <TabsTrigger value="weekly">Weekly</TabsTrigger>
+              <TabsTrigger value="monthly">Monthly</TabsTrigger>
+              <TabsTrigger value="all-time">All Time</TabsTrigger>
+            </TabsList>
+            {loadingGameLeaderboard ? (
+              <div className="py-8 text-center">
+                <Trophy className="h-8 w-8 mx-auto animate-spin text-muted-foreground" />
+              </div>
+            ) : gameLeaderboard && gameLeaderboard.entries && gameLeaderboard.entries.length > 0 ? (
+              <LeaderboardCard 
+                entries={gameLeaderboard.entries.slice(0, 10)} 
+                period={leaderboardPeriod}
+                title={`${leaderboardPeriod.charAt(0).toUpperCase() + leaderboardPeriod.slice(1)} Top Players`}
+              />
+            ) : (
+              <div className="py-8 text-center text-muted-foreground">
+                <Trophy className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <h3 className="text-lg font-semibold mb-2">No Leaderboard Data</h3>
+                <p>Play games to see rankings!</p>
+              </div>
+            )}
+          </Tabs>
+        </CardContent>
+      </Card>
 
       {/* Admin: Result Declaration */}
       {user && game.createdBy === user.uid && game.status === 'active' && FantasyGameUtils.canRevealResults(game) && (

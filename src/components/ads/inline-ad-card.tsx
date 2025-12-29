@@ -52,12 +52,13 @@ export function InlineAdCard({
 
           // Record impression
           if (user) {
+            const creative = decision.ad as AdCreative;
             await recordImpression(firestore, {
               adId: decision.ad.id,
-              campaignId: (decision.ad as AdCreative).campaignId,
+              ...(creative.campaignId && { campaignId: creative.campaignId }),
               userId: user.uid,
               placement: position,
-              gameId,
+              ...(gameId && { gameId }), // Only include gameId if it's defined
             });
           }
         }
@@ -77,10 +78,10 @@ export function InlineAdCard({
     try {
       await recordClick(firestore, {
         adId: ad.id,
-        campaignId: ad.campaignId,
+        ...(ad.campaignId && { campaignId: ad.campaignId }),
         userId: user.uid,
         placement: position,
-        gameId,
+        ...(gameId && { gameId }), // Only include gameId if it's defined
         clickUrl: ad.clickUrl,
       });
 

@@ -54,7 +54,7 @@ export function SponsorBanner({
               campaignId: selectedSponsor.id, // Using sponsor ID as campaign ID
               userId: user.uid,
               placement: position,
-              gameId,
+              ...(gameId && { gameId }), // Only include gameId if it's defined
             });
           }
         }
@@ -77,7 +77,7 @@ export function SponsorBanner({
         campaignId: sponsor.id,
         userId: user.uid,
         placement: position,
-        gameId,
+        ...(gameId && { gameId }), // Only include gameId if it's defined
         clickUrl: sponsor.websiteUrl || '#',
       });
 

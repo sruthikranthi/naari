@@ -571,10 +571,25 @@ export async function recordImpression(
   firestore: Firestore,
   impression: Omit<AdImpression, 'id' | 'timestamp'>
 ): Promise<string> {
-  const impressionData = {
-    ...impression,
+  // Filter out undefined values - Firestore doesn't allow them
+  const impressionData: Record<string, any> = {
+    adId: impression.adId,
+    userId: impression.userId,
+    placement: impression.placement,
     timestamp: serverTimestamp(),
   };
+  
+  // Only include optional fields if they are defined
+  if (impression.campaignId !== undefined) {
+    impressionData.campaignId = impression.campaignId;
+  }
+  if (impression.gameId !== undefined) {
+    impressionData.gameId = impression.gameId;
+  }
+  if (impression.metadata !== undefined) {
+    impressionData.metadata = impression.metadata;
+  }
+  
   const docRef = await addDoc(collection(firestore, 'ad_impressions'), impressionData);
   return docRef.id;
 }
@@ -583,10 +598,26 @@ export async function recordClick(
   firestore: Firestore,
   click: Omit<AdClick, 'id' | 'timestamp'>
 ): Promise<string> {
-  const clickData = {
-    ...click,
+  // Filter out undefined values - Firestore doesn't allow them
+  const clickData: Record<string, any> = {
+    adId: click.adId,
+    userId: click.userId,
+    placement: click.placement,
+    clickUrl: click.clickUrl,
     timestamp: serverTimestamp(),
   };
+  
+  // Only include optional fields if they are defined
+  if (click.campaignId !== undefined) {
+    clickData.campaignId = click.campaignId;
+  }
+  if (click.gameId !== undefined) {
+    clickData.gameId = click.gameId;
+  }
+  if (click.metadata !== undefined) {
+    clickData.metadata = click.metadata;
+  }
+  
   const docRef = await addDoc(collection(firestore, 'ad_clicks'), clickData);
   return docRef.id;
 }
