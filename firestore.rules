@@ -469,8 +469,7 @@ service cloud.firestore {
         request.resource.data.userId == request.auth.uid &&
         request.resource.data.gameId != null &&
         request.resource.data.questionId != null &&
-        request.resource.data.prediction != null &&
-        request.resource.data.submittedAt != null;
+        request.resource.data.prediction != null;
       
       // Users can read their own predictions, admins can read all
       allow get: if isSignedIn() && (
