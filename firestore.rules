@@ -440,6 +440,30 @@ service cloud.firestore {
     }
 
     // -------------------------------------------------------------------------
+    // SPONSORED QUIZZES
+    // -------------------------------------------------------------------------
+    match /sponsored_quizzes/{quizId} {
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isSuperAdmin();
+    }
+
+    match /quiz_attempts/{attemptId} {
+      allow get, list: if isSignedIn() && (
+        resource.data.userId == request.auth.uid ||
+        isSuperAdmin()
+      );
+      allow create: if isSignedIn() &&
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.quizId != null &&
+        request.resource.data.answers is list;
+      allow update: if isSignedIn() && (
+        resource.data.userId == request.auth.uid ||
+        isSuperAdmin()
+      );
+      allow delete: if isSuperAdmin();
+    }
+
+    // -------------------------------------------------------------------------
     // NAARI FANTASY ZONE
     // -------------------------------------------------------------------------
     

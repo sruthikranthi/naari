@@ -1,6 +1,6 @@
 'use client';
 
-import { Home, Users, Sparkles, MessageCircle, User } from 'lucide-react';
+import { Home, Users, Sparkles, MessageCircle, User, ClipboardCheck } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -10,6 +10,7 @@ const mobileNavItems = [
   { href: '/dashboard', icon: Home, label: 'Home' },
   { href: '/dashboard/communities', icon: Users, label: 'Communities' },
   { href: '/dashboard/fantasy', icon: Sparkles, label: 'Fantasy' },
+  { href: '/dashboard/quizzes', icon: ClipboardCheck, label: 'Quizzes' },
   { href: '/dashboard/chat', icon: MessageCircle, label: 'Chat' },
   { href: '/dashboard/profile', icon: User, label: 'Profile' },
 ];

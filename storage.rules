@@ -46,6 +46,11 @@ service firebase.storage {
       allow write: if isSignedIn() && request.auth.uid == userId;
     }
 
+    // Sponsored quiz media (video/image) - admins upload
+    match /quiz-media/{userId}/{allPaths=**} {
+      allow write: if isSignedIn() && request.auth.uid == userId;
+    }
+
     // You can add more specific rules for other paths here, for example:
     // match /shared-media/{mediaId} {
     //   allow read, write: if isSignedIn();

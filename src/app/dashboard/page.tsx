@@ -15,7 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AdCard, type Ad } from '@/components/ad-card';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Trophy, ArrowRight, Gift } from 'lucide-react';
+import { Trophy, ArrowRight, Gift, ClipboardCheck } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 
@@ -194,6 +194,25 @@ function PageContent() {
               <Link href="/dashboard/rewards">
                 <Button className="w-full" variant="default">
                   Browse Rewards
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+          <Card className="border-amber-500/20 bg-amber-500/5">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ClipboardCheck className="h-5 w-5 text-amber-600" />
+                Sponsored Quizzes
+              </CardTitle>
+              <CardDescription>
+                Watch 10s video/image, answer 5 questions, earn coins!
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Link href="/dashboard/quizzes">
+                <Button className="w-full" variant="default">
+                  Take a Quiz
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>

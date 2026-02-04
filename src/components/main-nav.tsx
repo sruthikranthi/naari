@@ -19,6 +19,7 @@ import {
   Sparkles,
   Trophy,
   Gift,
+  ClipboardCheck,
 } from 'lucide-react';
 
 import {
@@ -37,6 +38,7 @@ const navItems = [
   { href: '/dashboard/chat', icon: MessageCircle, label: 'Chat' },
   { href: '/dashboard/kitty-groups', icon: Wallet, label: 'Kitty Groups' },
   { href: '/dashboard/fantasy', icon: Sparkles, label: 'Naari Fantasy' },
+  { href: '/dashboard/quizzes', icon: ClipboardCheck, label: 'Quizzes' },
   { href: '/dashboard/tambola', icon: Ticket, label: 'Tambola' },
   { href: '/dashboard/contests', icon: Award, label: 'Contests' },
   { href: '/dashboard/learning', icon: BookOpen, label: 'Learning' },

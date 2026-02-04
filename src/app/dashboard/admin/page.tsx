@@ -77,6 +77,7 @@ import type { ProfessionalApplication } from '@/lib/applications';
 import { FantasyAdminTab } from './fantasy-admin-tab';
 import { AdsAdminTab } from './ads-admin-tab';
 import { RewardsAdminTab } from './rewards-admin-tab';
+import { QuizzesAdminTab } from './quizzes-admin-tab';
 
 type UserWithRole = User & { role: 'User' | 'Professional' | 'Creator'; status: 'Active' | 'Inactive' | 'Pending' };
 
@@ -538,6 +539,7 @@ export default function AdminPanelPage() {
           <TabsTrigger value="fantasy">Fantasy Zone</TabsTrigger>
           <TabsTrigger value="ads">Ads & Sponsors</TabsTrigger>
           <TabsTrigger value="rewards">Rewards & Coins</TabsTrigger>
+          <TabsTrigger value="quizzes">Sponsored Quizzes</TabsTrigger>
         </TabsList>
         
         <TabsContent value="dashboard" className="mt-6">
@@ -991,6 +993,17 @@ export default function AdminPanelPage() {
         <TabsContent value="rewards" className="mt-6">
           {firestore && user ? (
             <RewardsAdminTab firestore={firestore} user={user} toast={toast} />
+          ) : (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <p className="text-muted-foreground">Loading...</p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+        <TabsContent value="quizzes" className="mt-6">
+          {firestore && user ? (
+            <QuizzesAdminTab firestore={firestore} user={user} toast={toast} />
           ) : (
             <Card>
               <CardContent className="py-12 text-center">
