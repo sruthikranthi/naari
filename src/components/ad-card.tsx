@@ -25,20 +25,20 @@ type AdCardProps = {
 
 export function AdCard({ ad }: AdCardProps) {
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center gap-4 p-4">
-        <Avatar>
+    <Card className="w-full max-w-full overflow-hidden">
+      <CardHeader className="flex flex-row items-center gap-3 p-3 sm:gap-4 sm:p-4">
+        <Avatar className="h-9 w-9 shrink-0 sm:h-10 sm:w-10">
           <AvatarImage src={ad.avatar} alt={ad.advertiser} data-ai-hint="company logo" />
           <AvatarFallback>{ad.advertiser.charAt(0)}</AvatarFallback>
         </Avatar>
-        <div className="flex-1">
-          <p className="font-semibold">{ad.advertiser}</p>
-          <p className="text-sm text-muted-foreground">Sponsored</p>
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-semibold">{ad.advertiser}</p>
+          <p className="text-xs text-muted-foreground sm:text-sm">Sponsored</p>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4 px-4 pb-2">
-        <p className="whitespace-pre-wrap text-sm">{ad.description}</p>
-        <div className="relative aspect-video overflow-hidden rounded-lg border">
+      <CardContent className="space-y-4 px-3 pb-2 sm:px-4">
+        <p className="whitespace-pre-wrap break-words text-sm">{ad.description}</p>
+        <div className="relative aspect-video w-full overflow-hidden rounded-lg border">
           <Image
             src={ad.image}
             alt={ad.title}

@@ -178,11 +178,11 @@ export function PostCard({ post }: { post: PostFromFirestore }) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
       whileHover={{ y: -2 }}
-      className="hover-lift"
+      className="hover-lift w-full min-w-0 max-w-full"
     >
-      <Card>
-        <CardHeader className="flex flex-row items-center gap-4 p-4">
-        <Avatar>
+      <Card className="w-full max-w-full overflow-hidden">
+        <CardHeader className="flex flex-row items-start gap-3 p-3 sm:gap-4 sm:p-4">
+        <Avatar className="h-9 w-9 shrink-0 sm:h-10 sm:w-10">
           <AvatarImage src={authorAvatar} alt={authorName} data-ai-hint="woman portrait" />
           <AvatarFallback>
             {authorName
@@ -191,14 +191,14 @@ export function PostCard({ post }: { post: PostFromFirestore }) {
               .join('')}
           </AvatarFallback>
         </Avatar>
-        <div className="flex-1">
-          <p className="font-semibold">{authorName}</p>
-          <p className="text-sm text-muted-foreground">{formatTimestamp(post.timestamp)}</p>
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-semibold">{authorName}</p>
+          <p className="text-xs text-muted-foreground sm:text-sm">{formatTimestamp(post.timestamp)}</p>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4 px-4 pb-2">
+      <CardContent className="space-y-4 px-3 pb-2 sm:px-4">
         <p 
-          className="whitespace-pre-wrap text-sm"
+          className="whitespace-pre-wrap break-words text-sm"
           onMouseEnter={async () => {
             // Award coins when user reads post (on hover/engagement)
             if (firestore && user && !hasAwardedRead && post.content.length > 100) {
@@ -222,7 +222,7 @@ export function PostCard({ post }: { post: PostFromFirestore }) {
           {post.content}
         </p>
         {post.image && (
-          <div className="relative aspect-video overflow-hidden rounded-lg border">
+          <div className="relative aspect-video w-full overflow-hidden rounded-lg border">
             <Image
               src={post.image}
               alt="Post image"
@@ -235,11 +235,11 @@ export function PostCard({ post }: { post: PostFromFirestore }) {
           </div>
         )}
         {post.video && (
-          <div className="relative aspect-video overflow-hidden rounded-lg border bg-black">
+          <div className="relative aspect-video w-full overflow-hidden rounded-lg border bg-black">
             <video
               src={post.video}
               controls
-              className="w-full h-full object-contain"
+              className="h-full w-full object-contain"
               preload="metadata"
               playsInline
               onPlay={async () => {
@@ -268,7 +268,7 @@ export function PostCard({ post }: { post: PostFromFirestore }) {
           </div>
         )}
         {pollOptions && pollOptions.length > 0 && (
-          <div className="space-y-3 rounded-lg border p-4">
+          <div className="space-y-3 rounded-lg border p-3 sm:p-4">
             <div className='flex items-center gap-2 font-medium text-sm'>
               <BarChart className="h-4 w-4" />
               <span>Poll</span>
@@ -333,15 +333,16 @@ export function PostCard({ post }: { post: PostFromFirestore }) {
           </div>
         )}
       </CardContent>
-      <CardFooter className="flex justify-between p-2 px-4">
+      <CardFooter className="flex flex-wrap justify-between gap-2 p-2 px-3 sm:px-4">
         <motion.div
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
+          className="shrink-0"
         >
           <Button 
             variant="ghost" 
             size="sm" 
-            className="flex items-center gap-2 min-h-[44px] min-w-[44px] touch-manipulation scale-on-click" 
+            className="flex items-center gap-1.5 min-h-[44px] touch-manipulation scale-on-click sm:min-w-[44px] sm:gap-2" 
             onClick={handleLike}
             aria-label={isLiked ? 'Unlike post' : 'Like post'}
             aria-pressed={isLiked}
@@ -350,7 +351,7 @@ export function PostCard({ post }: { post: PostFromFirestore }) {
               animate={isLiked ? { scale: [1, 1.3, 1] } : {}}
               transition={{ duration: 0.3 }}
             >
-              <Heart className={cn("size-4", isLiked && "fill-destructive text-destructive")} aria-hidden="true" />
+              <Heart className={cn("size-4 shrink-0", isLiked && "fill-destructive text-destructive")} aria-hidden="true" />
             </motion.div>
             <span>{likeCount}</span>
           </Button>
@@ -358,30 +359,32 @@ export function PostCard({ post }: { post: PostFromFirestore }) {
         <motion.div
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
+          className="shrink-0"
         >
           <Button 
             variant="ghost" 
             size="sm" 
-            className="flex items-center gap-2 min-h-[44px] min-w-[44px] touch-manipulation scale-on-click" 
+            className="flex items-center gap-1.5 min-h-[44px] touch-manipulation scale-on-click sm:min-w-[44px] sm:gap-2" 
             onClick={handleComment}
             aria-label={`Comment on post by ${authorName}. ${post.comments} comments`}
           >
-            <MessageCircle className="size-4" aria-hidden="true" />
-            <span>{commentCount} Comments</span>
+            <MessageCircle className="size-4 shrink-0" aria-hidden="true" />
+            <span className="whitespace-nowrap">{commentCount} Comments</span>
           </Button>
         </motion.div>
         <motion.div
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
+          className="shrink-0"
         >
           <Button 
             variant="ghost" 
             size="sm" 
-            className="flex items-center gap-2 min-h-[44px] min-w-[44px] touch-manipulation scale-on-click" 
+            className="flex items-center gap-1.5 min-h-[44px] touch-manipulation scale-on-click sm:min-w-[44px] sm:gap-2" 
             onClick={handleShare}
             aria-label="Share post"
           >
-            <Share2 className="size-4" aria-hidden="true" />
+            <Share2 className="size-4 shrink-0" aria-hidden="true" />
             <span>Share</span>
           </Button>
         </motion.div>

@@ -345,10 +345,10 @@ export function CreatePost() {
 
 
   return (
-    <Card>
-      <CardContent className="p-4">
-        <div className="flex gap-4">
-          <Avatar>
+    <Card className="w-full max-w-full overflow-hidden">
+      <CardContent className="p-3 sm:p-4">
+        <div className="flex gap-3 sm:gap-4">
+          <Avatar className="h-9 w-9 shrink-0 sm:h-10 sm:w-10">
             <AvatarImage
               src={user?.photoURL || 'https://picsum.photos/seed/user1/100/100'}
               alt={user?.displayName || "User"}
@@ -361,7 +361,7 @@ export function CreatePost() {
                 .join('') || 'U'}
             </AvatarFallback>
           </Avatar>
-          <div className="w-full space-y-3">
+          <div className="min-w-0 flex-1 space-y-3">
             <Textarea
               placeholder="What's on your mind, Sakhi?"
               className="border-none bg-secondary focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
@@ -425,8 +425,8 @@ export function CreatePost() {
               </div>
             )}
             
-            <div className="flex flex-wrap items-center justify-between gap-y-2">
-              <div className="flex items-center gap-1">
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+              <div className="flex flex-wrap items-center gap-1">
                 <input
                     type="file"
                     ref={fileInputRef}
@@ -479,13 +479,13 @@ export function CreatePost() {
                   <BarChart className="text-muted-foreground" aria-hidden="true" />
                 </Button>
               </div>
-              <div className="flex items-center gap-4">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-4">
                 <Label
                     htmlFor="anonymous-post"
-                    className="flex cursor-pointer items-center gap-2 rounded-full py-1 px-3 text-sm font-normal text-muted-foreground transition-colors hover:bg-accent has-[[data-state=checked]]:bg-primary/10 has-[[data-state=checked]]:text-primary has-[[data-state=checked]]:font-medium min-h-[44px] touch-manipulation"
+                    className="flex cursor-pointer items-center gap-2 rounded-full py-1 px-3 text-sm font-normal text-muted-foreground transition-colors hover:bg-accent has-[[data-state=checked]]:bg-primary/10 has-[[data-state=checked]]:text-primary has-[[data-state=checked]]:font-medium min-h-[44px] touch-manipulation shrink-0"
                   >
-                    <Shield className="h-4 w-4" aria-hidden="true" />
-                    <span>Post Anonymously</span>
+                    <Shield className="h-4 w-4 shrink-0" aria-hidden="true" />
+                    <span className="truncate">Post Anonymously</span>
                     <Checkbox 
                         id="anonymous-post" 
                         className="sr-only"
@@ -498,7 +498,7 @@ export function CreatePost() {
                   size="sm" 
                   onClick={handlePost}
                   aria-label="Publish post"
-                  className="min-h-[44px] touch-manipulation"
+                  className="min-h-[44px] shrink-0 touch-manipulation"
                   disabled={(!content.trim() && !mediaPreview && !showPoll) || isUploading}
                 >
                   {isUploading ? (

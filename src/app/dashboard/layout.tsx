@@ -158,10 +158,10 @@ function Layout({ children }: { children: ReactNode }) {
         <a href="#main-content" className="skip-to-main">
           Skip to main content
         </a>
-        <header className="flex h-16 w-full items-center justify-between border-b bg-card px-4 md:px-6">
-          <div className="flex items-center gap-2">
+        <header className="flex h-14 md:h-16 w-full shrink-0 items-center justify-between gap-2 border-b bg-card px-3 md:px-6">
+          <div className="flex min-w-0 flex-1 items-center gap-2">
             <SidebarTrigger 
-              className="md:hidden" 
+              className="md:hidden shrink-0" 
               aria-label="Toggle sidebar"
             />
             <div className="relative hidden md:block">
@@ -182,14 +182,14 @@ function Layout({ children }: { children: ReactNode }) {
             <Button
               variant="ghost"
               size="icon"
-              className="md:hidden"
+              className="md:hidden shrink-0"
               onClick={() => setIsSearchOpen(true)}
               aria-label="Open search"
             >
               <Search className="h-5 w-5" />
             </Button>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex shrink-0 items-center gap-2 md:gap-4">
             <PWAInstallButton />
             <NotificationsNav />
             <CartSheet />
@@ -197,9 +197,11 @@ function Layout({ children }: { children: ReactNode }) {
             <UserNav />
           </div>
         </header>
-        <main id="main-content" className="flex-1 overflow-y-auto p-4 md:p-6 pb-20 md:pb-6" role="main">
+        <main id="main-content" className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto p-3 pb-[calc(5rem+env(safe-area-inset-bottom))] md:p-6 md:pb-6" role="main">
           <PageTransition>
-            {children}
+            <div className="mx-auto w-full max-w-full min-w-0">
+              {children}
+            </div>
           </PageTransition>
         </main>
         <SearchModal open={isSearchOpen} onOpenChange={setIsSearchOpen} />

@@ -97,9 +97,9 @@ function PageContent() {
     const anonymousPosts = posts?.filter(p => p.isAnonymous) || [];
 
     return (
-      <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-3">
+      <div className="grid w-full max-w-full grid-cols-1 items-start gap-4 lg:grid-cols-3 lg:gap-8">
         {/* Main content */}
-        <div className="space-y-6 lg:col-span-2">
+        <div className="min-w-0 w-full max-w-full space-y-4 lg:col-span-2 lg:space-y-6">
           <Stories />
           <CreatePost />
           
