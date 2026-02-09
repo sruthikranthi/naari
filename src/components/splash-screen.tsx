@@ -244,23 +244,23 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
         </motion.div>
       </div>
 
-      {/* Skip button */}
-      <motion.button
+      {/* Skip button - motion.div wrapper to avoid button inside button */}
+      <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 1.5, duration: 0.6 }}
-        onClick={handleSkip}
         className="absolute top-4 right-4 z-20"
       >
         <Button
           variant="ghost"
           size="sm"
           className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm hover:bg-white dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
+          onClick={handleSkip}
         >
           <X className="h-4 w-4 mr-2" />
           Skip
         </Button>
-      </motion.button>
+      </motion.div>
 
       {/* Notification badge */}
       <motion.div

@@ -7,15 +7,9 @@ import {
   Store,
   Wallet,
   MessageCircle,
-  HeartPulse,
-  BookOpen,
   Ticket,
-  HeartHandshake,
-  Briefcase,
   Shield,
   Award,
-  Crown,
-  Calendar,
   Sparkles,
   Trophy,
   Gift,
@@ -32,6 +26,7 @@ import { useUser } from '@/firebase';
 
 const SUPER_ADMIN_ID = process.env.NEXT_PUBLIC_SUPER_ADMIN_ID || 'ebixEzJ8UuYjIYTXrkOObW1obSw1';
 
+// Phase 2 (hidden until release): Learning, Wellness, Upcoming, Professional Hub, Support Directory, Subscriptions
 const navItems = [
   { href: '/dashboard', icon: Home, label: 'Dashboard' },
   { href: '/dashboard/communities', icon: Users, label: 'Communities' },
@@ -41,13 +36,7 @@ const navItems = [
   { href: '/dashboard/quizzes', icon: ClipboardCheck, label: 'Quizzes' },
   { href: '/dashboard/tambola', icon: Ticket, label: 'Tambola' },
   { href: '/dashboard/contests', icon: Award, label: 'Contests' },
-  { href: '/dashboard/learning', icon: BookOpen, label: 'Learning' },
-  { href: '/dashboard/wellness', icon: HeartPulse, label: 'Wellness' },
   { href: '/dashboard/marketplace', icon: Store, label: 'Marketplace' },
-  { href: '/dashboard/upcoming', icon: Calendar, label: 'Upcoming' },
-  { href: '/dashboard/professional-hub', icon: Briefcase, label: 'Professional Hub' },
-  { href: '/dashboard/support-directory', icon: HeartHandshake, label: 'Support Directory' },
-  { href: '/dashboard/subscriptions', icon: Crown, label: 'Subscriptions' },
   { href: '/dashboard/admin', icon: Shield, label: 'Admin Panel', adminOnly: true },
   { href: '/dashboard/fantasy#leaderboard', icon: Trophy, label: 'Leaderboard' },
   { href: '/dashboard/rewards', icon: Gift, label: 'Rewards' },
